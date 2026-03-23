@@ -1,8 +1,8 @@
 export type SkillId = 
   | 'mining' | 'woodcutting' | 'fishing' | 'hunting' | 'farming'
-  | 'smithing' | 'cooking' | 'herblore' | 'crafting'
-  | 'attack' | 'strength' | 'defense' | 'magic' | 'ranged'
-  | 'empire' | 'raids';
+  | 'smithing' | 'cooking' | 'herblore' | 'crafting' | 'runecrafting'
+  | 'thieving' | 'agility' | 'attack' | 'strength' | 'defense' | 'magic' | 'ranged'
+  | 'prayer' | 'empire' | 'raids' | 'slayer';
 
 export interface Item {
   id: string;
@@ -36,6 +36,7 @@ export interface SkillAction {
   outputs: { itemId: string; quantity: number; chance: number }[];
   isMonster?: boolean;
   weakness?: SkillId;
+  secondarySkillRequired?: { skill: SkillId; level: number };
 }
 
 export interface PlayerSkill {

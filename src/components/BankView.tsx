@@ -21,6 +21,13 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
   const isEquipped = selectedItemId ? Object.values(state.equipment).includes(selectedItemId) : false;
 
   const handleSell = (item: Item, quantity: number) => {
+    if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) {
+      const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id);
+      if (slot) unequipItem(slot);
+    }
+    if (item.type === 'edict' && (state.activeEdicts || []).includes(item.id) && quantity >= (selectedInventoryItem?.quantity || 0)) {
+      toggleEdict(item.id);
+    }
     removeFromInventory(item.id, quantity);
     addGp(item.value * quantity);
     if (quantity >= (selectedInventoryItem?.quantity || 0)) {

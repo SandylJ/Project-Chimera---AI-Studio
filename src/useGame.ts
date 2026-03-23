@@ -15,21 +15,26 @@ const INITIAL_STATE: PlayerState = {
     cooking: { id: 'cooking', level: 1, xp: 0 },
     herblore: { id: 'herblore', level: 1, xp: 0 },
     crafting: { id: 'crafting', level: 1, xp: 0 },
+    runecrafting: { id: 'runecrafting', level: 1, xp: 0 },
+    thieving: { id: 'thieving', level: 1, xp: 0 },
+    agility: { id: 'agility', level: 1, xp: 0 },
     attack: { id: 'attack', level: 1, xp: 0 },
     strength: { id: 'strength', level: 1, xp: 0 },
     defense: { id: 'defense', level: 1, xp: 0 },
     magic: { id: 'magic', level: 1, xp: 0 },
     ranged: { id: 'ranged', level: 1, xp: 0 },
+    prayer: { id: 'prayer', level: 1, xp: 0 },
     empire: { id: 'empire', level: 1, xp: 0 },
     raids: { id: 'raids', level: 1, xp: 0 },
+    slayer: { id: 'slayer', level: 1, xp: 0 },
   },
   inventory: [],
   equipment: {},
   activeEdicts: [],
   ascensions: {
     mining: 0, woodcutting: 0, fishing: 0, hunting: 0, farming: 0,
-    smithing: 0, cooking: 0, herblore: 0, crafting: 0,
-    attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0,
+    smithing: 0, cooking: 0, herblore: 0, crafting: 0, runecrafting: 0, thieving: 0,
+    attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0, prayer: 0,
     empire: 0, raids: 0
   },
   showNotifications: true,
@@ -195,6 +200,14 @@ export function useGame() {
       return;
     }
 
+    if (action.secondarySkillRequired) {
+      const secSkill = stateRef.current.skills[action.secondarySkillRequired.skill];
+      if (secSkill.level < action.secondarySkillRequired.level) {
+        addEvent(`Level ${action.secondarySkillRequired.level} ${action.secondarySkillRequired.skill} required!`, 'info');
+        return;
+      }
+    }
+
     if (action.inputs && !hasItems(action.inputs)) {
       addEvent(`Missing required materials!`, 'info');
       return;
@@ -217,6 +230,11 @@ export function useGame() {
     setState(prev => ({ ...prev, activeAction: undefined }));
   }, []);
 
+  const addGp = useCallback((amount: number) => {
+    if (amount > 0) addEvent(`Gained ${amount} GP`, 'loot');
+    setState(prev => ({ ...prev, gp: prev.gp + amount }));
+  }, [addEvent]);
+
   const completeAction = useCallback((action: SkillAction) => {
     // Check inputs again
     if (action.inputs && !hasItems(action.inputs)) {
@@ -238,13 +256,17 @@ export function useGame() {
         // Relic: Eye of the Storm (20% chance to double)
         if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
           quantity *= 2;
-          addEvent(`Eye of the Storm doubled your ${ITEMS[output.itemId]?.name}!`, 'loot');
+          addEvent(`Eye of the Storm doubled your ${ITEMS[output.itemId]?.name || 'GP'}!`, 'loot');
         }
 
-        if (output.itemId === 'gp' && stateRef.current.activeEdicts.includes('edict_prosperity')) {
-          quantity = Math.floor(quantity * 1.2);
+        if (output.itemId === 'gp') {
+          if (stateRef.current.activeEdicts.includes('edict_prosperity')) {
+            quantity = Math.floor(quantity * 1.2);
+          }
+          addGp(quantity);
+        } else {
+          addToInventory(output.itemId, quantity);
         }
-        addToInventory(output.itemId, quantity);
       }
     });
 
@@ -293,7 +315,7 @@ export function useGame() {
         } : undefined
       };
     });
-  }, [addToInventory, removeFromInventory, hasItems, stopAction, addEvent]);
+  }, [addToInventory, removeFromInventory, hasItems, stopAction, addEvent, addGp]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -318,11 +340,6 @@ export function useGame() {
 
     return () => clearInterval(interval);
   }, [completeAction]);
-
-  const addGp = useCallback((amount: number) => {
-    if (amount > 0) addEvent(`Gained ${amount} GP`, 'loot');
-    setState(prev => ({ ...prev, gp: prev.gp + amount }));
-  }, [addEvent]);
 
   const equipItem = useCallback((itemId: string) => {
     const item = ITEMS[itemId];

@@ -20,7 +20,12 @@ import {
   Store, 
   Coins,
   LayoutDashboard,
-  Package
+  Package,
+  Hexagon,
+  Hand,
+  Sparkles,
+  Ghost,
+  Footprints
 } from 'lucide-react';
 import { SkillId } from '../types';
 import { LEVEL_XP } from '../constants';
@@ -40,13 +45,18 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'cooking', name: 'Cooking', icon: Utensils },
   { id: 'herblore', name: 'Herblore', icon: FlaskConical },
   { id: 'crafting', name: 'Crafting', icon: Scissors },
+  { id: 'runecrafting', name: 'Runecrafting', icon: Hexagon },
+  { id: 'thieving', name: 'Thieving', icon: Hand },
+  { id: 'agility', name: 'Agility', icon: Footprints },
   { id: 'attack', name: 'Attack', icon: Sword },
   { id: 'strength', name: 'Strength', icon: Zap },
   { id: 'defense', name: 'Defense', icon: Shield },
   { id: 'magic', name: 'Magic', icon: Zap },
   { id: 'ranged', name: 'Ranged', icon: Target },
+  { id: 'prayer', name: 'Prayer', icon: Sparkles },
   { id: 'empire', name: 'Empire', icon: Castle },
   { id: 'raids', name: 'Raids', icon: Skull },
+  { id: 'slayer', name: 'Slayer', icon: Ghost },
 ];
 
 export function DashboardView({ state, setActiveTab }: DashboardViewProps) {

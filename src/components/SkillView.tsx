@@ -93,7 +93,8 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
       {/* Action Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {skillActions.map(action => {
-          const isLocked = skill.level < action.levelRequired;
+          const isLocked = skill.level < action.levelRequired || 
+            (action.secondarySkillRequired && state.skills[action.secondarySkillRequired.skill].level < action.secondarySkillRequired.level);
           const isActive = state.activeAction?.actionId === action.id;
           
           return (
@@ -107,7 +108,9 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
               {isLocked && (
                 <div className="absolute inset-0 flex items-center justify-center bg-[#E4E3E0]/60 backdrop-blur-[1px] z-10">
                   <div className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] -rotate-12 border border-[#141414] px-2 py-1 bg-[#E4E3E0]">
-                    LOCKED — LVL {action.levelRequired}
+                    LOCKED — LVL {action.levelRequired} {action.skill}
+                    {action.secondarySkillRequired && <br/>}
+                    {action.secondarySkillRequired && `LVL ${action.secondarySkillRequired.level} ${action.secondarySkillRequired.skill}`}
                   </div>
                 </div>
               )}
