@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item, QuestProgress, Quest, QuestObjective } from './types';
+import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item, QuestProgress, Quest, QuestObjective, BountyContract, BountyTier } from './types';
 import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE, MONSTER_DROP_TABLES, QUESTS } from './constants';
 
 const INITIAL_STATE: PlayerState = {
@@ -47,6 +47,11 @@ const INITIAL_STATE: PlayerState = {
   totalItemsGained: {},
   bankTab: 'all',
   killCount: {},
+  // Bounty Hunting
+  bountyContract: undefined,
+  bountyStreak: 0,
+  bountyMarks: 0,
+  totalBountiesCompleted: 0,
 };
 
 export interface GameEvent {
@@ -241,6 +246,11 @@ export function useGame() {
         totalItemsGained: parsed.totalItemsGained || {},
         bankTab: parsed.bankTab || 'all',
         killCount: parsed.killCount || {},
+        // Bounty Hunting
+        bountyContract: parsed.bountyContract || undefined,
+        bountyStreak: parsed.bountyStreak || 0,
+        bountyMarks: parsed.bountyMarks || 0,
+        totalBountiesCompleted: parsed.totalBountiesCompleted || 0,
       };
     } catch (e) {
       return INITIAL_STATE;
@@ -623,14 +633,53 @@ export function useGame() {
       }
     }
 
-    // Track action completion for quests + kill counts
-    setState(prev => ({
-      ...prev,
-      totalActions: { ...prev.totalActions, [action.id]: (prev.totalActions[action.id] || 0) + 1 },
-      killCount: action.isMonster
-        ? { ...prev.killCount, [action.id]: (prev.killCount[action.id] || 0) + 1 }
-        : prev.killCount,
-    }));
+    // Track action completion for quests + kill counts + bounty contracts
+    setState(prev => {
+      let newBountyContract = prev.bountyContract;
+      let newBountyStreak = prev.bountyStreak;
+      let newBountyMarks = prev.bountyMarks;
+      let newTotalBounties = prev.totalBountiesCompleted;
+      let newSlayerSkills = { ...prev.skills };
+
+      // Track bounty contract progress
+      if (action.isMonster && newBountyContract && action.id === newBountyContract.monsterId) {
+        newBountyContract = { ...newBountyContract, killsCompleted: newBountyContract.killsCompleted + 1 };
+
+        if (newBountyContract.killsCompleted >= newBountyContract.killsRequired) {
+          // Contract complete!
+          const streakBonus = Math.floor(newBountyStreak * 0.1 * newBountyContract.bountyMarkReward);
+          const totalMarks = newBountyContract.bountyMarkReward + streakBonus;
+          newBountyMarks += totalMarks;
+          newBountyStreak += 1;
+          newTotalBounties += 1;
+
+          // Bonus slayer XP
+          const slayer = newSlayerSkills.slayer;
+          const newXp = slayer.xp + newBountyContract.bonusXp;
+          const newLevel = XP_TO_LEVEL(newXp);
+          if (newLevel > slayer.level) {
+            addEvent(`LEVEL UP! SLAYER is now level ${newLevel}!`, 'level');
+          }
+          newSlayerSkills = { ...newSlayerSkills, slayer: { ...slayer, xp: newXp, level: newLevel } };
+
+          addEvent(`CONTRACT COMPLETE! +${totalMarks} Bounty Marks${streakBonus > 0 ? ` (${streakBonus} streak bonus)` : ''} | Streak: ${newBountyStreak}`, 'quest', '🏆', 'legendary');
+          newBountyContract = undefined;
+        }
+      }
+
+      return {
+        ...prev,
+        skills: newSlayerSkills,
+        totalActions: { ...prev.totalActions, [action.id]: (prev.totalActions[action.id] || 0) + 1 },
+        killCount: action.isMonster
+          ? { ...prev.killCount, [action.id]: (prev.killCount[action.id] || 0) + 1 }
+          : prev.killCount,
+        bountyContract: newBountyContract,
+        bountyStreak: newBountyStreak,
+        bountyMarks: newBountyMarks,
+        totalBountiesCompleted: newTotalBounties,
+      };
+    });
 
     // Update quest progress for action completion
     if (action.isMonster) {
@@ -1051,6 +1100,134 @@ export function useGame() {
     setState(prev => ({ ...prev, bankTab: tab }));
   }, []);
 
+  // ===== BOUNTY HUNTING SYSTEM =====
+  const BOUNTY_TIERS: Record<BountyTier, { minLevel: number; killRange: [number, number]; markMultiplier: number; xpMultiplier: number }> = {
+    iron: { minLevel: 1, killRange: [15, 40], markMultiplier: 1, xpMultiplier: 1 },
+    gold: { minLevel: 40, killRange: [30, 80], markMultiplier: 2, xpMultiplier: 1.5 },
+    imperial: { minLevel: 75, killRange: [50, 150], markMultiplier: 4, xpMultiplier: 2.5 },
+  };
+
+  const requestBounty = useCallback((tier: BountyTier) => {
+    setState(prev => {
+      if (prev.bountyContract) {
+        addEvent('You already have an active contract! Complete or abandon it first.', 'info');
+        return prev;
+      }
+
+      const slayerLevel = prev.skills.slayer.level;
+      const tierConfig = BOUNTY_TIERS[tier];
+      if (slayerLevel < tierConfig.minLevel) {
+        addEvent(`Slayer level ${tierConfig.minLevel} required for ${tier} contracts!`, 'info');
+        return prev;
+      }
+
+      // Find eligible monsters for this tier
+      const eligibleMonsters = ACTIONS.filter(a =>
+        a.isMonster &&
+        a.skill === 'slayer' &&
+        a.levelRequired <= slayerLevel &&
+        a.levelRequired >= Math.max(1, tierConfig.minLevel - 10)
+      );
+
+      if (eligibleMonsters.length === 0) {
+        addEvent('No suitable targets found for your level!', 'info');
+        return prev;
+      }
+
+      const target = eligibleMonsters[Math.floor(Math.random() * eligibleMonsters.length)];
+      const killsRequired = tierConfig.killRange[0] + Math.floor(Math.random() * (tierConfig.killRange[1] - tierConfig.killRange[0]));
+      const baseMarks = Math.floor(killsRequired * 0.5 * tierConfig.markMultiplier);
+      const bonusXp = Math.floor(target.xpReward * killsRequired * 0.3 * tierConfig.xpMultiplier);
+
+      const contract: BountyContract = {
+        monsterId: target.id,
+        monsterName: target.name,
+        killsRequired,
+        killsCompleted: 0,
+        tier,
+        bountyMarkReward: baseMarks,
+        bonusXp,
+        assignedAt: Date.now(),
+      };
+
+      addEvent(`NEW CONTRACT: Hunt ${killsRequired}x ${target.name}`, 'info', '📜');
+
+      return { ...prev, bountyContract: contract };
+    });
+  }, [addEvent]);
+
+  const abandonBounty = useCallback(() => {
+    setState(prev => {
+      if (!prev.bountyContract) return prev;
+      addEvent('Contract abandoned. Streak reset.', 'info', '❌');
+      return { ...prev, bountyContract: undefined, bountyStreak: 0 };
+    });
+  }, [addEvent]);
+
+  // ===== ADMIN / DEV TOOLS =====
+  const adminSetLevel = useCallback((skillId: SkillId, level: number) => {
+    const clampedLevel = Math.max(1, Math.min(99, level));
+    setState(prev => {
+      const xp = LEVEL_XP(clampedLevel);
+      return {
+        ...prev,
+        skills: {
+          ...prev.skills,
+          [skillId]: { id: skillId, level: clampedLevel, xp }
+        }
+      };
+    });
+  }, []);
+
+  const adminAddGp = useCallback((amount: number) => {
+    setState(prev => ({ ...prev, gp: prev.gp + amount }));
+  }, []);
+
+  const adminAddBountyMarks = useCallback((amount: number) => {
+    setState(prev => ({ ...prev, bountyMarks: prev.bountyMarks + amount }));
+  }, []);
+
+  const adminSetAllLevels = useCallback((level: number) => {
+    const clampedLevel = Math.max(1, Math.min(99, level));
+    const xp = LEVEL_XP(clampedLevel);
+    setState(prev => {
+      const newSkills = { ...prev.skills };
+      (Object.keys(newSkills) as SkillId[]).forEach(id => {
+        newSkills[id] = { id, level: clampedLevel, xp };
+      });
+      return { ...prev, skills: newSkills };
+    });
+  }, []);
+
+  const adminResetSave = useCallback(() => {
+    setState(INITIAL_STATE);
+    addEvent('Save data reset!', 'info');
+  }, [addEvent]);
+
+  const buyBountyItem = useCallback((itemId: string) => {
+    const item = ITEMS[itemId];
+    if (!item) return;
+
+    setState(prev => {
+      const cost = item.value; // bounty mark cost stored in item value
+      if (prev.bountyMarks < cost) {
+        addEvent('Not enough Bounty Marks!', 'info');
+        return prev;
+      }
+      if (prev.inventory.some(i => i.itemId === itemId)) {
+        addEvent('You already own this item!', 'info');
+        return prev;
+      }
+
+      addEvent(`Purchased ${item.name} for ${cost} Bounty Marks!`, 'loot', item.icon, item.rarity);
+      return {
+        ...prev,
+        bountyMarks: prev.bountyMarks - cost,
+        inventory: [...prev.inventory, { itemId, quantity: 1 }],
+      };
+    });
+  }, [addEvent]);
+
   // Kingdom passive income tick
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1127,5 +1304,16 @@ export function useGame() {
     // New systems
     startQuest,
     setBankTab,
+    // Bounty Hunting
+    requestBounty,
+    abandonBounty,
+    // Admin/Dev Tools
+    adminSetLevel,
+    adminAddGp,
+    adminAddBountyMarks,
+    adminSetAllLevels,
+    adminResetSave,
+    // Bounty shop
+    buyBountyItem,
   };
 }

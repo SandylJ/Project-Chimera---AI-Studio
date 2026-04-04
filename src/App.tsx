@@ -9,6 +9,8 @@ import { EventLog } from './components/EventLog';
 import { KingdomView } from './components/KingdomView';
 import { QuestView } from './components/QuestView';
 import { CollectionLogView } from './components/CollectionLogView';
+import { BountyBoardView } from './components/BountyBoardView';
+import AdminPanel from './components/AdminPanel';
 import { SkillId } from './types';
 
 import { CelestialForgeView } from './components/CelestialForgeView';
@@ -33,6 +35,14 @@ export default function App() {
     usePotion,
     startQuest,
     setBankTab,
+    requestBounty,
+    abandonBounty,
+    adminSetLevel,
+    adminAddGp,
+    adminAddBountyMarks,
+    adminSetAllLevels,
+    adminResetSave,
+    buyBountyItem,
   } = useGame();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -77,12 +87,27 @@ export default function App() {
       return <CollectionLogView state={state} />;
     }
 
+    // Bounty Hunting (replaces generic slayer skill view)
+    if (activeTab === 'slayer') {
+      return (
+        <BountyBoardView
+          state={state}
+          requestBounty={requestBounty}
+          abandonBounty={abandonBounty}
+          startAction={startAction}
+          stopAction={stopAction}
+          ascendSkill={ascendSkill}
+          buyBountyItem={buyBountyItem}
+        />
+      );
+    }
+
     // Check if activeTab is a SkillId
     const skillIds: SkillId[] = [
       'mining', 'woodcutting', 'fishing', 'hunting', 'farming',
       'smithing', 'cooking', 'herblore', 'crafting', 'runecrafting',
       'thieving', 'agility', 'attack', 'strength', 'defense', 'magic', 'ranged',
-      'prayer', 'empire', 'raids', 'slayer'
+      'prayer', 'empire', 'raids'
     ];
 
     if (skillIds.includes(activeTab as SkillId)) {
@@ -99,11 +124,12 @@ export default function App() {
 
     return (
       <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-        <h2 className="text-4xl font-serif italic font-bold tracking-tight">Under Construction</h2>
-        <p className="text-lg font-serif italic opacity-70">This area of the empire is still being developed.</p>
+        <h2 className="text-4xl font-bold tracking-tight" style={{ fontFamily: "'Cinzel', serif" }}>Under Construction</h2>
+        <p className="text-lg text-[#B8A890]">This area of the empire is still being developed.</p>
         <button
           onClick={() => setActiveTab('dashboard')}
-          className="px-6 py-3 bg-[#141414] text-[#E4E3E0] font-mono text-xs uppercase tracking-widest hover:bg-[#141414]/80 transition-colors"
+          className="keycap keycap-gold text-xs uppercase tracking-widest"
+          style={{ fontFamily: "'JetBrains Mono', monospace" }}
         >
           Return to Dashboard
         </button>
@@ -116,8 +142,19 @@ export default function App() {
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       gp={state.gp}
+      bountyMarks={state.bountyMarks}
       showNotifications={state.showNotifications || false}
       toggleNotifications={toggleNotifications}
+      adminPanel={
+        <AdminPanel
+          state={state}
+          adminSetLevel={adminSetLevel}
+          adminAddGp={adminAddGp}
+          adminAddBountyMarks={adminAddBountyMarks}
+          adminSetAllLevels={adminSetAllLevels}
+          adminResetSave={adminResetSave}
+        />
+      }
     >
       {renderContent()}
       <EventLog events={events} showNotifications={state.showNotifications} />

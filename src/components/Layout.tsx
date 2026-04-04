@@ -1,20 +1,20 @@
 import React, { ReactNode } from 'react';
-import { 
-  Pickaxe, 
-  Trees, 
-  Fish, 
-  PawPrint, 
-  Sprout, 
-  Hammer, 
-  Utensils, 
-  FlaskConical, 
-  Scissors, 
-  Sword, 
-  Shield, 
-  Zap, 
-  Target, 
-  Castle, 
-  Skull, 
+import {
+  Pickaxe,
+  Trees,
+  Fish,
+  PawPrint,
+  Sprout,
+  Hammer,
+  Utensils,
+  FlaskConical,
+  Scissors,
+  Sword,
+  Shield,
+  Zap,
+  Target,
+  Castle,
+  Skull,
   Briefcase,
   Store,
   Coins,
@@ -32,14 +32,17 @@ import {
   BookOpen
 } from 'lucide-react';
 import { SkillId } from '../types';
+import { playTabClick } from '../sounds';
 
 interface LayoutProps {
   children: ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   gp: number;
+  bountyMarks: number;
   showNotifications: boolean;
   toggleNotifications: () => void;
+  adminPanel?: ReactNode;
 }
 
 const SKILLS: { id: SkillId; name: string; icon: any }[] = [
@@ -63,126 +66,95 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'prayer', name: 'Prayer', icon: Sparkles },
   { id: 'empire', name: 'Empire', icon: Castle },
   { id: 'raids', name: 'Raids', icon: Skull },
-  { id: 'slayer', name: 'Slayer', icon: Ghost },
+  { id: 'slayer', name: 'Bounty Hunter', icon: Ghost },
 ];
 
-export function Layout({ children, activeTab, setActiveTab, gp, showNotifications, toggleNotifications }: LayoutProps) {
+export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, showNotifications, toggleNotifications, adminPanel }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const handleTabChange = (tab: string) => {
+    if (tab !== activeTab) playTabClick();
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
   };
 
+  const navButtonClass = (tab: string) =>
+    `w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-100 ${
+      activeTab === tab
+        ? 'bg-[#D4A943] text-[#1A1510] font-bold shadow-[0_3px_0_0_#8A6E1E]'
+        : 'bg-[#1E1A16] text-[#B8A890] shadow-[0_3px_0_0_#0D0B09] hover:shadow-[0_2px_0_0_#0D0B09] hover:translate-y-[1px] hover:text-[#E8E0D4] active:shadow-none active:translate-y-[3px]'
+    }`;
+
   return (
-    <div className="flex h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
-      {/* Sidebar - Desktop */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-[#141414] bg-[#E4E3E0] flex flex-col overflow-hidden transition-transform duration-300 lg:relative lg:translate-x-0 ${
+    <div className="flex h-screen bg-[#151210] text-[#E8E0D4] selection:bg-[#D4A943] selection:text-[#1A1510]" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-[#3D3328] bg-[#1A1612] flex flex-col overflow-hidden transition-transform duration-300 lg:relative lg:translate-x-0 ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="p-4 border-b border-[#141414] flex items-center justify-between">
+        <div className="p-4 border-b border-[#3D3328] flex items-center justify-between bg-[#1A1612]">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#141414] rounded-sm flex items-center justify-center text-[#E4E3E0]">
+            <div className="w-8 h-8 bg-[#D4A943] rounded-lg flex items-center justify-center text-[#1A1510] shadow-[0_2px_0_0_#8A6E1E]">
               <Castle size={20} />
             </div>
-            <h1 className="font-serif italic text-lg font-bold tracking-tight">Chimera</h1>
+            <h1 className="text-lg font-bold tracking-tight text-[#E8E0D4]" style={{ fontFamily: "'Cinzel', serif" }}>Chimera</h1>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden text-[#7A6E60] hover:text-[#E8E0D4]">
             <X size={20} />
           </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-          <button
-            onClick={() => handleTabChange('dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'dashboard' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('dashboard')} className={navButtonClass('dashboard')}>
             <LayoutDashboard size={18} />
             Dashboard
           </button>
-          <button
-            onClick={() => handleTabChange('bank')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'bank' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('bank')} className={navButtonClass('bank')}>
             <Package size={18} />
             Bank
           </button>
-          <button
-            onClick={() => handleTabChange('shop')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'shop' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('shop')} className={navButtonClass('shop')}>
             <Store size={18} />
             Shop
           </button>
-          <button
-            onClick={() => handleTabChange('forge')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'forge' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('forge')} className={navButtonClass('forge')}>
             <Sparkles size={18} />
             Celestial Forge
           </button>
-          <button
-            onClick={() => handleTabChange('kingdom')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'kingdom' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('kingdom')} className={navButtonClass('kingdom')}>
             <Users size={18} />
             Kingdom
           </button>
-          <button
-            onClick={() => handleTabChange('quests')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'quests' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('quests')} className={navButtonClass('quests')}>
             <ScrollText size={18} />
             Quests
           </button>
-          <button
-            onClick={() => handleTabChange('collection')}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'collection' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-            }`}
-          >
+          <button onClick={() => handleTabChange('collection')} className={navButtonClass('collection')}>
             <BookOpen size={18} />
             Collection Log
           </button>
 
-          <div className="pt-4 pb-2 px-3 text-[10px] font-serif italic uppercase opacity-50 tracking-widest">
+          <div className="pt-4 pb-2 px-3 text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'Cinzel', serif" }}>
             Gathering & Artisan
           </div>
           {SKILLS.slice(0, 9).map(skill => (
             <button
               key={skill.id}
               onClick={() => handleTabChange(skill.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === skill.id ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-              }`}
+              className={navButtonClass(skill.id)}
             >
               <skill.icon size={18} />
               {skill.name}
             </button>
           ))}
 
-          <div className="pt-4 pb-2 px-3 text-[10px] font-serif italic uppercase opacity-50 tracking-widest">
+          <div className="pt-4 pb-2 px-3 text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'Cinzel', serif" }}>
             Combat & Meta
           </div>
           {SKILLS.slice(9).map(skill => (
             <button
               key={skill.id}
               onClick={() => handleTabChange(skill.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === skill.id ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
-              }`}
+              className={navButtonClass(skill.id)}
             >
               <skill.icon size={18} />
               {skill.name}
@@ -190,42 +162,53 @@ export function Layout({ children, activeTab, setActiveTab, gp, showNotification
           ))}
         </nav>
 
-        <div className="p-4 border-t border-[#141414] bg-[#141414]/5">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="opacity-50">CURRENCY</span>
-            <span className="font-bold">{gp.toLocaleString()} GP</span>
+        <div className="p-4 border-t border-[#3D3328] bg-[#0D0B09]">
+          <div className="flex items-center justify-between text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <span className="text-[#7A6E60]">CURRENCY</span>
+            <span className="font-bold text-[#D4A943]">{gp.toLocaleString()} GP</span>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="h-14 border-b border-[#141414] flex items-center justify-between px-4 lg:px-6 bg-[#E4E3E0]/80 backdrop-blur-sm z-10">
+        <header className="h-14 border-b border-[#3D3328] flex items-center justify-between px-4 lg:px-6 bg-[#1A1612]/90 backdrop-blur-sm z-10">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 hover:bg-[#141414]/10 rounded-sm">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 hover:bg-[#2A2520] rounded-lg text-[#7A6E60]">
               <Menu size={20} />
             </button>
-            <div className="text-xs font-serif italic opacity-50 uppercase tracking-widest">
+            <div className="text-xs uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'Cinzel', serif" }}>
               {activeTab}
             </div>
           </div>
-          <div className="flex items-center gap-4 lg:gap-6 text-[10px] lg:text-xs font-mono">
-            <button 
+          <div className="flex items-center gap-4 lg:gap-6 text-[10px] lg:text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <button
               onClick={toggleNotifications}
-              className={`flex items-center gap-2 px-2 py-1 border border-[#141414]/20 rounded-sm transition-all ${showNotifications ? 'bg-[#141414] text-[#E4E3E0]' : 'bg-transparent text-[#141414] opacity-50'}`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-100 ${
+                showNotifications
+                  ? 'bg-[#D4A943] text-[#1A1510] shadow-[0_2px_0_0_#8A6E1E] font-bold'
+                  : 'bg-[#1E1A16] text-[#7A6E60] shadow-[0_2px_0_0_#0D0B09]'
+              }`}
               title={showNotifications ? "Disable Notifications" : "Enable Notifications"}
             >
               <Zap size={14} className={showNotifications ? "fill-current" : ""} />
               <span className="hidden sm:inline">{showNotifications ? "NOTIFS ON" : "NOTIFS OFF"}</span>
             </button>
             <div className="hidden sm:flex items-center gap-2">
-              <span className="opacity-50">STATUS</span>
-              <span className="text-green-600">ONLINE</span>
+              <span className="text-[#7A6E60]">STATUS</span>
+              <span className="text-green-500 font-bold">ONLINE</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="opacity-50">GP</span>
-              <span className="font-bold">{gp.toLocaleString()}</span>
+              <span className="text-[#7A6E60]">GP</span>
+              <span className="font-bold text-[#D4A943]">{gp.toLocaleString()}</span>
             </div>
+            {bountyMarks > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[#7A6E60]">MARKS</span>
+                <span className="font-bold text-[#C17F4E]">{bountyMarks.toLocaleString()}</span>
+              </div>
+            )}
+            {adminPanel}
           </div>
         </header>
 
@@ -236,8 +219,8 @@ export function Layout({ children, activeTab, setActiveTab, gp, showNotification
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-[#141414]/50 z-40 lg:hidden"
+        <div
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

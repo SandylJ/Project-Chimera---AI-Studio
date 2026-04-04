@@ -175,6 +175,20 @@ export interface BankTab {
   filter: (item: Item) => boolean;
 }
 
+// Bounty Hunting System
+export type BountyTier = 'iron' | 'gold' | 'imperial';
+
+export interface BountyContract {
+  monsterId: string; // actionId of the monster to hunt
+  monsterName: string;
+  killsRequired: number;
+  killsCompleted: number;
+  tier: BountyTier;
+  bountyMarkReward: number;
+  bonusXp: number;
+  assignedAt: number;
+}
+
 // Player State - expanded
 export interface PlayerState {
   gp: number;
@@ -200,6 +214,11 @@ export interface PlayerState {
   totalItemsGained: Record<string, number>; // itemId -> lifetime total
   bankTab: string; // active bank tab id
   killCount: Record<string, number>; // monsterId (actionId) -> kills
+  // Bounty Hunting
+  bountyContract?: BountyContract;
+  bountyStreak: number;
+  bountyMarks: number;
+  totalBountiesCompleted: number;
 }
 
 export interface QuestProgress {

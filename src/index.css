@@ -1,1 +1,419 @@
 @import "tailwindcss";
+
+/* ============================================================
+   IMPERIAL IDLE — Master Stylesheet
+   Aesthetic: Stardew Valley warmth + mechanical keyboard tactile + collector dopamine
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   1. CSS CUSTOM PROPERTIES — Warm Palette
+   ---------------------------------------------------------- */
+:root {
+  --bg-primary: #151210;
+  --bg-secondary: #1E1A16;
+  --bg-dark: #0D0B09;
+  --bg-card: #1E1A16;
+  --bg-elevated: #2A2520;
+  --text-primary: #E8E0D4;
+  --text-secondary: #B8A890;
+  --text-muted: #7A6E60;
+  --accent-gold: #D4A943;
+  --accent-copper: #C17F4E;
+  --border: #3D3328;
+  --shadow: rgba(0, 0, 0, 0.3);
+
+  /* Rarity palette */
+  --rarity-common: #8B8680;
+  --rarity-uncommon: #3A7D44;
+  --rarity-rare: #2B5FB3;
+  --rarity-epic: #7B3FA0;
+  --rarity-legendary: #D4A943;
+  --rarity-celestial: #22D3EE;
+}
+
+/* ----------------------------------------------------------
+   2. BODY DEFAULTS
+   ---------------------------------------------------------- */
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Stats / numbers mono font utility */
+.font-stats {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ----------------------------------------------------------
+   3. KEYCAP BUTTON STYLES — Mechanical keyboard feel
+   ---------------------------------------------------------- */
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #E8E0D4;
+  background: linear-gradient(180deg, #3A3530 0%, #2A2520 100%);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 4px 0 0 #1A1612,
+    0 5px 4px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  top: 0;
+}
+
+.keycap:hover {
+  top: -2px;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.08) inset,
+    0 6px 0 0 #1A1612,
+    0 7px 8px 0 rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, #45403A 0%, #353028 100%);
+}
+
+.keycap:active {
+  top: 3px;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 0 0 #1A1612,
+    0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, #252118 0%, #1E1A16 100%);
+}
+
+/* Gold accent variant */
+.keycap-gold {
+  background: linear-gradient(180deg, #E8C65A 0%, #D4A943 100%);
+  border-color: #B8922E;
+  color: #1A1510;
+  box-shadow:
+    0 1px 0 0 rgba(255, 230, 140, 0.3) inset,
+    0 4px 0 0 #8A6E1E,
+    0 5px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.keycap-gold:hover {
+  box-shadow:
+    0 1px 0 0 rgba(255, 230, 140, 0.4) inset,
+    0 6px 0 0 #8A6E1E,
+    0 7px 8px 0 rgba(0, 0, 0, 0.35);
+}
+
+.keycap-gold:active {
+  box-shadow:
+    0 1px 0 0 rgba(255, 230, 140, 0.2) inset,
+    0 1px 0 0 #8A6E1E,
+    0 1px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Size variants */
+.keycap-sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: 5px;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 3px 0 0 #1A1612,
+    0 4px 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.keycap-sm:active {
+  top: 2px;
+}
+
+.keycap-lg {
+  padding: 14px 32px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 5px 0 0 #1A1612,
+    0 6px 6px 0 rgba(0, 0, 0, 0.3);
+}
+
+.keycap-lg:active {
+  top: 4px;
+}
+
+/* ----------------------------------------------------------
+   4. NOTIFICATION ANIMATIONS
+   ---------------------------------------------------------- */
+@keyframes notif-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.notif-pop {
+  animation: notif-pop 350ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Legendary glow — pulsing purple */
+@keyframes glow-legendary {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(123, 63, 160, 0.4); }
+  50%      { box-shadow: 0 0 20px 6px rgba(123, 63, 160, 0.7); }
+}
+
+.notif-glow-legendary {
+  animation: glow-legendary 2s ease-in-out infinite;
+}
+
+/* Celestial glow — pulsing cyan */
+@keyframes glow-celestial {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(34, 211, 238, 0.4); }
+  50%      { box-shadow: 0 0 22px 8px rgba(34, 211, 238, 0.7); }
+}
+
+.notif-glow-celestial {
+  animation: glow-celestial 2s ease-in-out infinite;
+}
+
+/* Epic glow — pulsing red */
+@keyframes glow-epic {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(200, 50, 50, 0.35); }
+  50%      { box-shadow: 0 0 18px 6px rgba(200, 50, 50, 0.65); }
+}
+
+.notif-glow-epic {
+  animation: glow-epic 2s ease-in-out infinite;
+}
+
+/* Shimmer sweep for rare drops */
+@keyframes shimmer-sweep {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.notif-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.notif-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 45%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.35) 55%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 2.5s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ----------------------------------------------------------
+   5. RARITY COLOR CLASSES
+   ---------------------------------------------------------- */
+.rarity-common      { color: var(--rarity-common); }
+.rarity-uncommon    { color: var(--rarity-uncommon); }
+.rarity-rare        { color: var(--rarity-rare); }
+.rarity-epic        { color: var(--rarity-epic); }
+.rarity-legendary   { color: var(--rarity-legendary); }
+.rarity-celestial   { color: var(--rarity-celestial); text-shadow: 0 0 8px rgba(34, 211, 238, 0.5); }
+
+/* Border variants */
+.rarity-border-common    { border-color: var(--rarity-common); }
+.rarity-border-uncommon  { border-color: var(--rarity-uncommon); }
+.rarity-border-rare      { border-color: var(--rarity-rare); }
+.rarity-border-epic      { border-color: var(--rarity-epic); }
+.rarity-border-legendary { border-color: var(--rarity-legendary); }
+.rarity-border-celestial { border-color: var(--rarity-celestial); box-shadow: 0 0 6px rgba(34, 211, 238, 0.3); }
+
+/* Background variants */
+.rarity-bg-common    { background-color: rgba(139, 134, 128, 0.1); }
+.rarity-bg-uncommon  { background-color: rgba(58, 125, 68, 0.1); }
+.rarity-bg-rare      { background-color: rgba(43, 95, 179, 0.1); }
+.rarity-bg-epic      { background-color: rgba(123, 63, 160, 0.1); }
+.rarity-bg-legendary { background-color: rgba(212, 169, 67, 0.12); }
+.rarity-bg-celestial { background-color: rgba(34, 211, 238, 0.08); }
+
+/* ----------------------------------------------------------
+   6. PROGRESS BAR
+   ---------------------------------------------------------- */
+@keyframes progress-stripes {
+  0%   { background-position: 0 0; }
+  100% { background-position: 40px 20px; }
+}
+
+.progress-bar {
+  height: 20px;
+  border-radius: 10px;
+  background-color: var(--bg-secondary);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent-copper), var(--accent-gold));
+  background-size: 100% 100%;
+  transition: width 300ms ease-out;
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    rgba(255, 255, 255, 0.12) 8px,
+    rgba(255, 255, 255, 0.12) 16px
+  );
+  background-size: 40px 40px;
+  animation: progress-stripes 1.5s linear infinite;
+  border-radius: inherit;
+}
+
+/* ----------------------------------------------------------
+   7. CUSTOM SCROLLBAR — Warm parchment theme
+   ---------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  border: 2px solid var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-secondary);
+}
+
+/* ----------------------------------------------------------
+   8. ITEM STACK GLOW — Scales with --stack-size
+   ---------------------------------------------------------- */
+.item-stack {
+  --stack-size: 1;
+  position: relative;
+  transition: box-shadow 300ms ease;
+  box-shadow: 0 0 calc(2px + var(--stack-size) * 0.5px) calc(var(--stack-size) * 0.3px)
+    rgba(212, 169, 67, calc(0.08 + var(--stack-size) * 0.008));
+}
+
+.item-stack:hover {
+  box-shadow: 0 0 calc(4px + var(--stack-size) * 1px) calc(var(--stack-size) * 0.5px)
+    rgba(212, 169, 67, calc(0.15 + var(--stack-size) * 0.012));
+}
+
+/* ----------------------------------------------------------
+   9. TOOLTIP STYLES
+   ---------------------------------------------------------- */
+.tooltip {
+  position: relative;
+}
+
+.tooltip-content {
+  position: absolute;
+  z-index: 50;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  padding: 10px 14px;
+  background: var(--bg-dark);
+  color: #F5F0E8;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 169, 67, 0.25);
+  box-shadow:
+    0 4px 16px rgba(42, 31, 20, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--bg-dark);
+}
+
+.tooltip:hover .tooltip-content {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Tooltip subtext */
+.tooltip-stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent-gold);
+}
+
+.tooltip-desc {
+  color: #B8AA98;
+  font-size: 0.75rem;
+}
+
+/* ----------------------------------------------------------
+   10. CARD UTILITY
+   ---------------------------------------------------------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+/* ----------------------------------------------------------
+   11. SELECTION STYLING
+   ---------------------------------------------------------- */
+::selection {
+  background: rgba(212, 169, 67, 0.25);
+  color: var(--text-primary);
+}

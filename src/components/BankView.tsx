@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ITEMS } from '../constants';
 import { PlayerState, EquipmentSlot, Item } from '../types';
+import { playButtonPress, playSuccess } from '../sounds';
 
 interface BankViewProps {
   state: PlayerState;
@@ -29,45 +30,26 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'name' | 'value' | 'quantity' | 'rarity'>('name');
-
   const selectedItem = selectedItemId ? ITEMS[selectedItemId] : null;
   const selectedInventoryItem = inventory.find(i => i.itemId === selectedItemId);
   const isEquipped = selectedItemId ? Object.values(state.equipment).includes(selectedItemId) : false;
 
-  const handleUsePotion = (item: Item) => {
-    if (!item || item.type !== 'potion') return;
-    usePotion(item.id);
-  };
-
+  const handleUsePotion = (item: Item) => { if (!item || item.type !== 'potion') return; playSuccess(); usePotion(item.id); };
   const handleSalvage = (item: Item, quantity: number) => {
     if (!item || item.type !== 'equipment') return;
     if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) {
       const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id);
       if (slot) unequipItem(slot);
     }
-    salvageItem(item.id, quantity);
-    if (quantity >= (selectedInventoryItem?.quantity || 0)) {
-      setSelectedItemId(null);
-    }
+    playButtonPress(); salvageItem(item.id, quantity);
+    if (quantity >= (selectedInventoryItem?.quantity || 0)) setSelectedItemId(null);
   };
 
   const RARITY_ORDER: Record<string, number> = { celestial: 6, legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
-
   const filteredInventory = useMemo(() => {
     let items = inventory.filter(item => {
-      const data = ITEMS[item.itemId];
-      if (!data) return false;
-
-      // Search filter
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        if (!data.name.toLowerCase().includes(q) &&
-            !data.description.toLowerCase().includes(q) &&
-            !(data.skillHint || '').toLowerCase().includes(q)) {
-          return false;
-        }
-      }
-
+      const data = ITEMS[item.itemId]; if (!data) return false;
+      if (searchQuery) { const q = searchQuery.toLowerCase(); if (!data.name.toLowerCase().includes(q) && !data.description.toLowerCase().includes(q) && !(data.skillHint || '').toLowerCase().includes(q)) return false; }
       if (filter === 'all') return true;
       if (filter === 'equipment') return data.type === 'equipment' || data.type === 'tool';
       if (filter === 'resources') return data.type === 'resource' || data.type === 'currency';
@@ -76,148 +58,81 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
       if (filter === 'quest') return data.type === 'resource' && (data.rarity === 'legendary' || data.rarity === 'epic');
       return true;
     });
-
-    // Sort
-    items.sort((a, b) => {
-      const da = ITEMS[a.itemId];
-      const db = ITEMS[b.itemId];
-      if (!da || !db) return 0;
-      if (sortBy === 'name') return da.name.localeCompare(db.name);
-      if (sortBy === 'value') return (db.value * b.quantity) - (da.value * a.quantity);
-      if (sortBy === 'quantity') return b.quantity - a.quantity;
-      if (sortBy === 'rarity') return (RARITY_ORDER[db.rarity || 'common'] || 0) - (RARITY_ORDER[da.rarity || 'common'] || 0);
-      return 0;
-    });
-
-    return items;
+    items.sort((a, b) => { const da = ITEMS[a.itemId]; const db = ITEMS[b.itemId]; if (!da || !db) return 0;
+      if (sortBy === 'name') return da.name.localeCompare(db.name); if (sortBy === 'value') return (db.value * b.quantity) - (da.value * a.quantity);
+      if (sortBy === 'quantity') return b.quantity - a.quantity; if (sortBy === 'rarity') return (RARITY_ORDER[db.rarity || 'common'] || 0) - (RARITY_ORDER[da.rarity || 'common'] || 0); return 0;
+    }); return items;
   }, [inventory, filter, searchQuery, sortBy]);
 
   const totalValue = inventory.reduce((acc, item) => acc + (ITEMS[item.itemId]?.value || 0) * item.quantity, 0);
-
   const handleSell = (item: Item, quantity: number) => {
     if (!item || item.value === undefined) return;
-    if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) {
-      const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id);
-      if (slot) unequipItem(slot);
-    }
-    if (item.type === 'edict' && (state.activeEdicts || []).includes(item.id) && quantity >= (selectedInventoryItem?.quantity || 0)) {
-      toggleEdict(item.id);
-    }
-    removeFromInventory(item.id, quantity);
-    addGp(item.value * quantity);
-    if (quantity >= (selectedInventoryItem?.quantity || 0)) {
-      setSelectedItemId(null);
-    }
+    if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) { const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id); if (slot) unequipItem(slot); }
+    if (item.type === 'edict' && (state.activeEdicts || []).includes(item.id) && quantity >= (selectedInventoryItem?.quantity || 0)) toggleEdict(item.id);
+    playButtonPress(); removeFromInventory(item.id, quantity); addGp(item.value * quantity);
+    if (quantity >= (selectedInventoryItem?.quantity || 0)) setSelectedItemId(null);
   };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#141414] pb-6 gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#3D3328] pb-6 gap-6">
         <div>
-          <h2 className="text-5xl font-serif italic font-bold tracking-tight capitalize">Imperial Treasury</h2>
+          <h2 className="text-5xl font-bold tracking-tight capitalize" style={{ fontFamily: "'Cinzel', serif" }}>Imperial Treasury</h2>
           <div className="flex items-center gap-4 mt-2">
-            <div className="text-xs font-mono opacity-50 uppercase tracking-widest">
-              {inventory.length} / 100 SLOTS — {state.gp.toLocaleString()} GP
-            </div>
-            <div className="h-1 w-1 bg-[#141414]/20 rounded-full" />
-            <div className="text-xs font-mono text-amber-700 font-bold uppercase tracking-widest">
-              HOARD VALUE: {totalValue.toLocaleString()} GP
-            </div>
+            <div className="text-xs text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{inventory.length} / 100 SLOTS — {state.gp.toLocaleString()} GP</div>
+            <div className="h-1 w-1 bg-[#3D3328] rounded-full" />
+            <div className="text-xs text-[#D4A943] font-bold uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>HOARD VALUE: {totalValue.toLocaleString()} GP</div>
           </div>
         </div>
-        
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             {BANK_TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setFilter(tab.id)}
-                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all border flex items-center gap-1.5 ${
-                  filter === tab.id ? 'bg-[#141414] text-[#E4E3E0] border-[#141414]' : 'border-[#141414]/20 hover:border-[#141414]'
-                }`}
-              >
-                <span>{tab.icon}</span>
-                {tab.name}
-              </button>
+              <button key={tab.id} onClick={() => { playButtonPress(); setFilter(tab.id); }}
+                className={`px-3 py-1.5 text-[10px] uppercase tracking-widest transition-all rounded-lg flex items-center gap-1.5 ${
+                  filter === tab.id ? 'bg-[#D4A943] text-[#1A1510] font-bold shadow-[0_3px_0_0_#8A6E1E]'
+                  : 'bg-[#1E1A16] border border-[#3D3328] shadow-[0_2px_0_0_#0D0B09] hover:text-[#E8E0D4]'
+                }`} style={{ fontFamily: "'JetBrains Mono', monospace" }}><span>{tab.icon}</span>{tab.name}</button>
             ))}
           </div>
           <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 px-3 py-1.5 text-xs font-mono border border-[#141414]/20 bg-transparent placeholder:opacity-30 focus:border-[#141414] focus:outline-none transition-colors"
-            />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border border-[#141414]/20 bg-transparent focus:outline-none cursor-pointer"
-            >
-              <option value="name">Sort: Name</option>
-              <option value="value">Sort: Value</option>
-              <option value="quantity">Sort: Qty</option>
-              <option value="rarity">Sort: Rarity</option>
+            <input type="text" placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs border border-[#3D3328] bg-[#1E1A16] text-[#E8E0D4] rounded-lg placeholder:text-[#7A6E60]/50 focus:border-[#D4A943] focus:outline-none focus:ring-2 focus:ring-[#D4A943]/20 transition-colors"
+              style={{ fontFamily: "'JetBrains Mono', monospace" }} />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-1.5 text-[10px] uppercase tracking-widest border border-[#3D3328] bg-[#1E1A16] text-[#E8E0D4] rounded-lg focus:outline-none cursor-pointer"
+              style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <option value="name">Sort: Name</option><option value="value">Sort: Value</option><option value="quantity">Sort: Qty</option><option value="rarity">Sort: Rarity</option>
             </select>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Equipment Section */}
         <div className="space-y-6">
-          <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2">Equipment</h3>
+          <h3 className="text-xl font-bold border-b border-[#3D3328] pb-2" style={{ fontFamily: "'Cinzel', serif" }}>Equipment</h3>
           <div className="grid grid-cols-3 gap-4 max-w-[300px] mx-auto">
-            <div className="col-start-2">
-              <Slot slot="head" itemId={state.equipment?.head} onUnequip={() => unequipItem('head')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-2">
-              <Slot slot="neck" itemId={state.equipment?.neck} onUnequip={() => unequipItem('neck')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-1">
-              <Slot slot="hands" itemId={state.equipment?.hands} onUnequip={() => unequipItem('hands')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-2">
-              <Slot slot="body" itemId={state.equipment?.body} onUnequip={() => unequipItem('body')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-3">
-              <Slot slot="ring" itemId={state.equipment?.ring} onUnequip={() => unequipItem('ring')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-1">
-              <Slot slot="weapon" itemId={state.equipment?.weapon} onUnequip={() => unequipItem('weapon')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-2">
-              <Slot slot="legs" itemId={state.equipment?.legs} onUnequip={() => unequipItem('legs')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-3">
-              <Slot slot="shield" itemId={state.equipment?.shield} onUnequip={() => unequipItem('shield')} onSelect={setSelectedItemId} />
-            </div>
-            <div className="col-start-2">
-              <Slot slot="feet" itemId={state.equipment?.feet} onUnequip={() => unequipItem('feet')} onSelect={setSelectedItemId} />
-            </div>
+            <div className="col-start-2"><Slot slot="head" itemId={state.equipment?.head} onUnequip={() => unequipItem('head')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-2"><Slot slot="neck" itemId={state.equipment?.neck} onUnequip={() => unequipItem('neck')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-1"><Slot slot="hands" itemId={state.equipment?.hands} onUnequip={() => unequipItem('hands')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-2"><Slot slot="body" itemId={state.equipment?.body} onUnequip={() => unequipItem('body')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-3"><Slot slot="ring" itemId={state.equipment?.ring} onUnequip={() => unequipItem('ring')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-1"><Slot slot="weapon" itemId={state.equipment?.weapon} onUnequip={() => unequipItem('weapon')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-2"><Slot slot="legs" itemId={state.equipment?.legs} onUnequip={() => unequipItem('legs')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-3"><Slot slot="shield" itemId={state.equipment?.shield} onUnequip={() => unequipItem('shield')} onSelect={setSelectedItemId} /></div>
+            <div className="col-start-2"><Slot slot="feet" itemId={state.equipment?.feet} onUnequip={() => unequipItem('feet')} onSelect={setSelectedItemId} /></div>
           </div>
-
-          {/* Active Edicts Section */}
           <div className="mt-12 space-y-6">
-            <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2">Active Edicts</h3>
+            <h3 className="text-xl font-bold border-b border-[#3D3328] pb-2" style={{ fontFamily: "'Cinzel', serif" }}>Active Edicts</h3>
             <div className="grid grid-cols-3 gap-4">
               {Array.from({ length: 3 }).map((_, i) => {
-                const edictId = (state.activeEdicts || [])[i];
-                const edict = edictId ? ITEMS[edictId] : null;
+                const edictId = (state.activeEdicts || [])[i]; const edict = edictId ? ITEMS[edictId] : null;
                 return (
-                  <div 
-                    key={`edict-${i}`}
-                    onClick={() => edictId && setSelectedItemId(edictId)}
-                    className={`aspect-square border border-[#141414] flex flex-col items-center justify-center p-2 relative group transition-all cursor-pointer ${edict ? 'bg-[#141414] text-[#E4E3E0]' : 'opacity-20 border-dashed'}`}
-                  >
-                    {edict ? (
-                      <>
-                        <div className="text-2xl">{edict.icon}</div>
-                        <div className="text-[8px] font-mono uppercase tracking-widest text-center mt-1">{edict.name}</div>
-                      </>
-                    ) : (
-                      <div className="text-[8px] font-mono uppercase tracking-widest text-center opacity-50">Empty Slot</div>
-                    )}
+                  <div key={`edict-${i}`} onClick={() => edictId && setSelectedItemId(edictId)}
+                    className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 relative group transition-all cursor-pointer ${
+                      edict ? 'bg-[#0D0B09] text-[#E8E0D4] border border-[#D4A943]/30' : 'border border-dashed border-[#3D3328] opacity-40'
+                    }`}>
+                    {edict ? (<><div className="text-2xl">{edict.icon}</div><div className="text-[8px] uppercase tracking-widest text-center mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{edict.name}</div></>)
+                    : (<div className="text-[8px] uppercase tracking-widest text-center text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Empty Slot</div>)}
                   </div>
                 );
               })}
@@ -225,219 +140,116 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
           </div>
         </div>
 
-        {/* Inventory Grid */}
         <div className="lg:col-span-2 space-y-6">
-          <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2">Vault</h3>
+          <h3 className="text-xl font-bold border-b border-[#3D3328] pb-2" style={{ fontFamily: "'Cinzel', serif" }}>Vault</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
             {filteredInventory.map(item => {
-              const itemData = ITEMS[item.itemId];
-              if (!itemData) return null;
-
+              const itemData = ITEMS[item.itemId]; if (!itemData) return null;
               return (
-                <motion.div 
-                  key={item.itemId}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={() => setSelectedItemId(item.itemId)}
-                  className={`group border border-[#141414] p-4 flex flex-col items-center justify-center gap-2 hover:bg-[#141414] hover:text-[#E4E3E0] transition-all cursor-pointer relative ${selectedItemId === item.itemId ? 'bg-[#141414] text-[#E4E3E0] ring-2 ring-inset ring-[#E4E3E0]/30' : ''} ${
-                    itemData.rarity === 'celestial' ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.3)]' :
-                    itemData.rarity === 'legendary' ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 
-                    itemData.rarity === 'epic' ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
-                    itemData.rarity === 'rare' ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 
-                    itemData.rarity === 'uncommon' ? 'border-green-500' : ''
-                  }`}
-                >
-                  <div className="text-4xl drop-shadow-sm">{itemData.icon}</div>
-                  <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest text-center truncate w-full">
-                    {itemData.name}
-                  </div>
-                  <div className={`absolute top-2 right-2 text-xs font-mono font-bold ${
-                    itemData.rarity === 'celestial' ? 'text-cyan-500' :
-                    itemData.rarity === 'legendary' ? 'text-purple-500' : 
-                    itemData.rarity === 'epic' ? 'text-red-500' :
-                    itemData.rarity === 'rare' ? 'text-blue-500' : 
-                    itemData.rarity === 'uncommon' ? 'text-green-500' : ''
+                <motion.div key={item.itemId} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                  onClick={() => { playButtonPress(); setSelectedItemId(item.itemId); }}
+                  className={`group card p-4 flex flex-col items-center justify-center gap-2 hover:bg-[#2A2520] hover:border-[#D4A943]/30 transition-all cursor-pointer relative ${
+                    selectedItemId === item.itemId ? 'bg-[#2A2520] border-[#D4A943]/30 ring-2 ring-inset ring-[#D4A943]/30' : ''
+                  } ${
+                    itemData.rarity === 'celestial' ? 'rarity-border-celestial border-2' : itemData.rarity === 'legendary' ? 'rarity-border-legendary border-2' :
+                    itemData.rarity === 'epic' ? 'rarity-border-epic border-2' : itemData.rarity === 'rare' ? 'rarity-border-rare border-2' :
+                    itemData.rarity === 'uncommon' ? 'rarity-border-uncommon border-2' : ''
                   }`}>
-                    {item.quantity.toLocaleString()}
-                  </div>
+                  <div className="text-4xl drop-shadow-sm">{itemData.icon}</div>
+                  <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest text-center truncate w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{itemData.name}</div>
+                  <div className={`absolute top-2 right-2 text-xs font-bold ${
+                    itemData.rarity === 'celestial' ? 'rarity-celestial' : itemData.rarity === 'legendary' ? 'rarity-legendary' :
+                    itemData.rarity === 'epic' ? 'rarity-epic' : itemData.rarity === 'rare' ? 'rarity-rare' :
+                    itemData.rarity === 'uncommon' ? 'rarity-uncommon' : 'text-[#7A6E60]'
+                  }`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>{item.quantity.toLocaleString()}</div>
                 </motion.div>
               );
             })}
-
             {Array.from({ length: Math.max(0, 18 - filteredInventory.length) }).map((_, i) => (
-              <div key={`empty-${i}`} className="border border-[#141414]/10 p-4 flex items-center justify-center opacity-20 grayscale">
-                <div className="w-8 h-8 rounded-full border border-dashed border-[#141414]" />
-              </div>
+              <div key={`empty-${i}`} className="border border-dashed border-[#3D3328] rounded-lg p-4 flex items-center justify-center opacity-20">
+                <div className="w-8 h-8 rounded-full border border-dashed border-[#3D3328]" /></div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Item Details Modal */}
+      {/* Item Modal */}
       <AnimatePresence>
-        {selectedItem && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedItemId(null)}
-              className="fixed inset-0 bg-[#141414]/40 backdrop-blur-sm z-40"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#E4E3E0]/95 backdrop-blur-md border border-[#141414] shadow-2xl z-50 overflow-hidden"
-            >
-              <div className="relative">
-                <button 
-                  onClick={() => setSelectedItemId(null)}
-                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors z-10"
-                >
-                  ✕
-                </button>
-
-                <div className="flex flex-col items-center text-center space-y-4 p-8 bg-[#141414] text-[#E4E3E0]">
-                  <div className="text-7xl drop-shadow-lg">{selectedItem.icon}</div>
-                  <div>
-                    <h4 className="text-3xl font-serif italic font-bold tracking-tight">{selectedItem.name}</h4>
-                    <p className="text-[10px] font-mono opacity-50 uppercase tracking-widest mt-1">{selectedItem.type}</p>
-                  </div>
-                </div>
-
-                <div className="p-8 space-y-6">
-                  <div>
-                    <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest mb-2">Description</div>
-                    <p className="text-base font-serif italic leading-relaxed">{selectedItem.description}</p>
-                  </div>
-
-                  {selectedItem.stats && (
-                    <div>
-                      <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest mb-2">Attributes</div>
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                        {Object.entries(selectedItem.stats).map(([stat, val]) => (
-                          <div key={stat} className="text-xs font-mono uppercase tracking-widest flex justify-between border-b border-[#141414]/10 pb-1">
-                            <span className="opacity-70">{stat}</span>
-                            <span className="font-bold text-emerald-800">+{val}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedItem.setBonus && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm">
-                      <div className="text-[10px] font-mono text-amber-800 uppercase tracking-widest mb-1">Set Bonus: {selectedItem.setBonus.setId}</div>
-                      <div className="text-xs text-amber-900 italic">
-                        Requires {selectedItem.setBonus.piecesRequired} pieces.
-                        <div className="mt-1 font-bold">
-                          {Object.entries(selectedItem.setBonus.bonus).map(([stat, val]) => (
-                            <span key={stat} className="mr-2">+{val} {stat}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(selectedItem.skillHint || selectedItem.farmHint || selectedItem.usageHint) && (
-                    <div className="p-5 bg-[#141414]/5 border border-[#141414]/10 space-y-4 rounded-sm">
-                      {selectedItem.skillHint && (
-                        <div>
-                          <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">Skill Focus</div>
-                          <div className="text-xs font-bold uppercase tracking-tight">{selectedItem.skillHint}</div>
-                        </div>
-                      )}
-                      {selectedItem.farmHint && (
-                        <div>
-                          <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">Provenance</div>
-                          <div className="text-xs font-bold italic">"{selectedItem.farmHint}"</div>
-                        </div>
-                      )}
-                      {selectedItem.usageHint && (
-                        <div>
-                          <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">Imperial Insight</div>
-                          <div className="text-xs italic opacity-80 leading-snug">{selectedItem.usageHint}</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="pt-4 space-y-3">
-                    {selectedItem.type === 'equipment' && selectedInventoryItem && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          onClick={() => {
-                            equipItem(selectedItem.id);
-                            setSelectedItemId(null);
-                          }}
-                          className="py-4 bg-[#141414] text-[#E4E3E0] hover:bg-[#141414]/90 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
-                        >
-                          Equip Item
-                        </button>
-                        <button 
-                          onClick={() => handleSalvage(selectedItem, 1)}
-                          className="py-4 border border-cyan-600 text-cyan-600 hover:bg-cyan-600 hover:text-white text-xs font-mono uppercase tracking-widest transition-all"
-                        >
-                          Salvage (Essence)
-                        </button>
-                      </div>
-                    )}
-
-                    {selectedItem.type === 'potion' && selectedInventoryItem && (
-                      <button 
-                        onClick={() => handleUsePotion(selectedItem)}
-                        className="w-full py-4 bg-emerald-800 text-white hover:bg-emerald-700 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
-                      >
-                        Consume Potion
-                      </button>
-                    )}
-
-                    {selectedItem.type === 'edict' && (
-                      <button 
-                        onClick={() => toggleEdict(selectedItem.id)}
-                        className="w-full py-4 bg-[#141414] text-[#E4E3E0] hover:bg-[#141414]/90 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
-                      >
-                        {(state.activeEdicts || []).includes(selectedItem.id) ? 'Deactivate Edict' : 'Activate Edict'}
-                      </button>
-                    )}
-
-                    {selectedInventoryItem && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          onClick={() => handleSell(selectedItem, 1)}
-                          className="py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest transition-all"
-                        >
-                          Sell 1 ({(selectedItem?.value || 0)} GP)
-                        </button>
-                        <button 
-                          onClick={() => handleSell(selectedItem, selectedInventoryItem.quantity)}
-                          className="py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest transition-all"
-                        >
-                          Sell All ({(selectedItem?.value || 0) * selectedInventoryItem.quantity} GP)
-                        </button>
-                      </div>
-                    )}
-
-                    {isEquipped && (
-                      <button 
-                        onClick={() => {
-                          const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === selectedItem.id);
-                          if (slot) unequipItem(slot);
-                          setSelectedItemId(null);
-                        }}
-                        className="w-full py-4 border border-red-900 text-red-900 hover:bg-red-900 hover:text-white text-xs font-mono uppercase tracking-widest transition-all"
-                      >
-                        Unequip Item
-                      </button>
-                    )}
-                  </div>
+        {selectedItem && (<>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedItemId(null)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" />
+          <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#1E1A16] border border-[#3D3328] rounded-xl shadow-2xl z-50 overflow-hidden">
+            <div className="relative">
+              <button onClick={() => setSelectedItemId(null)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg border border-[#3D3328] hover:bg-[#2A2520] transition-colors z-10 text-[#7A6E60] hover:text-[#E8E0D4]">✕</button>
+              <div className="flex flex-col items-center text-center space-y-4 p-8 bg-[#0D0B09] text-[#E8E0D4]">
+                <div className="text-7xl drop-shadow-lg">{selectedItem.icon}</div>
+                <div>
+                  <h4 className="text-3xl font-bold tracking-tight" style={{ fontFamily: "'Cinzel', serif" }}>{selectedItem.name}</h4>
+                  <p className="text-[10px] text-[#7A6E60] uppercase tracking-widest mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{selectedItem.type}</p>
                 </div>
               </div>
-            </motion.div>
-          </>
-        )}
+              <div className="p-8 space-y-6">
+                <div>
+                  <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Description</div>
+                  <p className="text-base leading-relaxed text-[#B8A890]">{selectedItem.description}</p>
+                </div>
+                {selectedItem.stats && (
+                  <div>
+                    <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Attributes</div>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                      {Object.entries(selectedItem.stats).map(([stat, val]) => (
+                        <div key={stat} className="text-xs uppercase tracking-widest flex justify-between border-b border-[#3D3328] pb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span className="text-[#7A6E60]">{stat}</span><span className="font-bold text-emerald-400">+{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedItem.setBonus && (
+                  <div className="p-4 bg-[#D4A943]/10 border border-[#D4A943]/30 rounded-lg">
+                    <div className="text-[10px] text-[#D4A943] uppercase tracking-widest mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Set Bonus: {selectedItem.setBonus.setId}</div>
+                    <div className="text-xs text-[#B8A890] italic">Requires {selectedItem.setBonus.piecesRequired} pieces.
+                      <div className="mt-1 font-bold">{Object.entries(selectedItem.setBonus.bonus).map(([stat, val]) => (<span key={stat} className="mr-2">+{val} {stat}</span>))}</div>
+                    </div>
+                  </div>
+                )}
+                {(selectedItem.skillHint || selectedItem.farmHint || selectedItem.usageHint) && (
+                  <div className="p-5 bg-[#0D0B09] border border-[#3D3328] space-y-4 rounded-lg">
+                    {selectedItem.skillHint && <div><div className="text-[9px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Skill Focus</div><div className="text-xs font-bold uppercase tracking-tight">{selectedItem.skillHint}</div></div>}
+                    {selectedItem.farmHint && <div><div className="text-[9px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Provenance</div><div className="text-xs font-bold italic">"{selectedItem.farmHint}"</div></div>}
+                    {selectedItem.usageHint && <div><div className="text-[9px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Imperial Insight</div><div className="text-xs italic text-[#B8A890] leading-snug">{selectedItem.usageHint}</div></div>}
+                  </div>
+                )}
+                <div className="pt-4 space-y-3">
+                  {selectedItem.type === 'equipment' && selectedInventoryItem && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => { playSuccess(); equipItem(selectedItem.id); setSelectedItemId(null); }} className="keycap keycap-gold py-4 text-xs uppercase tracking-widest w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Equip</button>
+                      <button onClick={() => handleSalvage(selectedItem, 1)} className="keycap py-4 text-xs uppercase tracking-widest w-full text-cyan-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Salvage</button>
+                    </div>
+                  )}
+                  {selectedItem.type === 'potion' && selectedInventoryItem && (
+                    <button onClick={() => handleUsePotion(selectedItem)} className="keycap keycap-gold w-full py-4 text-xs uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Consume Potion</button>
+                  )}
+                  {selectedItem.type === 'edict' && (
+                    <button onClick={() => { playButtonPress(); toggleEdict(selectedItem.id); }} className="keycap keycap-gold w-full py-4 text-xs uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {(state.activeEdicts || []).includes(selectedItem.id) ? 'Deactivate Edict' : 'Activate Edict'}
+                    </button>
+                  )}
+                  {selectedInventoryItem && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => handleSell(selectedItem, 1)} className="keycap keycap-sm py-3 text-[10px] uppercase tracking-widest w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sell 1 ({selectedItem?.value || 0} GP)</button>
+                      <button onClick={() => handleSell(selectedItem, selectedInventoryItem.quantity)} className="keycap keycap-sm py-3 text-[10px] uppercase tracking-widest w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sell All ({(selectedItem?.value || 0) * selectedInventoryItem.quantity} GP)</button>
+                    </div>
+                  )}
+                  {isEquipped && (
+                    <button onClick={() => { playButtonPress(); const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === selectedItem.id); if (slot) unequipItem(slot); setSelectedItemId(null); }}
+                      className="keycap w-full py-4 text-xs uppercase tracking-widest text-red-400" style={{ fontFamily: "'JetBrains Mono', monospace", boxShadow: '0 4px 0 0 #7f1d1d' }}>Unequip Item</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>)}
       </AnimatePresence>
     </div>
   );
@@ -446,15 +258,13 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
 function Slot({ slot, itemId, onUnequip, onSelect }: { slot: string; itemId?: string; onUnequip: () => void; onSelect: (id: string) => void }) {
   const item = itemId ? ITEMS[itemId] : null;
   return (
-    <div 
-      onClick={() => itemId && onSelect(itemId)}
-      className={`aspect-square border border-[#141414] flex flex-col items-center justify-center p-2 relative group transition-all cursor-pointer ${item ? 'bg-[#141414] text-[#E4E3E0]' : 'opacity-20 border-dashed'}`}
-    >
+    <div onClick={() => { if (itemId) { playButtonPress(); onSelect(itemId); } }}
+      className={`aspect-square rounded-lg flex flex-col items-center justify-center p-2 relative group transition-all cursor-pointer ${
+        item ? 'bg-[#0D0B09] text-[#E8E0D4] border border-[#D4A943]/30' : 'border border-dashed border-[#3D3328] opacity-30'
+      }`}>
       <div className="text-2xl">{item ? item.icon : '◌'}</div>
-      <div className="text-[8px] font-mono uppercase tracking-widest text-center mt-1">{item ? item.name : slot}</div>
-      {item && (
-        <div className="absolute inset-0 bg-red-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-      )}
+      <div className="text-[8px] uppercase tracking-widest text-center mt-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{item ? item.name : slot}</div>
+      {item && <div className="absolute inset-0 rounded-lg bg-red-900/10 opacity-0 group-hover:opacity-100 transition-opacity" />}
     </div>
   );
 }

@@ -254,16 +254,16 @@ export const ITEMS: Record<string, Item> = {
   'void_walker_emblem': { id: 'void_walker_emblem', name: 'Void Walker Emblem', description: 'Proof you survived the void. Opens the path to the Void Citadel.', icon: '🏅', value: 500000, type: 'resource', rarity: 'legendary', farmHint: 'Extremely rare drop from Void creatures' },
 
   // Boss signature drops
-  'tanzanite_fang': { id: 'tanzanite_fang', name: 'Tanzanite Fang', description: 'A fang from Zulrah. Used to create the Blowpipe.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Toxic Blowpipe at 90 Crafting.' },
-  'magic_fang': { id: 'magic_fang', name: 'Magic Fang', description: 'A venomous fang imbued with magic.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Trident of the Swamp at 90 Crafting.' },
-  'serpentine_scale': { id: 'serpentine_scale', name: 'Serpentine Scale', description: 'Scales from Zulrah. Used for serpentine equipment.', icon: '🐍', value: 5000, type: 'resource', rarity: 'uncommon', usageHint: 'Craft into Serpentine Helm at 75 Crafting (20 scales).' },
-  'vorkath_head': { id: 'vorkath_head', name: "Vorkath's Head", description: 'The severed head of Vorkath. A legendary trophy.', icon: '🐲', value: 200000, type: 'resource', rarity: 'epic', usageHint: 'Mount or use to upgrade Assembler.' },
+  'tanzanite_fang': { id: 'tanzanite_fang', name: 'Venomspine Fang', description: 'A fang from the Voidmother. Used to create the Venom Spitter.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Venom Spitter at 90 Crafting.' },
+  'magic_fang': { id: 'magic_fang', name: 'Corrupted Fang', description: 'A venomous fang imbued with abyssal magic.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Trident of the Deep at 90 Crafting.' },
+  'serpentine_scale': { id: 'serpentine_scale', name: 'Abyssal Scale', description: 'Scales from the Voidmother. Used for abyssal equipment.', icon: '🐍', value: 5000, type: 'resource', rarity: 'uncommon', usageHint: 'Craft into Abyssal Visage at 75 Crafting (20 scales).' },
+  'vorkath_head': { id: 'vorkath_head', name: "Stormwarden's Crest", description: 'The severed crest of the Stormwarden. A legendary trophy.', icon: '🐲', value: 200000, type: 'resource', rarity: 'epic', usageHint: 'Mount as a trophy or use to upgrade gear.' },
   'dragonbone_necklace_piece': { id: 'dragonbone_necklace_piece', name: 'Dragonbone Necklace Piece', description: 'Part of a dragonbone necklace. Collect 2 to assemble.', icon: '📿', value: 50000, type: 'resource', rarity: 'rare' },
   'skeletal_visage': { id: 'skeletal_visage', name: 'Skeletal Visage', description: 'A spectral shield face. Smith into Skeletal Wyvern Shield.', icon: '🛡️', value: 400000, type: 'resource', rarity: 'legendary', usageHint: 'Smith into Ancient Wyvern Shield at 92 Smithing.' },
-  'hydra_leather': { id: 'hydra_leather', name: 'Hydra Leather', description: 'Leather from a Hydra. Incredibly tough and resistant.', icon: '📜', value: 30000, type: 'resource', rarity: 'rare', usageHint: 'Craft into Ferocious Gloves at 85 Crafting.' },
-  'hydra_fang': { id: 'hydra_fang', name: 'Hydra Fang', description: 'A venomous fang from a Hydra.', icon: '🦷', value: 50000, type: 'resource', rarity: 'epic' },
-  'hydra_claw': { id: 'hydra_claw', name: 'Hydra Claw', description: 'A massive claw from the Alchemical Hydra.', icon: '🦴', value: 500000, type: 'resource', rarity: 'legendary', usageHint: 'Attach to Dragon Hunter Lance at 95 Smithing.' },
-  'hydra_heart': { id: 'hydra_heart', name: 'Hydra Heart', description: 'The still-beating heart of the Alchemical Hydra.', icon: '❤️', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'Imbue into Ring of the Gods at 99 Crafting.' },
+  'hydra_leather': { id: 'hydra_leather', name: 'Wyrm Hide', description: 'Hide from the Ashen Wyrm. Incredibly tough and fire-resistant.', icon: '📜', value: 30000, type: 'resource', rarity: 'rare', usageHint: 'Craft into Wyrm Grips at 85 Crafting.' },
+  'hydra_fang': { id: 'hydra_fang', name: 'Wyrm Fang', description: 'A venomous fang from the Ashen Wyrm.', icon: '🦷', value: 50000, type: 'resource', rarity: 'epic' },
+  'hydra_claw': { id: 'hydra_claw', name: 'Ashen Talon', description: 'A massive claw from the Elder Wyrm.', icon: '🦴', value: 500000, type: 'resource', rarity: 'legendary', usageHint: 'Attach to Imperial Lance at 95 Smithing.' },
+  'hydra_heart': { id: 'hydra_heart', name: 'Molten Core', description: 'The still-burning core of the Elder Wyrm.', icon: '❤️', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'Imbue into Sovereign Ring at 99 Crafting.' },
   'crystal_seed': { id: 'crystal_seed', name: 'Crystal Seed', description: 'An elven crystal seed. Can be shaped into weapons.', icon: '💎', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Craft into Crystal Bow or Crystal Shield at 85 Crafting.' },
   'elven_signet': { id: 'elven_signet', name: 'Elven Signet', description: 'A sacred elven ring. Grants favor with the elves.', icon: '💍', value: 300000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'ring', stats: { luck: 25, magic: 15, speed: 0.1 }, farmHint: 'Extremely rare drop from Elves' },
   'granite_maul_handle': { id: 'granite_maul_handle', name: 'Granite Maul Handle', description: 'A heavy granite handle. Combine with granite for Granite Maul.', icon: '🪨', value: 20000, type: 'resource', rarity: 'rare' },
@@ -281,10 +281,10 @@ export const ITEMS: Record<string, Item> = {
   'twisted_bow': { id: 'twisted_bow', name: 'Twisted Bow', description: 'THE legendary bow. Stronger against high-magic foes.', icon: '🏹', value: 5000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { ranged: 120, speed: 0.2, luck: 10 }, farmHint: 'Assembled from 2 Twisted Bow Limbs' },
 
   // Crafted boss gear
-  'toxic_blowpipe': { id: 'toxic_blowpipe', name: 'Toxic Blowpipe', description: 'A venomous ranged weapon crafted from Zulrah fang.', icon: '🐍', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 80, speed: 0.4 } },
-  'trident_of_swamp': { id: 'trident_of_swamp', name: 'Trident of the Swamp', description: 'A powered staff dripping with venom.', icon: '🔱', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 85, speed: 0.2 } },
-  'serpentine_helm': { id: 'serpentine_helm', name: 'Serpentine Helm', description: 'A helm crafted from Zulrah scales. Provides venom immunity.', icon: '⛑️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { defense: 40, strength: 5 } },
-  'ferocious_gloves': { id: 'ferocious_gloves', name: 'Ferocious Gloves', description: 'Gloves of immense power crafted from hydra leather.', icon: '🧤', value: 150000, type: 'equipment', rarity: 'epic', equipmentSlot: 'hands', stats: { attack: 20, strength: 20, defense: 10 } },
+  'toxic_blowpipe': { id: 'toxic_blowpipe', name: 'Venom Spitter', description: 'A venomous ranged weapon crafted from Voidmother fang.', icon: '🐍', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 80, speed: 0.4 } },
+  'trident_of_swamp': { id: 'trident_of_swamp', name: 'Trident of the Deep', description: 'A powered staff dripping with abyssal venom.', icon: '🔱', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 85, speed: 0.2 } },
+  'serpentine_helm': { id: 'serpentine_helm', name: 'Abyssal Visage', description: 'A helm crafted from abyssal scales. Provides venom immunity.', icon: '⛑️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { defense: 40, strength: 5 } },
+  'ferocious_gloves': { id: 'ferocious_gloves', name: 'Wyrm Grips', description: 'Gloves of immense power crafted from wyrm hide.', icon: '🧤', value: 150000, type: 'equipment', rarity: 'epic', equipmentSlot: 'hands', stats: { attack: 20, strength: 20, defense: 10 } },
   'crystal_bow': { id: 'crystal_bow', name: 'Crystal Bow', description: 'An elven bow that fires arrows of light.', icon: '🏹', value: 250000, type: 'equipment', rarity: 'epic', equipmentSlot: 'weapon', stats: { ranged: 75, magic: 10 } },
 
   // Primal crafting chain (wolf -> leather -> armor)
@@ -390,7 +390,7 @@ export const ITEMS: Record<string, Item> = {
   'giant_toe': { id: 'giant_toe', name: 'Giant Toe', description: 'Used in giant-toe-soup.', icon: '🦶', value: 150, type: 'resource' },
   'demon_horn': { id: 'demon_horn', name: 'Demon Horn', description: 'Hot to the touch.', icon: '😈', value: 500, type: 'resource' },
   'gargoyle_granite': { id: 'gargoyle_granite', name: 'Gargoyle Granite', description: 'Extremely hard stone.', icon: '🪨', value: 800, type: 'resource' },
-  'abyssal_whip': { id: 'abyssal_whip', name: 'Abyssal Whip', description: 'A living weapon.', icon: '🐍', value: 50000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 80, strength: 40 } },
+  'abyssal_whip': { id: 'abyssal_whip', name: 'Netherlash', description: 'A living weapon from the abyss.', icon: '🐍', value: 50000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 80, strength: 40 } },
   'big_bones': { id: 'big_bones', name: 'Big Bones', description: 'Large, heavy bones.', icon: '🦴', value: 30, type: 'resource' },
   'dragon_bones': { id: 'dragon_bones', name: 'Dragon Bones', description: 'Bones that hum with power.', icon: '🦴', value: 500, type: 'resource' },
   // goblin_mail defined in new items section below
@@ -559,11 +559,11 @@ export const ITEMS: Record<string, Item> = {
   'black_mask': { id: 'black_mask', name: 'Black Mask', description: 'A mask that increases Slayer damage.', icon: '🎭', value: 150000, type: 'equipment', equipmentSlot: 'head', rarity: 'rare', stats: { attack: 10, defense: 5 } },
   'dragon_chainbody': { id: 'dragon_chainbody', name: 'Dragon Chainbody', description: 'A very rare and powerful chainmail.', icon: '⛓️', value: 500000, type: 'equipment', equipmentSlot: 'body', rarity: 'epic', stats: { defense: 80, attack: 5 } },
   'rune_boots': { id: 'rune_boots', name: 'Rune Boots', description: 'Strong boots made of runite.', icon: '👢', value: 25000, type: 'equipment', equipmentSlot: 'feet', rarity: 'uncommon', stats: { defense: 15, attack: 2 } },
-  'occult_necklace': { id: 'occult_necklace', name: 'Occult Necklace', description: 'A necklace that boosts magic power significantly.', icon: '📿', value: 300000, type: 'equipment', equipmentSlot: 'neck', rarity: 'epic', stats: { magic: 25, attack: 5 } },
-  'primordial_boots': { id: 'primordial_boots', name: 'Primordial Boots', description: 'The best boots for a warrior.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { attack: 30, defense: 20 } },
-  'pegasian_boots': { id: 'pegasian_boots', name: 'Pegasian Boots', description: 'The best boots for a ranger.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { ranged: 30, defense: 10 } },
+  'occult_necklace': { id: 'occult_necklace', name: 'Nethertide Pendant', description: 'A necklace that channels forbidden arcane power.', icon: '📿', value: 300000, type: 'equipment', equipmentSlot: 'neck', rarity: 'epic', stats: { magic: 25, attack: 5 } },
+  'primordial_boots': { id: 'primordial_boots', name: 'Ironwrought Greaves', description: 'The finest warrior boots, forged in hellfire.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { attack: 30, defense: 20 } },
+  'pegasian_boots': { id: 'pegasian_boots', name: 'Windstrider Boots', description: 'Lightweight boots for the deadliest marksmen.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { ranged: 30, defense: 10 } },
   'eternal_boots': { id: 'eternal_boots', name: 'Eternal Boots', description: 'The best boots for a mage.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { magic: 30, defense: 10 } },
-  'infernal_cape': { id: 'infernal_cape', name: 'Infernal Cape', description: 'A cape that burns with the heat of the core.', icon: '🧥', value: 5000000, type: 'equipment', equipmentSlot: 'back', rarity: 'celestial', stats: { attack: 50, strength: 30, defense: 20 } },
+  'infernal_cape': { id: 'infernal_cape', name: 'Emberclaw Mantle', description: 'A cape that radiates the heat of Emberclaw itself.', icon: '🧥', value: 5000000, type: 'equipment', equipmentSlot: 'back', rarity: 'celestial', stats: { attack: 50, strength: 30, defense: 20 } },
 
   // High-Level Sets
   'justiciar_helm': { id: 'justiciar_helm', name: 'Justiciar Helm', description: 'Part of the Justiciar set.', icon: '🛡️', value: 1000000, type: 'equipment', equipmentSlot: 'head', rarity: 'legendary', setBonus: { setId: 'justiciar_set', piecesRequired: 3, bonus: { defense: 100, health: 50 } }, stats: { defense: 50 } },
@@ -586,6 +586,34 @@ export const ITEMS: Record<string, Item> = {
 
   // Global Rare Drops
   'celestial_shard': { id: 'celestial_shard', name: 'Celestial Shard', description: 'A fragment of a fallen star.', icon: '✨', value: 250000, type: 'resource', rarity: 'celestial' },
+
+  // ===== ARCHFIEND BOSS SIGNATURE DROPS =====
+  // The Hollow King
+  'hollow_crown': { id: 'hollow_crown', name: 'Hollow Crown', description: 'The cursed crown of the Hollow King. Whispers of power echo within.', icon: '👑', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'head', stats: { attack: 30, magic: 30, defense: 50, luck: 15 } },
+  'hollow_scepter': { id: 'hollow_scepter', name: 'Hollow Scepter', description: 'The Hollow King\'s scepter. Commands the dead.', icon: '🏛️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, attack: 20, luck: 10 } },
+  'kings_vestige': { id: 'kings_vestige', name: "King's Vestige", description: 'A fragment of the Hollow King\'s essence. Radiates dread.', icon: '💀', value: 500000, type: 'resource', rarity: 'legendary' },
+
+  // Emberclaw
+  'emberclaws_fang': { id: 'emberclaws_fang', name: "Emberclaw's Fang", description: 'A molten fang that never cools. Burns anything it touches.', icon: '🔥', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 85, strength: 55, speed: 0.2 } },
+  'charred_crown': { id: 'charred_crown', name: 'Charred Crown', description: 'A crown of blackened bone from Emberclaw\'s mane.', icon: '🔥', value: 1200000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'head', stats: { strength: 30, defense: 35, attack: 15 } },
+  'ember_core': { id: 'ember_core', name: 'Ember Core', description: 'The burning heart ripped from Emberclaw. Still aflame.', icon: '🌋', value: 800000, type: 'resource', rarity: 'legendary' },
+
+  // Voidmother
+  'voidmother_eye': { id: 'voidmother_eye', name: "Voidmother's Eye", description: 'An unblinking eye that sees through all illusions.', icon: '👁️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'neck', stats: { magic: 40, luck: 30, ranged: 15 } },
+  'abyssal_membrane': { id: 'abyssal_membrane', name: 'Abyssal Membrane', description: 'A living shield grown from the Voidmother\'s flesh.', icon: '🛡️', value: 1200000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'shield', stats: { defense: 70, magic: 20, health: 15 } },
+
+  // Stormwarden
+  'stormwarden_crest_helm': { id: 'stormwarden_crest_helm', name: "Stormwarden's Crown", description: 'A crown of lightning. Crackles with static.', icon: '⚡', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'head', stats: { ranged: 40, magic: 25, speed: 0.3, defense: 20 } },
+  'tempest_lance': { id: 'tempest_lance', name: 'Tempest Lance', description: 'A weapon forged from Stormwarden\'s spine. Calls lightning on each strike.', icon: '⚡', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { attack: 70, ranged: 50, strength: 40, speed: 0.2 } },
+
+  // Ashen Wyrm / Elder Wyrm
+  'ashen_plate': { id: 'ashen_plate', name: 'Ashen Plate', description: 'Body armor forged from the Elder Wyrm\'s scales. Nearly indestructible.', icon: '🔥', value: 2500000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'body', stats: { defense: 80, strength: 20, attack: 15, health: 25 } },
+  'wyrm_spine_bow': { id: 'wyrm_spine_bow', name: 'Wyrmspine Bow', description: 'A recurve bow carved from the Elder Wyrm\'s vertebrae.', icon: '🏹', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 100, speed: 0.3, luck: 5 } },
+
+  // ===== BOUNTY MARK SHOP ITEMS =====
+  'huntsmans_vizor': { id: 'huntsmans_vizor', name: "Huntsman's Vizor", description: 'A helm forged from bounty marks. Increases slayer XP and damage.', icon: '🎭', value: 500, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { attack: 25, strength: 15, defense: 20, luck: 10 } },
+  'bounty_ring': { id: 'bounty_ring', name: 'Contract Ring', description: 'A ring that marks you as a seasoned hunter. Boosts bounty mark gains.', icon: '💍', value: 300, type: 'equipment', rarity: 'rare', equipmentSlot: 'ring', stats: { luck: 20, attack: 10 } },
+  'hunters_insignia': { id: 'hunters_insignia', name: "Hunter's Insignia", description: 'A cape marking your dedication to the Bounty Board. Feared by monsters.', icon: '🏅', value: 750, type: 'equipment', rarity: 'legendary', equipmentSlot: 'cape', stats: { attack: 20, strength: 20, defense: 15, speed: 0.1 } },
 };
 
 export const RARE_DROP_TABLE: { itemId: string; chance: number }[] = [
@@ -737,6 +765,29 @@ export const MONSTER_DROP_TABLES: Record<string, { itemId: string; quantity: num
     { itemId: 'twisted_bow_limb', quantity: 1, chance: 0.005 },
     { itemId: 'elder_maul_shaft', quantity: 1, chance: 0.008 },
     { itemId: 'kodai_insignia', quantity: 1, chance: 0.008 },
+  ],
+  // Archfiend unique drops
+  'archfiend_hollow_king': [
+    { itemId: 'hollow_crown', quantity: 1, chance: 0.002 },
+    { itemId: 'hollow_scepter', quantity: 1, chance: 0.005 },
+    { itemId: 'kings_vestige', quantity: 1, chance: 0.02 },
+  ],
+  'archfiend_emberclaw': [
+    { itemId: 'emberclaws_fang', quantity: 1, chance: 0.005 },
+    { itemId: 'charred_crown', quantity: 1, chance: 0.008 },
+    { itemId: 'ember_core', quantity: 1, chance: 0.02 },
+  ],
+  'archfiend_voidmother': [
+    { itemId: 'voidmother_eye', quantity: 1, chance: 0.005 },
+    { itemId: 'abyssal_membrane', quantity: 1, chance: 0.008 },
+  ],
+  'archfiend_stormwarden': [
+    { itemId: 'stormwarden_crest_helm', quantity: 1, chance: 0.005 },
+    { itemId: 'tempest_lance', quantity: 1, chance: 0.002 },
+  ],
+  'archfiend_elder_wyrm': [
+    { itemId: 'ashen_plate', quantity: 1, chance: 0.002 },
+    { itemId: 'wyrm_spine_bow', quantity: 1, chance: 0.003 },
   ],
 };
 
@@ -1639,12 +1690,12 @@ export const ACTIONS: SkillAction[] = [
   { id: 'enchant_sapphire', name: 'Enchant Sapphire Ring', skill: 'magic', levelRequired: 7, xpReward: 17.5, duration: 2000, description: 'Infuse a sapphire ring with magic.', secondarySkillRequired: { skill: 'crafting', level: 20 }, inputs: [{ itemId: 'cosmic_rune', quantity: 1 }, { itemId: 'sapphire_ring', quantity: 1 }], outputs: [{ itemId: 'sapphire_ring', quantity: 1, chance: 1 }] },
   
   // Bosses
-  { id: 'boss_dragon_lord', name: 'The Dragon Lord', skill: 'slayer', levelRequired: 95, xpReward: 25000, duration: 120000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'cooked_shark', quantity: 5 }], outputs: [
+  { id: 'boss_dragon_lord', name: 'Hunt The Hollow King', skill: 'slayer', levelRequired: 95, xpReward: 25000, duration: 120000, isMonster: true, isBoss: true, weakness: 'magic', inputs: [{ itemId: 'cooked_shark', quantity: 5 }], outputs: [
     { itemId: 'dragon_lord_trophy', quantity: 1, chance: 1 },
     { itemId: 'dragonite_ore', quantity: 50, chance: 1 },
     { itemId: 'dragon_slayer_blade', quantity: 1, chance: 0.05 }
   ] },
-  { id: 'boss_void_reaper', name: 'Void Reaper', skill: 'slayer', levelRequired: 99, xpReward: 100000, duration: 300000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+  { id: 'boss_void_reaper', name: 'Hunt Void Sovereign', skill: 'slayer', levelRequired: 99, xpReward: 100000, duration: 300000, isMonster: true, isBoss: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
     { itemId: 'void_essence', quantity: 10, chance: 1 },
     { itemId: 'ancient_relic', quantity: 1, chance: 0.2 },
     { itemId: 'void_blade', quantity: 1, chance: 0.01 }
@@ -1659,48 +1710,48 @@ export const ACTIONS: SkillAction[] = [
   { id: 'craft_anguish_necklace', name: 'Craft Necklace of Anguish', skill: 'crafting', levelRequired: 99, xpReward: 15000, duration: 20000, inputs: [{ itemId: 'zenyte_shard', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'anguish_necklace', quantity: 1, chance: 1 }] },
   { id: 'craft_tormented_bracelet', name: 'Craft Tormented Bracelet', skill: 'crafting', levelRequired: 99, xpReward: 15000, duration: 20000, inputs: [{ itemId: 'zenyte_shard', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'tormented_bracelet', quantity: 1, chance: 1 }] },
 
-  { id: 'hunt_vorkath', name: 'Slay Vorkath', skill: 'slayer', levelRequired: 95, xpReward: 50000, duration: 120000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'dragon_slayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+  { id: 'hunt_vorkath', name: 'Hunt Stormwarden', skill: 'slayer', levelRequired: 95, xpReward: 50000, duration: 120000, isMonster: true, isBoss: true, weakness: 'ranged', inputs: [{ itemId: 'dragon_slayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
     { itemId: 'dragon_bones', quantity: 5, chance: 1 },
     { itemId: 'dragon_scale', quantity: 10, chance: 1 },
     { itemId: 'dragonite_ore', quantity: 5, chance: 0.5 },
     { itemId: 'dragon_med_helm', quantity: 1, chance: 0.05 }
   ] },
-  { id: 'hunt_zulrah', name: 'Slay Zulrah', skill: 'slayer', levelRequired: 92, xpReward: 40000, duration: 100000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'antipoison', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+  { id: 'hunt_zulrah', name: 'Hunt Voidmother', skill: 'slayer', levelRequired: 92, xpReward: 40000, duration: 100000, isMonster: true, isBoss: true, weakness: 'magic', inputs: [{ itemId: 'antipoison', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
     { itemId: 'spider_venom', quantity: 5, chance: 1 },
     { itemId: 'uncut_zenyte', quantity: 1, chance: 0.01 },
     { itemId: 'spirit_seed', quantity: 1, chance: 0.1 }
   ] },
-  { id: 'hunt_cerberus', name: 'Slay Cerberus', skill: 'slayer', levelRequired: 91, xpReward: 35000, duration: 90000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'prayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+  { id: 'hunt_cerberus', name: 'Hunt Emberclaw', skill: 'slayer', levelRequired: 91, xpReward: 35000, duration: 90000, isMonster: true, isBoss: true, weakness: 'attack', inputs: [{ itemId: 'prayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
     { itemId: 'bones', quantity: 10, chance: 1 },
     { itemId: 'primordial_boots', quantity: 1, chance: 0.01 },
     { itemId: 'pegasian_boots', quantity: 1, chance: 0.01 },
     { itemId: 'eternal_boots', quantity: 1, chance: 0.01 }
   ] },
 
-  { id: 'raid_theatre_of_blood', name: 'Raid Theatre of Blood', skill: 'raids', levelRequired: 95, xpReward: 150000, duration: 600000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 15 }], outputs: [
+  { id: 'raid_theatre_of_blood', name: 'Raid the Crimson Sanctum', skill: 'raids', levelRequired: 95, xpReward: 150000, duration: 600000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 15 }], outputs: [
     { itemId: 'ancient_relic', quantity: 1, chance: 0.5 },
     { itemId: 'raid_relic', quantity: 5, chance: 1 },
     { itemId: 'infernal_cape', quantity: 1, chance: 0.01 }
   ] },
   { id: 'smith_dragonite_body', name: 'Smith Dragonite Body', skill: 'smithing', levelRequired: 99, xpReward: 30000, duration: 35000, inputs: [{ itemId: 'dragonite_bar', quantity: 15 }], outputs: [{ itemId: 'dragonite_body', quantity: 1, chance: 1 }] },
 
-  { id: 'raid_chambers_of_xeric', name: 'Raid Chambers of Xeric', skill: 'raids', levelRequired: 90, xpReward: 100000, duration: 450000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+  { id: 'raid_chambers_of_xeric', name: 'Raid the Imperial Vault', skill: 'raids', levelRequired: 90, xpReward: 100000, duration: 450000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
     { itemId: 'ancient_relic', quantity: 1, chance: 0.3 },
     { itemId: 'raid_relic', quantity: 3, chance: 1 },
     { itemId: 'dragon_sq_shield', quantity: 1, chance: 0.05 }
   ] },
-  { id: 'raid_theatre_of_blood_hard', name: 'Raid Theatre of Blood (Hard)', skill: 'raids', levelRequired: 99, xpReward: 300000, duration: 900000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 25 }], outputs: [
+  { id: 'raid_theatre_of_blood_hard', name: 'Raid the Crimson Sanctum (Hard)', skill: 'raids', levelRequired: 99, xpReward: 300000, duration: 900000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 25 }], outputs: [
     { itemId: 'ancient_relic', quantity: 2, chance: 1 },
     { itemId: 'raid_relic', quantity: 10, chance: 1 },
     { itemId: 'infernal_cape', quantity: 1, chance: 0.05 }
   ] },
 
-  { id: 'hunt_hydra', name: 'Slay Hydra', skill: 'slayer', levelRequired: 95, xpReward: 45000, duration: 110000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+  { id: 'hunt_hydra', name: 'Hunt Ashen Wyrm', skill: 'slayer', levelRequired: 95, xpReward: 45000, duration: 110000, isMonster: true, isBoss: true, weakness: 'ranged', inputs: [{ itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
     { itemId: 'bones', quantity: 10, chance: 1 },
     { itemId: 'dragon_bones', quantity: 2, chance: 0.5 },
     { itemId: 'mithril_dragon_scale', quantity: 5, chance: 1 }
   ] },
-  { id: 'hunt_alchemical_hydra', name: 'Slay Alchemical Hydra', skill: 'slayer', levelRequired: 99, xpReward: 120000, duration: 300000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+  { id: 'hunt_alchemical_hydra', name: 'Hunt Elder Wyrm', skill: 'slayer', levelRequired: 99, xpReward: 120000, duration: 300000, isMonster: true, isBoss: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
     { itemId: 'dragon_bones', quantity: 10, chance: 1 },
     { itemId: 'rune_dragon_scale', quantity: 5, chance: 1 },
     { itemId: 'primordial_boots', quantity: 1, chance: 0.05 }
@@ -1816,8 +1867,8 @@ export const ACTIONS: SkillAction[] = [
   { id: 'brew_holy_potion', name: 'Brew Holy Potion', skill: 'herblore', levelRequired: 70, xpReward: 1000, duration: 10000, inputs: [{ itemId: 'bone_meal', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'prayer_potion', quantity: 2, chance: 1 }] },
 
   // New Crafting Combinations
-  { id: 'assemble_godsword_blade', name: 'Assemble Godsword Blade', skill: 'crafting', levelRequired: 80, xpReward: 5000, duration: 30000, inputs: [{ itemId: 'godsword_shard_1', quantity: 1 }, { itemId: 'godsword_shard_2', quantity: 1 }, { itemId: 'godsword_shard_3', quantity: 1 }], outputs: [{ itemId: 'godsword_blade', quantity: 1, chance: 1 }] },
-  { id: 'forge_armadyl_godsword', name: 'Forge Armadyl Godsword', skill: 'smithing', levelRequired: 90, xpReward: 20000, duration: 60000, inputs: [{ itemId: 'godsword_blade', quantity: 1 }, { itemId: 'armadyl_hilt', quantity: 1 }], outputs: [{ itemId: 'armadyl_godsword', quantity: 1, chance: 1 }] },
+  { id: 'assemble_godsword_blade', name: 'Assemble Imperial Blade', skill: 'crafting', levelRequired: 80, xpReward: 5000, duration: 30000, inputs: [{ itemId: 'godsword_shard_1', quantity: 1 }, { itemId: 'godsword_shard_2', quantity: 1 }, { itemId: 'godsword_shard_3', quantity: 1 }], outputs: [{ itemId: 'godsword_blade', quantity: 1, chance: 1 }] },
+  { id: 'forge_armadyl_godsword', name: 'Forge Sovereign Greatsword', skill: 'smithing', levelRequired: 90, xpReward: 20000, duration: 60000, inputs: [{ itemId: 'godsword_blade', quantity: 1 }, { itemId: 'armadyl_hilt', quantity: 1 }], outputs: [{ itemId: 'armadyl_godsword', quantity: 1, chance: 1 }] },
 
   // ===== NEW: Signature Drop Crafting Chains =====
   // Dragon crafting chain
@@ -1839,12 +1890,12 @@ export const ACTIONS: SkillAction[] = [
   { id: 'smith_hellfire_sword', name: 'Smith Hellfire Sword', skill: 'smithing', levelRequired: 85, xpReward: 10000, duration: 25000, inputs: [{ itemId: 'hellfire_metal', quantity: 5 }, { itemId: 'dragonite_bar', quantity: 2 }], outputs: [{ itemId: 'hellfire_sword', quantity: 1, chance: 1 }] },
 
   // Zulrah crafting chain
-  { id: 'craft_toxic_blowpipe', name: 'Craft Toxic Blowpipe', skill: 'crafting', levelRequired: 90, xpReward: 12000, duration: 20000, inputs: [{ itemId: 'tanzanite_fang', quantity: 1 }], outputs: [{ itemId: 'toxic_blowpipe', quantity: 1, chance: 1 }] },
+  { id: 'craft_toxic_blowpipe', name: 'Craft Venom Spitter', skill: 'crafting', levelRequired: 90, xpReward: 12000, duration: 20000, inputs: [{ itemId: 'tanzanite_fang', quantity: 1 }], outputs: [{ itemId: 'toxic_blowpipe', quantity: 1, chance: 1 }] },
   { id: 'craft_trident_of_swamp', name: 'Craft Trident of the Swamp', skill: 'crafting', levelRequired: 90, xpReward: 12000, duration: 20000, inputs: [{ itemId: 'magic_fang', quantity: 1 }, { itemId: 'death_rune', quantity: 50 }], outputs: [{ itemId: 'trident_of_swamp', quantity: 1, chance: 1 }] },
-  { id: 'craft_serpentine_helm', name: 'Craft Serpentine Helm', skill: 'crafting', levelRequired: 75, xpReward: 5000, duration: 15000, inputs: [{ itemId: 'serpentine_scale', quantity: 20 }], outputs: [{ itemId: 'serpentine_helm', quantity: 1, chance: 1 }] },
+  { id: 'craft_serpentine_helm', name: 'Craft Abyssal Visage', skill: 'crafting', levelRequired: 75, xpReward: 5000, duration: 15000, inputs: [{ itemId: 'serpentine_scale', quantity: 20 }], outputs: [{ itemId: 'serpentine_helm', quantity: 1, chance: 1 }] },
 
   // Hydra crafting chain
-  { id: 'craft_ferocious_gloves', name: 'Craft Ferocious Gloves', skill: 'crafting', levelRequired: 85, xpReward: 8000, duration: 15000, inputs: [{ itemId: 'hydra_leather', quantity: 3 }], outputs: [{ itemId: 'ferocious_gloves', quantity: 1, chance: 1 }] },
+  { id: 'craft_ferocious_gloves', name: 'Craft Wyrm Grips', skill: 'crafting', levelRequired: 85, xpReward: 8000, duration: 15000, inputs: [{ itemId: 'hydra_leather', quantity: 3 }], outputs: [{ itemId: 'ferocious_gloves', quantity: 1, chance: 1 }] },
 
   // Elven crafting
   { id: 'shape_crystal_bow', name: 'Shape Crystal Bow', skill: 'crafting', levelRequired: 85, xpReward: 10000, duration: 25000, inputs: [{ itemId: 'crystal_seed', quantity: 1 }], outputs: [{ itemId: 'crystal_bow', quantity: 1, chance: 1 }] },
@@ -1864,6 +1915,36 @@ export const ACTIONS: SkillAction[] = [
   // Advanced cooking
   { id: 'cook_wilderness_stew', name: 'Cook Wilderness Stew', skill: 'cooking', levelRequired: 75, xpReward: 2000, duration: 15000, description: 'A legendary stew made from wild ingredients.', inputs: [{ itemId: 'cooked_bear_meat', quantity: 2 }, { itemId: 'herbs', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'wilderness_stew', quantity: 1, chance: 1 }] },
   { id: 'cook_dragon_feast', name: 'Cook Dragon Feast', skill: 'cooking', levelRequired: 95, xpReward: 10000, duration: 30000, description: 'A feast fit for a dragon slayer.', inputs: [{ itemId: 'cooked_dragon_meat', quantity: 3 }, { itemId: 'cooked_mantaray', quantity: 2 }, { itemId: 'spirit_herb', quantity: 3 }], outputs: [{ itemId: 'dragon_feast', quantity: 1, chance: 1 }] },
+
+  // ===== ARCHFIEND ENCOUNTERS =====
+  { id: 'archfiend_hollow_king', name: 'Archfiend: The Hollow King', skill: 'slayer', levelRequired: 90, xpReward: 60000, duration: 180000, isMonster: true, isBoss: true, weakness: 'magic', description: 'A skeletal monarch who refuses to relinquish his throne. Commands legions of the dead.', inputs: [{ itemId: 'prayer_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 8 }], outputs: [
+    { itemId: 'kings_vestige', quantity: 1, chance: 0.3 },
+    { itemId: 'gp', quantity: 25000, chance: 1 },
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.1 },
+    { itemId: 'dragon_bones', quantity: 10, chance: 1 },
+  ] },
+  { id: 'archfiend_emberclaw', name: 'Archfiend: Emberclaw', skill: 'slayer', levelRequired: 93, xpReward: 75000, duration: 200000, isMonster: true, isBoss: true, weakness: 'ranged', description: 'A primordial beast of living flame. Its claws melt steel on contact.', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'ember_core', quantity: 1, chance: 0.25 },
+    { itemId: 'gp', quantity: 35000, chance: 1 },
+    { itemId: 'dragon_bones', quantity: 15, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 10, chance: 0.5 },
+  ] },
+  { id: 'archfiend_voidmother', name: 'Archfiend: Voidmother', skill: 'slayer', levelRequired: 95, xpReward: 85000, duration: 240000, isMonster: true, isBoss: true, weakness: 'attack', description: 'An ancient abyssal entity that births horrors from the void. Her gaze paralyzes the weak.', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'antipoison', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'gp', quantity: 40000, chance: 1 },
+    { itemId: 'void_essence', quantity: 15, chance: 1 },
+    { itemId: 'dragon_bones', quantity: 10, chance: 1 },
+  ] },
+  { id: 'archfiend_stormwarden', name: 'Archfiend: Stormwarden', skill: 'slayer', levelRequired: 97, xpReward: 95000, duration: 250000, isMonster: true, isBoss: true, weakness: 'magic', description: 'A draconic guardian of the sky peaks. Commands lightning and wind.', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 12 }], outputs: [
+    { itemId: 'gp', quantity: 45000, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 20, chance: 1 },
+    { itemId: 'dragon_bones', quantity: 20, chance: 1 },
+  ] },
+  { id: 'archfiend_elder_wyrm', name: 'Archfiend: The Ashen Wyrm', skill: 'slayer', levelRequired: 99, xpReward: 150000, duration: 360000, isMonster: true, isBoss: true, weakness: 'ranged', description: 'The eldest and most devastating of all wyrms. Its breath reduces stone to ash.', inputs: [{ itemId: 'overload_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 15 }, { itemId: 'prayer_potion', quantity: 2 }], outputs: [
+    { itemId: 'gp', quantity: 75000, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 30, chance: 1 },
+    { itemId: 'dragon_bones', quantity: 30, chance: 1 },
+    { itemId: 'void_essence', quantity: 10, chance: 0.5 },
+  ] },
 ];
 
 export const KINGDOM_WORKERS: KingdomWorker[] = [
