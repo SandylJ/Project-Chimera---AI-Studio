@@ -1,4 +1,4 @@
-export type SkillId = 
+export type SkillId =
   | 'mining' | 'woodcutting' | 'fishing' | 'hunting' | 'farming'
   | 'smithing' | 'cooking' | 'herblore' | 'crafting' | 'runecrafting'
   | 'thieving' | 'agility' | 'attack' | 'strength' | 'defense' | 'magic' | 'ranged'
@@ -25,8 +25,8 @@ export interface Item {
     magic?: number;
     ranged?: number;
     speed?: number;
-    luck?: number; // Increases rare drop chances
-    health?: number; // Increases survivability
+    luck?: number;
+    health?: number;
   };
   setBonus?: {
     setId: string;
@@ -37,9 +37,11 @@ export interface Item {
   sockets?: number;
   isGem?: boolean;
   gemBonus?: Partial<Item['stats']>;
-  skillHint?: string; // Which skill is this used for?
-  farmHint?: string;  // Where can you get this?
-  usageHint?: string; // What can you do with it?
+  skillHint?: string;
+  farmHint?: string;
+  usageHint?: string;
+  // New: quest requirement flag
+  questRequired?: string; // questId required to use/equip this item
 }
 
 export interface SkillAction {
@@ -55,8 +57,12 @@ export interface SkillAction {
   isMonster?: boolean;
   isBoss?: boolean;
   weakness?: SkillId;
-  toolRequired?: string; // itemId
+  toolRequired?: string;
   secondarySkillRequired?: { skill: SkillId; level: number };
+  // New: quest gating
+  questRequired?: string; // questId required to access this action
+  // New: unique monster drop table (overrides global RDT)
+  uniqueDropTable?: { itemId: string; quantity: number; chance: number; }[];
 }
 
 export interface PlayerSkill {
@@ -103,10 +109,73 @@ export interface KingdomWorker {
   costMultiplier: number;
   bonusType: 'xp' | 'gp' | 'celestial_essence';
   bonusValue: number;
-  primarySkillId: SkillId; // Used for hiring limits
+  primarySkillId: SkillId;
   requirements: { skillId: SkillId; level: number }[];
 }
 
+// ===== NEW SYSTEMS =====
+
+// Quest System
+export type QuestStatus = 'locked' | 'available' | 'in_progress' | 'completed';
+
+export interface QuestRequirement {
+  type: 'skill_level' | 'item' | 'quest' | 'kill_count' | 'craft_count' | 'gp';
+  skillId?: SkillId;
+  itemId?: string;
+  questId?: string;
+  actionId?: string; // for kill/craft count tracking
+  quantity: number;
+}
+
+export interface QuestReward {
+  type: 'xp' | 'item' | 'gp' | 'celestial_essence' | 'unlock_action' | 'unlock_area';
+  skillId?: SkillId;
+  itemId?: string;
+  actionId?: string;
+  quantity: number;
+}
+
+export interface QuestObjective {
+  id: string;
+  description: string;
+  type: 'gather' | 'craft' | 'kill' | 'reach_level' | 'equip' | 'earn_gp';
+  target: number;
+  current?: number; // tracked in player state
+  itemId?: string;
+  skillId?: SkillId;
+  actionId?: string;
+}
+
+export interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  difficulty: 'novice' | 'intermediate' | 'experienced' | 'master' | 'grandmaster';
+  category: 'combat' | 'gathering' | 'artisan' | 'exploration' | 'special';
+  prerequisites: QuestRequirement[];
+  objectives: QuestObjective[];
+  rewards: QuestReward[];
+  flavorText?: string; // lore/story snippet
+}
+
+// Collection Log
+export interface CollectionLogCategory {
+  id: string;
+  name: string;
+  icon: string;
+  items: string[]; // itemIds
+}
+
+// Bank Tab
+export interface BankTab {
+  id: string;
+  name: string;
+  icon: string;
+  filter: (item: Item) => boolean;
+}
+
+// Player State - expanded
 export interface PlayerState {
   gp: number;
   celestialEssence: number;
@@ -114,9 +183,9 @@ export interface PlayerState {
   inventory: InventoryItem[];
   equipment: Equipment;
   activeEdicts: string[];
-  ascensions: Record<SkillId, number>; // Number of times each skill has ascended
+  ascensions: Record<SkillId, number>;
   buffs: Buff[];
-  kingdom: Record<string, number>; // workerId -> count
+  kingdom: Record<string, number>;
   activeAction?: {
     actionId: string;
     startTime: number;
@@ -124,4 +193,19 @@ export interface PlayerState {
     actualDuration: number;
   };
   showNotifications?: boolean;
+  // New systems
+  quests: Record<string, QuestProgress>;
+  collectionLog: string[]; // itemIds ever obtained
+  totalActions: Record<string, number>; // actionId -> count (for quest tracking)
+  totalItemsGained: Record<string, number>; // itemId -> lifetime total
+  bankTab: string; // active bank tab id
+  killCount: Record<string, number>; // monsterId (actionId) -> kills
+}
+
+export interface QuestProgress {
+  questId: string;
+  status: QuestStatus;
+  objectiveProgress: Record<string, number>; // objectiveId -> current count
+  completedAt?: number;
+  startedAt?: number;
 }

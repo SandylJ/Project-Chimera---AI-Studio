@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item } from './types';
-import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE } from './constants';
+import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item, QuestProgress, Quest, QuestObjective } from './types';
+import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE, MONSTER_DROP_TABLES, QUESTS } from './constants';
 
 const INITIAL_STATE: PlayerState = {
   gp: 0,
@@ -40,13 +40,20 @@ const INITIAL_STATE: PlayerState = {
   buffs: [],
   kingdom: {},
   showNotifications: true,
+  // New systems
+  quests: {},
+  collectionLog: [],
+  totalActions: {},
+  totalItemsGained: {},
+  bankTab: 'all',
+  killCount: {},
 };
 
 export interface GameEvent {
   id: string;
   timestamp: number;
   message: string;
-  type: 'loot' | 'level' | 'xp' | 'info';
+  type: 'loot' | 'level' | 'xp' | 'info' | 'quest';
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'celestial';
   icon?: string;
 }
@@ -79,14 +86,13 @@ const calculateSetBonuses = (equipment: Equipment) => {
     if (itemId) {
       const item = ITEMS[itemId];
       if (item?.setBonus && setCounts[item.setBonus.setId] >= item.setBonus.piecesRequired) {
-        // Apply bonus once per set
         const setId = item.setBonus.setId;
         if (setCounts[setId] !== -1) {
           Object.entries(item.setBonus.bonus).forEach(([stat, value]) => {
             const s = stat as keyof Item['stats'];
             bonuses[s] = (bonuses[s] || 0) + (value as number);
           });
-          setCounts[setId] = -1; // Mark as applied
+          setCounts[setId] = -1;
         }
       }
     }
@@ -120,26 +126,26 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
 
   // Global Edict Efficiency
   if (activeEdicts.includes('edict_efficiency')) {
-    actualDuration *= 0.9; // 10% faster
+    actualDuration *= 0.9;
   }
 
   // Relic: Heart of the Empire
   if (action.skill === 'empire' && activeEdicts.includes('relic_empire_heart')) {
-    actualDuration *= 0.5; // 50% faster
+    actualDuration *= 0.5;
   }
 
   // Ascension Bonus
   const ascensionCount = ascensions[action.skill] || 0;
-  actualDuration *= (1 - ascensionCount * 0.05); // 5% faster per ascension
+  actualDuration *= (1 - ascensionCount * 0.05);
 
   if (action.isMonster) {
     // Relic: Void Blade (10% chance to execute)
     if (activeEdicts.includes('relic_void_blade') && Math.random() < 0.1) {
-      return 100; // Near-instant kill
+      return 100;
     }
 
     let combatLevel = 1;
-    
+
     if (['attack', 'strength', 'defense'].includes(action.skill)) {
       combatLevel = (skills.attack.level + skills.strength.level + skills.defense.level) / 3;
     } else if (action.skill === 'magic') {
@@ -165,17 +171,16 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
       }
     });
 
-    // Base speed increase from combat level and equipment
     actualDuration = actualDuration / (1 + (combatLevel - 1) * 0.05 + equipmentBonus * 0.01);
 
     // Weakness bonus
     if (action.weakness && action.skill === action.weakness) {
-      actualDuration *= 0.7; // 30% faster if using the correct weakness
+      actualDuration *= 0.7;
     }
 
     // Martial Law Edict
     if (activeEdicts.includes('edict_martial_law')) {
-      actualDuration *= 0.85; // 15% faster combat
+      actualDuration *= 0.85;
     }
   }
 
@@ -188,6 +193,32 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
   return Math.max(100, actualDuration);
 };
 
+// Quest helper: check if quest prerequisites are met
+const checkQuestPrerequisites = (quest: Quest, state: PlayerState): boolean => {
+  return quest.prerequisites.every(req => {
+    switch (req.type) {
+      case 'skill_level':
+        return req.skillId ? state.skills[req.skillId].level >= req.quantity : false;
+      case 'item':
+        return req.itemId ? (state.inventory.find(i => i.itemId === req.itemId)?.quantity || 0) >= req.quantity : false;
+      case 'quest':
+        return req.questId ? state.quests[req.questId]?.status === 'completed' : false;
+      case 'gp':
+        return state.gp >= req.quantity;
+      case 'kill_count':
+        return req.actionId ? (state.killCount[req.actionId] || 0) >= req.quantity : false;
+      default:
+        return true;
+    }
+  });
+};
+
+// Check if a quest objective is complete
+const checkObjectiveProgress = (obj: QuestObjective, state: PlayerState, questProgress: QuestProgress): boolean => {
+  const current = questProgress.objectiveProgress[obj.id] || 0;
+  return current >= obj.target;
+};
+
 export function useGame() {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [state, setState] = useState<PlayerState>(() => {
@@ -195,7 +226,6 @@ export function useGame() {
     if (!saved) return INITIAL_STATE;
     try {
       const parsed = JSON.parse(saved);
-      // Merge with INITIAL_STATE to ensure new fields exist
       return {
         ...INITIAL_STATE,
         ...parsed,
@@ -204,6 +234,13 @@ export function useGame() {
         equipment: { ...INITIAL_STATE.equipment, ...parsed.equipment },
         buffs: parsed.buffs || [],
         kingdom: parsed.kingdom || {},
+        // Merge new systems
+        quests: parsed.quests || {},
+        collectionLog: parsed.collectionLog || [],
+        totalActions: parsed.totalActions || {},
+        totalItemsGained: parsed.totalItemsGained || {},
+        bankTab: parsed.bankTab || 'all',
+        killCount: parsed.killCount || {},
       };
     } catch (e) {
       return INITIAL_STATE;
@@ -228,37 +265,53 @@ export function useGame() {
     localStorage.setItem('chimera_save', JSON.stringify(state));
   }, [state]);
 
+  // Track item in collection log
+  const trackCollectionLog = useCallback((itemId: string) => {
+    setState(prev => {
+      if (prev.collectionLog.includes(itemId)) return prev;
+      return { ...prev, collectionLog: [...prev.collectionLog, itemId] };
+    });
+  }, []);
+
   const addToInventory = useCallback((itemId: string, quantity: number) => {
     const item = ITEMS[itemId];
     if (item) {
       if (item.rarity === 'celestial') {
-        addEvent(`✨ CELESTIAL DROP: ${quantity}x ${item.name} ✨`, 'loot', '🌌', 'celestial');
+        addEvent(`CELESTIAL DROP: ${quantity}x ${item.name}`, 'loot', '🌌', 'celestial');
       } else if (item.rarity === 'legendary') {
-        addEvent(`🌟 LEGENDARY DROP: ${quantity}x ${item.name} 🌟`, 'loot', '🔥', 'legendary');
+        addEvent(`LEGENDARY DROP: ${quantity}x ${item.name}`, 'loot', '🔥', 'legendary');
       } else if (item.rarity === 'epic') {
-        addEvent(`💎 EPIC DROP: ${quantity}x ${item.name} 💎`, 'loot', '🟣', 'epic');
+        addEvent(`EPIC DROP: ${quantity}x ${item.name}`, 'loot', '🟣', 'epic');
+      } else if (item.rarity === 'rare') {
+        addEvent(`Rare drop: ${quantity}x ${item.name}`, 'loot', '🔷', 'rare');
       } else {
-        const rarityIcon = item.rarity === 'rare' ? '🔷' : '';
-        addEvent(`Gained ${quantity}x ${item.name}`, 'loot', rarityIcon || item.icon, item.rarity);
+        addEvent(`Gained ${quantity}x ${item.name}`, 'loot', item.icon, item.rarity);
       }
+      // Track in collection log
+      trackCollectionLog(itemId);
     }
-    
+
     setState(prev => {
       const existing = prev.inventory.find(i => i.itemId === itemId);
+      // Track lifetime totals
+      const newTotalItems = { ...prev.totalItemsGained, [itemId]: (prev.totalItemsGained[itemId] || 0) + quantity };
+
       if (existing) {
         return {
           ...prev,
-          inventory: prev.inventory.map(i => 
+          totalItemsGained: newTotalItems,
+          inventory: prev.inventory.map(i =>
             i.itemId === itemId ? { ...i, quantity: i.quantity + quantity } : i
           )
         };
       }
       return {
         ...prev,
+        totalItemsGained: newTotalItems,
         inventory: [...prev.inventory, { itemId, quantity }]
       };
     });
-  }, [addEvent]);
+  }, [addEvent, trackCollectionLog]);
 
   const salvageItem = useCallback((itemId: string, quantity: number) => {
     const item = ITEMS[itemId];
@@ -268,7 +321,6 @@ export function useGame() {
       const existing = prev.inventory.find(i => i.itemId === itemId);
       if (!existing || existing.quantity < quantity) return prev;
 
-      // Calculate salvage value
       let essenceAmount = 0;
       switch (item.rarity) {
         case 'common': essenceAmount = 1 * quantity; break;
@@ -296,7 +348,7 @@ export function useGame() {
     setState(prev => {
       const existing = prev.inventory.find(i => i.itemId === itemId);
       if (!existing || existing.quantity < quantity) return prev;
-      
+
       const newInventory = prev.inventory
         .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - quantity } : i)
         .filter(i => i.quantity > 0);
@@ -328,6 +380,16 @@ export function useGame() {
       const secSkill = stateRef.current.skills[action.secondarySkillRequired.skill];
       if (secSkill.level < action.secondarySkillRequired.level) {
         addEvent(`Level ${action.secondarySkillRequired.level} ${action.secondarySkillRequired.skill} required!`, 'info');
+        return;
+      }
+    }
+
+    // Check quest requirement
+    if (action.questRequired) {
+      const questProgress = stateRef.current.quests[action.questRequired];
+      if (!questProgress || questProgress.status !== 'completed') {
+        const quest = QUESTS.find(q => q.id === action.questRequired);
+        addEvent(`Quest required: ${quest?.name || action.questRequired}!`, 'info');
         return;
       }
     }
@@ -367,6 +429,100 @@ export function useGame() {
     setState(prev => ({ ...prev, gp: prev.gp + amount }));
   }, [addEvent]);
 
+  // Update quest progress based on game events
+  const updateQuestProgress = useCallback((eventType: string, data: { actionId?: string; itemId?: string; skillId?: SkillId; quantity?: number }) => {
+    setState(prev => {
+      let changed = false;
+      const newQuests = { ...prev.quests };
+
+      // Check all in-progress quests
+      (Object.values(newQuests) as QuestProgress[]).forEach(qp => {
+        if (qp.status !== 'in_progress') return;
+        const quest = QUESTS.find(q => q.id === qp.questId);
+        if (!quest) return;
+
+        quest.objectives.forEach(obj => {
+          const currentProgress = qp.objectiveProgress[obj.id] || 0;
+          if (currentProgress >= obj.target) return; // Already complete
+
+          let increment = 0;
+
+          if (eventType === 'action_complete' && obj.type === 'kill' && data.actionId === obj.actionId) {
+            increment = 1;
+          } else if (eventType === 'action_complete' && obj.type === 'craft' && data.actionId === obj.actionId) {
+            increment = 1;
+          } else if (eventType === 'item_gained' && obj.type === 'gather' && data.itemId === obj.itemId) {
+            increment = data.quantity || 1;
+          } else if (eventType === 'level_up' && obj.type === 'reach_level' && data.skillId === obj.skillId) {
+            // Set to current level
+            const skillLevel = prev.skills[data.skillId!]?.level || 0;
+            if (skillLevel >= obj.target) {
+              qp.objectiveProgress[obj.id] = obj.target;
+              changed = true;
+              return;
+            }
+          } else if (eventType === 'gp_gained' && obj.type === 'earn_gp') {
+            increment = data.quantity || 0;
+          }
+
+          if (increment > 0) {
+            qp.objectiveProgress[obj.id] = Math.min(obj.target, currentProgress + increment);
+            changed = true;
+          }
+        });
+
+        // Check if all objectives complete
+        if (changed) {
+          const allComplete = quest.objectives.every(obj =>
+            (qp.objectiveProgress[obj.id] || 0) >= obj.target
+          );
+          if (allComplete && qp.status === 'in_progress') {
+            qp.status = 'completed';
+            qp.completedAt = Date.now();
+            addEvent(`QUEST COMPLETE: ${quest.name}!`, 'quest', '🏆', 'legendary');
+
+            // Grant rewards
+            quest.rewards.forEach(reward => {
+              switch (reward.type) {
+                case 'xp':
+                  if (reward.skillId) {
+                    const skill = prev.skills[reward.skillId];
+                    const newXp = skill.xp + reward.quantity;
+                    const newLevel = XP_TO_LEVEL(newXp);
+                    prev.skills[reward.skillId] = { ...skill, xp: newXp, level: newLevel };
+                    addEvent(`Quest reward: ${reward.quantity} ${reward.skillId} XP`, 'xp', '⭐');
+                  }
+                  break;
+                case 'gp':
+                  prev.gp += reward.quantity;
+                  addEvent(`Quest reward: ${reward.quantity} GP`, 'loot', '💰');
+                  break;
+                case 'celestial_essence':
+                  prev.celestialEssence += reward.quantity;
+                  addEvent(`Quest reward: ${reward.quantity} Celestial Essence`, 'loot', '✨');
+                  break;
+                case 'item':
+                  if (reward.itemId) {
+                    const existing = prev.inventory.find(i => i.itemId === reward.itemId);
+                    if (existing) {
+                      existing.quantity += reward.quantity;
+                    } else {
+                      prev.inventory.push({ itemId: reward.itemId, quantity: reward.quantity });
+                    }
+                    const rewardItem = ITEMS[reward.itemId];
+                    addEvent(`Quest reward: ${reward.quantity}x ${rewardItem?.name || reward.itemId}`, 'loot', rewardItem?.icon);
+                  }
+                  break;
+              }
+            });
+          }
+        }
+      });
+
+      return changed ? { ...prev, quests: newQuests } : prev;
+    });
+  }, [addEvent]);
+
   const completeAction = useCallback((action: SkillAction) => {
     // Check inputs again
     if (action.inputs && !hasItems(action.inputs)) {
@@ -396,7 +552,7 @@ export function useGame() {
       const rolledChance = output.chance * luckMultiplier;
       if (Math.random() <= rolledChance) {
         let quantity = output.quantity;
-        
+
         // Relic: Eye of the Storm (20% chance to double)
         if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
           quantity *= 2;
@@ -408,18 +564,45 @@ export function useGame() {
             quantity = Math.floor(quantity * 1.2);
           }
           addGp(quantity);
+          // Track GP for quests
+          updateQuestProgress('gp_gained', { quantity });
         } else if (output.itemId === 'celestial_essence') {
           setState(prev => ({ ...prev, celestialEssence: prev.celestialEssence + quantity }));
           addEvent(`Gained ${quantity} Celestial Essence`, 'loot');
         } else {
           addToInventory(output.itemId, quantity);
+          // Track items for quests
+          updateQuestProgress('item_gained', { itemId: output.itemId, quantity });
         }
       }
     });
 
-    // Rare Drop Table (RDT) roll for monsters
+    // ===== UNIQUE MONSTER DROP TABLE =====
+    // Each monster has signature drops that roll separately from RDT
     if (action.isMonster) {
-      const rdtChance = 0.05 * luckMultiplier; // Base 5% chance for RDT roll
+      const monsterDrops = MONSTER_DROP_TABLES[action.id];
+      if (monsterDrops) {
+        monsterDrops.forEach(drop => {
+          const adjustedChance = drop.chance * luckMultiplier;
+          if (Math.random() <= adjustedChance) {
+            let qty = drop.quantity;
+            // Eye of the Storm can double these too
+            if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
+              qty *= 2;
+            }
+            addToInventory(drop.itemId, qty);
+            const dropItem = ITEMS[drop.itemId];
+            if (dropItem && (dropItem.rarity === 'legendary' || dropItem.rarity === 'celestial' || dropItem.rarity === 'epic')) {
+              addEvent(`UNIQUE DROP: ${qty}x ${dropItem.name}!`, 'loot', dropItem.icon, dropItem.rarity);
+            }
+          }
+        });
+      }
+    }
+
+    // Global Rare Drop Table (RDT) roll for monsters
+    if (action.isMonster) {
+      const rdtChance = 0.05 * luckMultiplier;
       if (Math.random() <= rdtChance) {
         const rdtRoll = Math.random();
         let cumulativeChance = 0;
@@ -429,15 +612,31 @@ export function useGame() {
             if (rdtItem.itemId === 'gp') {
               const gpAmount = Math.floor(Math.random() * 5000) + 1000;
               addGp(gpAmount);
-              addEvent(`RARE DROP TABLE: You found a hidden stash of ${gpAmount} GP!`, 'loot', '💰', 'rare');
+              addEvent(`RARE DROP TABLE: Hidden stash of ${gpAmount} GP!`, 'loot', '💰', 'rare');
             } else {
               addToInventory(rdtItem.itemId, 1);
-              addEvent(`RARE DROP TABLE: You found a ${ITEMS[rdtItem.itemId]?.name}!`, 'loot', ITEMS[rdtItem.itemId]?.icon, ITEMS[rdtItem.itemId]?.rarity);
+              addEvent(`RARE DROP TABLE: ${ITEMS[rdtItem.itemId]?.name}!`, 'loot', ITEMS[rdtItem.itemId]?.icon, ITEMS[rdtItem.itemId]?.rarity);
             }
             break;
           }
         }
       }
+    }
+
+    // Track action completion for quests + kill counts
+    setState(prev => ({
+      ...prev,
+      totalActions: { ...prev.totalActions, [action.id]: (prev.totalActions[action.id] || 0) + 1 },
+      killCount: action.isMonster
+        ? { ...prev.killCount, [action.id]: (prev.killCount[action.id] || 0) + 1 }
+        : prev.killCount,
+    }));
+
+    // Update quest progress for action completion
+    if (action.isMonster) {
+      updateQuestProgress('action_complete', { actionId: action.id });
+    } else {
+      updateQuestProgress('action_complete', { actionId: action.id });
     }
 
     // Add XP
@@ -478,9 +677,11 @@ export function useGame() {
 
       const newXp = skill.xp + xpReward;
       const newLevel = XP_TO_LEVEL(newXp);
-      
+
       if (newLevel > skill.level) {
         addEvent(`LEVEL UP! ${action.skill.toUpperCase()} is now level ${newLevel}!`, 'level');
+        // Update quest progress for level ups
+        updateQuestProgress('level_up', { skillId: action.skill });
       }
 
       const nextSkills = {
@@ -499,7 +700,6 @@ export function useGame() {
         ...prev,
         skills: nextSkills,
         buffs: nextBuffs,
-        // Restart action if possible
         activeAction: prev.activeAction ? {
           ...prev.activeAction,
           startTime: Date.now(),
@@ -508,7 +708,7 @@ export function useGame() {
         } : undefined
       };
     });
-  }, [addToInventory, removeFromInventory, hasItems, stopAction, addEvent, addGp]);
+  }, [addToInventory, removeFromInventory, hasItems, stopAction, addEvent, addGp, updateQuestProgress]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -560,7 +760,8 @@ export function useGame() {
       };
     });
     addEvent(`Equipped ${item.name}`, 'info');
-  }, [addEvent]);
+    updateQuestProgress('action_complete', { actionId: `equip_${itemId}` });
+  }, [addEvent, updateQuestProgress]);
 
   const unequipItem = useCallback((slot: string) => {
     setState(prev => {
@@ -588,7 +789,7 @@ export function useGame() {
 
   const toggleEdict = useCallback((itemId: string) => {
     const item = ITEMS[itemId];
-    if (!item || item.type !== 'edict') return; // Relics use edict type for logic
+    if (!item || item.type !== 'edict') return;
 
     setState(prev => {
       const isActive = prev.activeEdicts.includes(itemId);
@@ -596,7 +797,6 @@ export function useGame() {
         addEvent(`Deactivated ${item.name}`, 'info');
         return { ...prev, activeEdicts: prev.activeEdicts.filter(id => id !== itemId) };
       } else {
-        // Relics don't count towards the 3-edict limit
         const activeEdictsOnly = prev.activeEdicts.filter(id => ITEMS[id]?.type === 'edict' && !id.startsWith('relic_'));
         if (!itemId.startsWith('relic_') && activeEdictsOnly.length >= 3) {
           addEvent(`Maximum of 3 Edicts can be active!`, 'info');
@@ -625,6 +825,8 @@ export function useGame() {
         buff = { id: 'agility_buff', name: 'Agility Boost', type: 'speed', multiplier: 1.25, remainingActions: 50 };
       } else if (itemId === 'thief_brew') {
         buff = { id: 'thief_buff', name: 'Thief\'s Brew', type: 'speed', multiplier: 1.5, remainingActions: 30 };
+      } else if (itemId === 'vampyrism_potion') {
+        buff = { id: 'vampyrism_buff', name: 'Vampyrism', type: 'combat', multiplier: 1.3, remainingActions: 100 };
       }
 
       if (!buff) return prev;
@@ -646,15 +848,15 @@ export function useGame() {
 
       const newAscensions = { ...prev.ascensions, [skillId]: (prev.ascensions[skillId] || 0) + 1 };
       const newSkills = { ...prev.skills, [skillId]: { id: skillId, level: 1, xp: 0 } };
-      
+
       addEvent(`ASCENSION! ${skillId.toUpperCase()} has been reborn. Gained 1 Celestial Essence.`, 'level');
-      
+
       return {
         ...prev,
         celestialEssence: prev.celestialEssence + 1,
         skills: newSkills,
         ascensions: newAscensions,
-        activeAction: undefined // Stop current action
+        activeAction: undefined
       };
     });
   }, [addEvent]);
@@ -696,7 +898,6 @@ export function useGame() {
         return prev;
       }
 
-      // Check skill requirements
       const missingReqs = worker.requirements.filter(req => prev.skills[req.skillId].level < req.level);
       if (missingReqs.length > 0) {
         const reqStr = missingReqs.map(r => `${r.skillId} Lv.${r.level}`).join(', ');
@@ -704,7 +905,6 @@ export function useGame() {
         return prev;
       }
 
-      // Tiered hiring limits: 1 at base, 3 at lvl 20, 5 at lvl 40, 7 at lvl 60...
       const primarySkill = prev.skills[worker.primarySkillId];
       const maxWorkers = 1 + Math.floor(primarySkill.level / 20) * 2;
       if (currentCount >= maxWorkers) {
@@ -730,18 +930,25 @@ export function useGame() {
       if (!existing || existing.quantity <= 0) return prev;
 
       let nextBuffs = [...prev.buffs];
-      
+
       if (item.type === 'food') {
-        // Food currently doesn't do much since there's no HP, 
-        // but we can make it give a small XP buff or speed buff for a few actions
-        nextBuffs.push({
-          id: `${itemId}_buff_${Date.now()}`,
-          name: `${item.name} Energy`,
-          type: 'speed',
-          multiplier: 1.05,
-          remainingActions: 5
-        });
-        addEvent(`Ate ${item.name}. Feeling energized!`, 'info');
+        if (itemId === 'wilderness_stew') {
+          nextBuffs.push({ id: 'stew_buff', name: 'Wilderness Stew', type: 'xp', multiplier: 1.1, remainingActions: 20 });
+          addEvent(`Ate Wilderness Stew. +10% XP for 20 actions!`, 'info', '🍲');
+        } else if (itemId === 'dragon_feast') {
+          nextBuffs.push({ id: 'feast_xp_buff', name: 'Dragon Feast (XP)', type: 'xp', multiplier: 1.25, remainingActions: 50 });
+          nextBuffs.push({ id: 'feast_speed_buff', name: 'Dragon Feast (Speed)', type: 'speed', multiplier: 1.15, remainingActions: 50 });
+          addEvent(`Ate Dragon Feast. +25% XP and +15% speed for 50 actions!`, 'info', '🍖');
+        } else {
+          nextBuffs.push({
+            id: `${itemId}_buff_${Date.now()}`,
+            name: `${item.name} Energy`,
+            type: 'speed',
+            multiplier: 1.05,
+            remainingActions: 5
+          });
+          addEvent(`Ate ${item.name}. Feeling energized!`, 'info');
+        }
       } else if (item.type === 'potion') {
         let buffType: 'speed' | 'combat' | 'xp' = 'speed';
         let multiplier = 1.2;
@@ -788,10 +995,67 @@ export function useGame() {
     setState(prev => ({ ...prev, showNotifications: !prev.showNotifications }));
   }, []);
 
+  // Quest system functions
+  const startQuest = useCallback((questId: string) => {
+    const quest = QUESTS.find(q => q.id === questId);
+    if (!quest) return;
+
+    setState(prev => {
+      // Check prerequisites
+      if (!checkQuestPrerequisites(quest, prev)) {
+        addEvent(`Quest prerequisites not met!`, 'info');
+        return prev;
+      }
+
+      // Check if already started/completed
+      if (prev.quests[questId]) {
+        addEvent(`Quest already ${prev.quests[questId].status}!`, 'info');
+        return prev;
+      }
+
+      addEvent(`Quest started: ${quest.name}`, 'quest', '📋');
+
+      // Initialize objective progress, pre-filling any already-met objectives
+      const objectiveProgress: Record<string, number> = {};
+      quest.objectives.forEach(obj => {
+        let current = 0;
+        if (obj.type === 'gather' && obj.itemId) {
+          current = prev.totalItemsGained[obj.itemId] || 0;
+        } else if (obj.type === 'kill' && obj.actionId) {
+          current = prev.killCount[obj.actionId] || 0;
+        } else if (obj.type === 'reach_level' && obj.skillId) {
+          current = prev.skills[obj.skillId].level;
+        } else if (obj.type === 'earn_gp') {
+          current = prev.gp;
+        }
+        objectiveProgress[obj.id] = Math.min(current, obj.target);
+      });
+
+      return {
+        ...prev,
+        quests: {
+          ...prev.quests,
+          [questId]: {
+            questId,
+            status: 'in_progress',
+            objectiveProgress,
+            startedAt: Date.now(),
+          }
+        }
+      };
+    });
+  }, [addEvent]);
+
+  // Set bank tab
+  const setBankTab = useCallback((tab: string) => {
+    setState(prev => ({ ...prev, bankTab: tab }));
+  }, []);
+
+  // Kingdom passive income tick
   useEffect(() => {
     const interval = setInterval(() => {
       const { kingdom, skills } = stateRef.current;
-      
+
       let gpGain = 0;
       let essenceGain = 0;
       const xpGains: Record<string, number> = {};
@@ -822,7 +1086,7 @@ export function useGame() {
             const skill = nextSkills[sId];
             const newXp = skill.xp + xp;
             const newLevel = XP_TO_LEVEL(newXp);
-            
+
             if (newLevel > skill.level) {
               addEvent(`KINGDOM LEVEL UP! ${sId.toUpperCase()} is now level ${newLevel}!`, 'level');
             }
@@ -837,7 +1101,7 @@ export function useGame() {
           };
         });
       }
-    }, 1000); // Passive tick every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [addEvent]);
@@ -859,6 +1123,9 @@ export function useGame() {
     useItem,
     toggleNotifications,
     salvageItem,
-    usePotion
+    usePotion,
+    // New systems
+    startQuest,
+    setBankTab,
   };
 }

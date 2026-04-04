@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ITEMS } from '../constants';
 import { PlayerState, EquipmentSlot, Item } from '../types';
@@ -14,10 +14,21 @@ interface BankViewProps {
   usePotion: (itemId: string) => void;
 }
 
+const BANK_TABS = [
+  { id: 'all', name: 'All', icon: '📦' },
+  { id: 'equipment', name: 'Gear', icon: '⚔️' },
+  { id: 'resources', name: 'Resources', icon: '🪨' },
+  { id: 'consumables', name: 'Consumables', icon: '🧪' },
+  { id: 'rare', name: 'Rare+', icon: '💎' },
+  { id: 'quest', name: 'Quest Items', icon: '📜' },
+];
+
 export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp, salvageItem, usePotion }: BankViewProps) {
   const inventory = state.inventory;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'value' | 'quantity' | 'rarity'>('name');
 
   const selectedItem = selectedItemId ? ITEMS[selectedItemId] : null;
   const selectedInventoryItem = inventory.find(i => i.itemId === selectedItemId);
@@ -40,16 +51,46 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
     }
   };
 
-  const filteredInventory = inventory.filter(item => {
-    const data = ITEMS[item.itemId];
-    if (!data) return false;
-    if (filter === 'all') return true;
-    if (filter === 'equipment') return data.type === 'equipment' || data.type === 'tool';
-    if (filter === 'resources') return data.type === 'resource' || data.type === 'currency';
-    if (filter === 'consumables') return data.type === 'food' || data.type === 'potion';
-    if (filter === 'rare') return data.rarity === 'rare' || data.rarity === 'legendary';
-    return true;
-  });
+  const RARITY_ORDER: Record<string, number> = { celestial: 6, legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
+
+  const filteredInventory = useMemo(() => {
+    let items = inventory.filter(item => {
+      const data = ITEMS[item.itemId];
+      if (!data) return false;
+
+      // Search filter
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!data.name.toLowerCase().includes(q) &&
+            !data.description.toLowerCase().includes(q) &&
+            !(data.skillHint || '').toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+
+      if (filter === 'all') return true;
+      if (filter === 'equipment') return data.type === 'equipment' || data.type === 'tool';
+      if (filter === 'resources') return data.type === 'resource' || data.type === 'currency';
+      if (filter === 'consumables') return data.type === 'food' || data.type === 'potion';
+      if (filter === 'rare') return data.rarity === 'rare' || data.rarity === 'epic' || data.rarity === 'legendary' || data.rarity === 'celestial';
+      if (filter === 'quest') return data.type === 'resource' && (data.rarity === 'legendary' || data.rarity === 'epic');
+      return true;
+    });
+
+    // Sort
+    items.sort((a, b) => {
+      const da = ITEMS[a.itemId];
+      const db = ITEMS[b.itemId];
+      if (!da || !db) return 0;
+      if (sortBy === 'name') return da.name.localeCompare(db.name);
+      if (sortBy === 'value') return (db.value * b.quantity) - (da.value * a.quantity);
+      if (sortBy === 'quantity') return b.quantity - a.quantity;
+      if (sortBy === 'rarity') return (RARITY_ORDER[db.rarity || 'common'] || 0) - (RARITY_ORDER[da.rarity || 'common'] || 0);
+      return 0;
+    });
+
+    return items;
+  }, [inventory, filter, searchQuery, sortBy]);
 
   const totalValue = inventory.reduce((acc, item) => acc + (ITEMS[item.itemId]?.value || 0) * item.quantity, 0);
 
@@ -85,18 +126,40 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
           </div>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          {['all', 'equipment', 'resources', 'consumables', 'rare'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all border ${
-                filter === f ? 'bg-[#141414] text-[#E4E3E0] border-[#141414]' : 'border-[#141414]/20 hover:border-[#141414]'
-              }`}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            {BANK_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all border flex items-center gap-1.5 ${
+                  filter === tab.id ? 'bg-[#141414] text-[#E4E3E0] border-[#141414]' : 'border-[#141414]/20 hover:border-[#141414]'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-3 py-1.5 text-xs font-mono border border-[#141414]/20 bg-transparent placeholder:opacity-30 focus:border-[#141414] focus:outline-none transition-colors"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border border-[#141414]/20 bg-transparent focus:outline-none cursor-pointer"
             >
-              {f}
-            </button>
-          ))}
+              <option value="name">Sort: Name</option>
+              <option value="value">Sort: Value</option>
+              <option value="quantity">Sort: Qty</option>
+              <option value="rarity">Sort: Rarity</option>
+            </select>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,8 @@
-import { Item, SkillAction, SkillId, KingdomWorker } from './types';
+import { Item, SkillAction, SkillId, KingdomWorker, Quest, CollectionLogCategory } from './types';
+import { QUESTS } from './questData';
+import { COLLECTION_LOG_CATEGORIES } from './collectionLogData';
+
+export { QUESTS, COLLECTION_LOG_CATEGORIES };
 
 export const ITEMS: Record<string, Item> = {
   'raw_anchovies': { id: 'raw_anchovies', name: 'Raw Anchovies', description: 'Tiny fish.', icon: '🐟', value: 4, type: 'resource' },
@@ -197,6 +201,104 @@ export const ITEMS: Record<string, Item> = {
   'herbs': { id: 'herbs', name: 'Herbs', description: 'Wild herbs for potions.', icon: '🌿', value: 10, type: 'resource' },
   'vial_of_water': { id: 'vial_of_water', name: 'Vial of Water', description: 'Base for potions.', icon: '🧪', value: 5, type: 'resource' },
   'attack_potion': { id: 'attack_potion', name: 'Attack Potion', description: 'Boosts attack level.', icon: '🧪', value: 100, type: 'potion' },
+
+  // ===== NEW: Unique Monster Signature Drops =====
+  // Goblin uniques
+  'goblin_mail': { id: 'goblin_mail', name: 'Goblin Mail', description: 'Crude but collectible armor from goblins.', icon: '👕', value: 25, type: 'equipment', rarity: 'uncommon', equipmentSlot: 'body', stats: { defense: 2 }, farmHint: 'Dropped by Goblins' },
+  'goblin_champion_scroll': { id: 'goblin_champion_scroll', name: 'Goblin Champion Scroll', description: 'A rare challenge scroll from a goblin champion. Proof of your dominance.', icon: '📜', value: 50000, type: 'resource', rarity: 'legendary', farmHint: 'Extremely rare drop from Goblins (1/1000)' },
+
+  // Wolf uniques
+  'fang_necklace': { id: 'fang_necklace', name: 'Fang Necklace', description: 'A necklace strung with wolf fangs. Radiates primal energy.', icon: '📿', value: 5000, type: 'equipment', rarity: 'rare', equipmentSlot: 'neck', stats: { strength: 8, attack: 4 }, farmHint: 'Rare drop from Wolves' },
+  'howl_essence': { id: 'howl_essence', name: 'Howl Essence', description: 'Crystallized wolf spirit. Used in primal crafting.', icon: '🌀', value: 500, type: 'resource', rarity: 'uncommon', usageHint: 'Combine with leather for Primal Armor pieces.' },
+
+  // Zombie uniques
+  'zombie_champion_scroll': { id: 'zombie_champion_scroll', name: 'Zombie Champion Scroll', description: 'A rotting scroll of undead challenge.', icon: '📜', value: 50000, type: 'resource', rarity: 'legendary', farmHint: 'Extremely rare drop from Zombies' },
+  'undead_essence': { id: 'undead_essence', name: 'Undead Essence', description: 'Dark energy from the undead. Used in necromantic crafting.', icon: '💀', value: 200, type: 'resource', rarity: 'uncommon', usageHint: 'Used in Herblore for dark potions and Crafting for cursed items.' },
+
+  // Dragon signature drops
+  'draconic_visage': { id: 'draconic_visage', name: 'Draconic Visage', description: 'An ancient dragon face-plate. Can be smithed into a Dragonfire Shield.', icon: '🛡️', value: 500000, type: 'resource', rarity: 'legendary', skillHint: 'Smithing', usageHint: 'Smith into Dragonfire Shield (requires 90 Smithing).' },
+  'dragon_claw_fragment': { id: 'dragon_claw_fragment', name: 'Dragon Claw Fragment', description: 'A shard of dragon talon. Collect 4 to forge Dragon Claws.', icon: '🦴', value: 25000, type: 'resource', rarity: 'rare', usageHint: 'Combine 4 fragments at 95 Smithing to forge Dragon Claws.' },
+  'dragon_egg_shard': { id: 'dragon_egg_shard', name: 'Dragon Egg Shard', description: 'A fragment of a petrified dragon egg. Radiates ancient heat.', icon: '🥚', value: 75000, type: 'resource', rarity: 'epic', usageHint: 'Collect 3 shards to assemble a Dragon Egg at 99 Crafting.' },
+
+  // Dragon crafted items
+  'dragonfire_shield': { id: 'dragonfire_shield', name: 'Dragonfire Shield', description: 'A shield forged from a draconic visage. Absorbs dragonfire.', icon: '🛡️', value: 750000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'shield', stats: { defense: 60, strength: 10, magic: 10 }, farmHint: 'Smithed from Draconic Visage' },
+  'dragon_claws': { id: 'dragon_claws', name: 'Dragon Claws', description: 'Razor-sharp claws of pure dragonbone. Devastating special attack.', icon: '🦴', value: 350000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 80, strength: 60, speed: 0.2 }, farmHint: 'Smithed from 4 Dragon Claw Fragments' },
+  'dragon_egg': { id: 'dragon_egg', name: 'Dragon Egg', description: 'A reassembled petrified dragon egg. A trophy of immense value.', icon: '🥚', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'Display trophy. Can be hatched at 99 Farming for Dragon Hatchling pet token.' },
+
+  // Abyssal signature drops
+  'abyssal_dagger': { id: 'abyssal_dagger', name: 'Abyssal Dagger', description: 'A dagger forged in the abyss. Attacks with otherworldly speed.', icon: '🗡️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'weapon', stats: { attack: 55, strength: 30, speed: 0.3 }, farmHint: 'Rare drop from Abyssal Demons' },
+  'abyssal_bludgeon_piece': { id: 'abyssal_bludgeon_piece', name: 'Abyssal Bludgeon Piece', description: 'A fragment of the Abyssal Bludgeon. Collect 3 to assemble.', icon: '🔩', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Collect 3 pieces to assemble Abyssal Bludgeon at 90 Crafting.' },
+  'abyssal_thread': { id: 'abyssal_thread', name: 'Abyssal Thread', description: 'Dark thread from the abyss. Used to weave powerful robes.', icon: '🧵', value: 5000, type: 'resource', rarity: 'rare', usageHint: 'Weave into Abyssal Robes at 85 Crafting.' },
+  'abyssal_bludgeon': { id: 'abyssal_bludgeon', name: 'Abyssal Bludgeon', description: 'A massive weapon assembled from abyssal fragments.', icon: '🔨', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 30, strength: 95 }, farmHint: 'Assembled from 3 Abyssal Bludgeon Pieces' },
+  'abyssal_robe_top': { id: 'abyssal_robe_top', name: 'Abyssal Robe Top', description: 'Robes woven from the fabric of the abyss.', icon: '👘', value: 50000, type: 'equipment', rarity: 'rare', equipmentSlot: 'body', stats: { magic: 45, defense: 20 }, setBonus: { setId: 'abyssal', piecesRequired: 2, bonus: { magic: 15, speed: 0.1 } } },
+  'abyssal_robe_legs': { id: 'abyssal_robe_legs', name: 'Abyssal Robe Legs', description: 'Dark leggings that shift like shadows.', icon: '👖', value: 50000, type: 'equipment', rarity: 'rare', equipmentSlot: 'legs', stats: { magic: 35, defense: 15 }, setBonus: { setId: 'abyssal', piecesRequired: 2, bonus: { magic: 15, speed: 0.1 } } },
+
+  // Vampire signature drops
+  'blood_diamond': { id: 'blood_diamond', name: 'Blood Diamond', description: 'A diamond stained with eternal blood. Pulses with dark energy.', icon: '💎', value: 50000, type: 'resource', rarity: 'epic', usageHint: 'Craft into Blood Diamond Ring at 80 Crafting (+luck, +hp).' },
+  'vampire_fang': { id: 'vampire_fang', name: 'Vampire Fang', description: 'A sharp fang from a vampire. Used in dark potions.', icon: '🦷', value: 2000, type: 'resource', rarity: 'uncommon', usageHint: 'Used in Herblore for Vampyrism Potion.' },
+  'blood_shard': { id: 'blood_shard', name: 'Blood Shard', description: 'A crystallized drop of ancient vampire blood. Incredibly valuable.', icon: '🩸', value: 250000, type: 'resource', rarity: 'legendary', usageHint: 'Attach to Amulet of Fury for Blood Fury variant.' },
+  'sanguinesti_staff_piece': { id: 'sanguinesti_staff_piece', name: 'Sanguinesti Staff Piece', description: 'A component of the legendary blood staff. Collect 3 to assemble.', icon: '🔮', value: 500000, type: 'resource', rarity: 'legendary', usageHint: 'Collect 3 to assemble Sanguinesti Staff at 95 Crafting.' },
+  'blood_diamond_ring': { id: 'blood_diamond_ring', name: 'Blood Diamond Ring', description: 'A ring set with a blood diamond. Drains life from foes.', icon: '💍', value: 100000, type: 'equipment', rarity: 'epic', equipmentSlot: 'ring', stats: { luck: 15, health: 20, strength: 5 } },
+  'vampyrism_potion': { id: 'vampyrism_potion', name: 'Vampyrism Potion', description: 'Grants life steal for 100 actions. Heal 5% of damage dealt.', icon: '🧪', value: 15000, type: 'potion', rarity: 'rare' },
+  'sanguinesti_staff': { id: 'sanguinesti_staff', name: 'Sanguinesti Staff', description: 'The legendary blood staff. Heals you as it damages enemies.', icon: '🔮', value: 2000000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, health: 30 }, farmHint: 'Assembled from 3 Sanguinesti Staff Pieces' },
+
+  // Hellhound signature drops
+  'smouldering_stone': { id: 'smouldering_stone', name: 'Smouldering Stone', description: 'A stone that burns eternally. Used to upgrade tools.', icon: '🔥', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Combine with Dragon tools to create Infernal tools.' },
+  'hellfire_metal': { id: 'hellfire_metal', name: 'Hellfire Metal', description: 'Metal tempered in hellfire. Extremely hot to the touch.', icon: '🔴', value: 10000, type: 'resource', rarity: 'rare', usageHint: 'Used in Smithing for Hellfire equipment.' },
+  'infernal_thread': { id: 'infernal_thread', name: 'Infernal Thread', description: 'Thread spun from hellfire. Burns those unworthy.', icon: '🧵', value: 20000, type: 'resource', rarity: 'rare', usageHint: 'Used in Crafting for Infernal Robes.' },
+  'hellfire_sword': { id: 'hellfire_sword', name: 'Hellfire Sword', description: 'A blade that burns with eternal flame.', icon: '⚔️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'weapon', stats: { attack: 65, strength: 45 }, farmHint: 'Smithed from Hellfire Metal' },
+
+  // Void signature drops
+  'void_sigil': { id: 'void_sigil', name: 'Void Sigil', description: 'A sigil from the void. Hums with emptiness.', icon: '🔣', value: 50000, type: 'resource', rarity: 'epic', usageHint: 'Combine 3 Void Sigils with Void Crystal at 90 Crafting for Void Knight pieces.' },
+  'void_crystal': { id: 'void_crystal', name: 'Void Crystal', description: 'A crystal that absorbs light. Used in void crafting.', icon: '💠', value: 25000, type: 'resource', rarity: 'rare', usageHint: 'Core component for Void Knight equipment.' },
+  'void_walker_emblem': { id: 'void_walker_emblem', name: 'Void Walker Emblem', description: 'Proof you survived the void. Opens the path to the Void Citadel.', icon: '🏅', value: 500000, type: 'resource', rarity: 'legendary', farmHint: 'Extremely rare drop from Void creatures' },
+
+  // Boss signature drops
+  'tanzanite_fang': { id: 'tanzanite_fang', name: 'Tanzanite Fang', description: 'A fang from Zulrah. Used to create the Blowpipe.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Toxic Blowpipe at 90 Crafting.' },
+  'magic_fang': { id: 'magic_fang', name: 'Magic Fang', description: 'A venomous fang imbued with magic.', icon: '🐍', value: 300000, type: 'resource', rarity: 'legendary', usageHint: 'Craft into Trident of the Swamp at 90 Crafting.' },
+  'serpentine_scale': { id: 'serpentine_scale', name: 'Serpentine Scale', description: 'Scales from Zulrah. Used for serpentine equipment.', icon: '🐍', value: 5000, type: 'resource', rarity: 'uncommon', usageHint: 'Craft into Serpentine Helm at 75 Crafting (20 scales).' },
+  'vorkath_head': { id: 'vorkath_head', name: "Vorkath's Head", description: 'The severed head of Vorkath. A legendary trophy.', icon: '🐲', value: 200000, type: 'resource', rarity: 'epic', usageHint: 'Mount or use to upgrade Assembler.' },
+  'dragonbone_necklace_piece': { id: 'dragonbone_necklace_piece', name: 'Dragonbone Necklace Piece', description: 'Part of a dragonbone necklace. Collect 2 to assemble.', icon: '📿', value: 50000, type: 'resource', rarity: 'rare' },
+  'skeletal_visage': { id: 'skeletal_visage', name: 'Skeletal Visage', description: 'A spectral shield face. Smith into Skeletal Wyvern Shield.', icon: '🛡️', value: 400000, type: 'resource', rarity: 'legendary', usageHint: 'Smith into Ancient Wyvern Shield at 92 Smithing.' },
+  'hydra_leather': { id: 'hydra_leather', name: 'Hydra Leather', description: 'Leather from a Hydra. Incredibly tough and resistant.', icon: '📜', value: 30000, type: 'resource', rarity: 'rare', usageHint: 'Craft into Ferocious Gloves at 85 Crafting.' },
+  'hydra_fang': { id: 'hydra_fang', name: 'Hydra Fang', description: 'A venomous fang from a Hydra.', icon: '🦷', value: 50000, type: 'resource', rarity: 'epic' },
+  'hydra_claw': { id: 'hydra_claw', name: 'Hydra Claw', description: 'A massive claw from the Alchemical Hydra.', icon: '🦴', value: 500000, type: 'resource', rarity: 'legendary', usageHint: 'Attach to Dragon Hunter Lance at 95 Smithing.' },
+  'hydra_heart': { id: 'hydra_heart', name: 'Hydra Heart', description: 'The still-beating heart of the Alchemical Hydra.', icon: '❤️', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'Imbue into Ring of the Gods at 99 Crafting.' },
+  'crystal_seed': { id: 'crystal_seed', name: 'Crystal Seed', description: 'An elven crystal seed. Can be shaped into weapons.', icon: '💎', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Craft into Crystal Bow or Crystal Shield at 85 Crafting.' },
+  'elven_signet': { id: 'elven_signet', name: 'Elven Signet', description: 'A sacred elven ring. Grants favor with the elves.', icon: '💍', value: 300000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'ring', stats: { luck: 25, magic: 15, speed: 0.1 }, farmHint: 'Extremely rare drop from Elves' },
+  'granite_maul_handle': { id: 'granite_maul_handle', name: 'Granite Maul Handle', description: 'A heavy granite handle. Combine with granite for Granite Maul.', icon: '🪨', value: 20000, type: 'resource', rarity: 'rare' },
+  'gargoyle_heart': { id: 'gargoyle_heart', name: 'Gargoyle Heart', description: 'A stone heart that still beats. Dark and ancient.', icon: '🪨', value: 100000, type: 'resource', rarity: 'epic' },
+  'cave_horror_fang': { id: 'cave_horror_fang', name: 'Cave Horror Fang', description: 'A twisted fang dripping with cave venom.', icon: '🦷', value: 10000, type: 'resource', rarity: 'rare' },
+  'dust_battlestaff_piece': { id: 'dust_battlestaff_piece', name: 'Dust Battlestaff Piece', description: 'Part of a dust battlestaff. Collect 2 to assemble.', icon: '🔮', value: 50000, type: 'resource', rarity: 'rare' },
+  'smoke_battlestaff_piece': { id: 'smoke_battlestaff_piece', name: 'Smoke Battlestaff Piece', description: 'Part of a smoke battlestaff. Collect 2 to assemble.', icon: '🔮', value: 50000, type: 'resource', rarity: 'rare' },
+
+  // Raid signature drops
+  'avernic_defender_hilt': { id: 'avernic_defender_hilt', name: 'Avernic Defender Hilt', description: 'Hilt from the Theatre of Blood. Upgrades Dragon Defender.', icon: '🛡️', value: 750000, type: 'resource', rarity: 'legendary' },
+  'ghrazi_rapier': { id: 'ghrazi_rapier', name: 'Ghrazi Rapier', description: 'The fastest melee weapon. Thrusts with vampiric precision.', icon: '🗡️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 90, strength: 50, speed: 0.3 }, farmHint: 'Rare drop from Theatre of Blood' },
+  'twisted_bow_limb': { id: 'twisted_bow_limb', name: 'Twisted Bow Limb', description: 'A limb of the legendary Twisted Bow. Collect 2 to assemble.', icon: '🏹', value: 500000, type: 'resource', rarity: 'legendary' },
+  'elder_maul_shaft': { id: 'elder_maul_shaft', name: 'Elder Maul Shaft', description: 'Shaft of the Elder Maul. Combine with Elder Maul Head.', icon: '🔨', value: 200000, type: 'resource', rarity: 'epic' },
+  'kodai_insignia': { id: 'kodai_insignia', name: 'Kodai Insignia', description: 'Magical insignia from Chambers of Xeric.', icon: '🔮', value: 300000, type: 'resource', rarity: 'epic' },
+  'twisted_bow': { id: 'twisted_bow', name: 'Twisted Bow', description: 'THE legendary bow. Stronger against high-magic foes.', icon: '🏹', value: 5000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { ranged: 120, speed: 0.2, luck: 10 }, farmHint: 'Assembled from 2 Twisted Bow Limbs' },
+
+  // Crafted boss gear
+  'toxic_blowpipe': { id: 'toxic_blowpipe', name: 'Toxic Blowpipe', description: 'A venomous ranged weapon crafted from Zulrah fang.', icon: '🐍', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 80, speed: 0.4 } },
+  'trident_of_swamp': { id: 'trident_of_swamp', name: 'Trident of the Swamp', description: 'A powered staff dripping with venom.', icon: '🔱', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 85, speed: 0.2 } },
+  'serpentine_helm': { id: 'serpentine_helm', name: 'Serpentine Helm', description: 'A helm crafted from Zulrah scales. Provides venom immunity.', icon: '⛑️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { defense: 40, strength: 5 } },
+  'ferocious_gloves': { id: 'ferocious_gloves', name: 'Ferocious Gloves', description: 'Gloves of immense power crafted from hydra leather.', icon: '🧤', value: 150000, type: 'equipment', rarity: 'epic', equipmentSlot: 'hands', stats: { attack: 20, strength: 20, defense: 10 } },
+  'crystal_bow': { id: 'crystal_bow', name: 'Crystal Bow', description: 'An elven bow that fires arrows of light.', icon: '🏹', value: 250000, type: 'equipment', rarity: 'epic', equipmentSlot: 'weapon', stats: { ranged: 75, magic: 10 } },
+
+  // Primal crafting chain (wolf -> leather -> armor)
+  'primal_leather': { id: 'primal_leather', name: 'Primal Leather', description: 'Leather infused with primal wolf essence.', icon: '📜', value: 2000, type: 'resource', rarity: 'uncommon', usageHint: 'Craft into Primal armor at 60+ Crafting.' },
+  'primal_body': { id: 'primal_body', name: 'Primal Body', description: 'Armor pulsing with primal energy.', icon: '👕', value: 15000, type: 'equipment', rarity: 'rare', equipmentSlot: 'body', stats: { defense: 45, strength: 10, speed: 0.05 } },
+  'primal_legs': { id: 'primal_legs', name: 'Primal Legs', description: 'Leggings that enhance agility.', icon: '👖', value: 12000, type: 'equipment', rarity: 'rare', equipmentSlot: 'legs', stats: { defense: 35, speed: 0.1 } },
+
+  // Enchanting chain (magic scrap -> enchanted items)
+  'enchanted_ruby': { id: 'enchanted_ruby', name: 'Enchanted Ruby', description: 'A ruby infused with magical energy.', icon: '💎', value: 5000, type: 'resource', rarity: 'rare', usageHint: 'Used in high-level jewelry crafting.' },
+  'enchanted_diamond': { id: 'enchanted_diamond', name: 'Enchanted Diamond', description: 'A diamond radiating pure magic.', icon: '💎', value: 15000, type: 'resource', rarity: 'epic' },
+
+  // XP boost food chain
+  'wilderness_stew': { id: 'wilderness_stew', name: 'Wilderness Stew', description: 'A hearty stew that boosts all skills temporarily.', icon: '🍲', value: 5000, type: 'food', rarity: 'rare', usageHint: '+10% XP for 20 actions when eaten.' },
+  'dragon_feast': { id: 'dragon_feast', name: 'Dragon Feast', description: 'A legendary meal of dragon meat and rare spices.', icon: '🍖', value: 25000, type: 'food', rarity: 'epic', usageHint: '+25% XP and +15% speed for 50 actions.' },
   'strength_potion': { id: 'strength_potion', name: 'Strength Potion', description: 'Boosts strength level.', icon: '🧪', value: 250, type: 'potion' },
   'defense_potion': { id: 'defense_potion', name: 'Defense Potion', description: 'Boosts defense level.', icon: '🧪', value: 500, type: 'potion' },
   'energy_potion': { id: 'energy_potion', name: 'Energy Potion', description: 'Restores run energy.', icon: '🧪', value: 400, type: 'potion' },
@@ -291,7 +393,7 @@ export const ITEMS: Record<string, Item> = {
   'abyssal_whip': { id: 'abyssal_whip', name: 'Abyssal Whip', description: 'A living weapon.', icon: '🐍', value: 50000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 80, strength: 40 } },
   'big_bones': { id: 'big_bones', name: 'Big Bones', description: 'Large, heavy bones.', icon: '🦴', value: 30, type: 'resource' },
   'dragon_bones': { id: 'dragon_bones', name: 'Dragon Bones', description: 'Bones that hum with power.', icon: '🦴', value: 500, type: 'resource' },
-  'goblin_mail': { id: 'goblin_mail', name: 'Goblin Mail', description: 'Smells terrible.', icon: '👕', value: 10, type: 'resource', skillHint: 'Crafting', farmHint: 'Goblins', usageHint: 'Can be dismantled for scraps.' },
+  // goblin_mail defined in new items section below
   'zombie_brain': { id: 'zombie_brain', name: 'Zombie Brain', description: 'Surprisingly squishy.', icon: '🧠', value: 50, type: 'resource' },
   'ogre_tooth': { id: 'ogre_tooth', name: 'Ogre Tooth', description: 'A massive yellowed tooth.', icon: '🦷', value: 200, type: 'resource' },
   'elf_dust': { id: 'elf_dust', name: 'Elf Dust', description: 'Magical residue.', icon: '✨', value: 400, type: 'resource' },
@@ -501,6 +603,143 @@ export const RARE_DROP_TABLE: { itemId: string; chance: number }[] = [
   { itemId: 'gp', chance: 0.1 },
 ];
 
+// ===== UNIQUE MONSTER DROP TABLES =====
+// Each monster type has signature drops that ONLY come from them
+// These roll SEPARATELY from the global RDT (stacks with it)
+export const MONSTER_DROP_TABLES: Record<string, { itemId: string; quantity: number; chance: number }[]> = {
+  // Goblins - cheap junk that adds up
+  'farm_goblins': [
+    { itemId: 'goblin_mail', quantity: 1, chance: 0.02 },
+    { itemId: 'goblin_champion_scroll', quantity: 1, chance: 0.001 },
+  ],
+  // Wolves
+  'farm_wolves': [
+    { itemId: 'fang_necklace', quantity: 1, chance: 0.005 },
+    { itemId: 'howl_essence', quantity: 1, chance: 0.03 },
+  ],
+  // Zombies
+  'farm_zombies': [
+    { itemId: 'zombie_champion_scroll', quantity: 1, chance: 0.001 },
+    { itemId: 'undead_essence', quantity: 1, chance: 0.05 },
+  ],
+  // Dragons - the big money makers
+  'farm_dragons': [
+    { itemId: 'draconic_visage', quantity: 1, chance: 0.001 },
+    { itemId: 'dragon_claw_fragment', quantity: 1, chance: 0.02 },
+    { itemId: 'dragon_egg_shard', quantity: 1, chance: 0.005 },
+  ],
+  'hunt_dragon_mag': [
+    { itemId: 'draconic_visage', quantity: 1, chance: 0.002 },
+    { itemId: 'dragon_claw_fragment', quantity: 2, chance: 0.03 },
+    { itemId: 'dragon_egg_shard', quantity: 1, chance: 0.01 },
+  ],
+  'hunt_dragon_ran': [
+    { itemId: 'draconic_visage', quantity: 1, chance: 0.002 },
+    { itemId: 'dragon_claw_fragment', quantity: 2, chance: 0.03 },
+    { itemId: 'dragon_egg_shard', quantity: 1, chance: 0.01 },
+  ],
+  // Abyssal demons - whip chasers
+  'hunt_abyssal_att': [
+    { itemId: 'abyssal_dagger', quantity: 1, chance: 0.0005 },
+    { itemId: 'abyssal_bludgeon_piece', quantity: 1, chance: 0.001 },
+    { itemId: 'abyssal_thread', quantity: 1, chance: 0.02 },
+  ],
+  'slay_abyssal_demon': [
+    { itemId: 'abyssal_dagger', quantity: 1, chance: 0.0005 },
+    { itemId: 'abyssal_bludgeon_piece', quantity: 1, chance: 0.001 },
+    { itemId: 'abyssal_thread', quantity: 1, chance: 0.02 },
+  ],
+  // Vampires
+  'hunt_vampire_mag': [
+    { itemId: 'blood_diamond', quantity: 1, chance: 0.005 },
+    { itemId: 'vampire_fang', quantity: 1, chance: 0.03 },
+    { itemId: 'blood_shard', quantity: 1, chance: 0.001 },
+  ],
+  'hunt_vampire_lord': [
+    { itemId: 'blood_diamond', quantity: 1, chance: 0.01 },
+    { itemId: 'vampire_fang', quantity: 2, chance: 0.05 },
+    { itemId: 'blood_shard', quantity: 1, chance: 0.005 },
+    { itemId: 'sanguinesti_staff_piece', quantity: 1, chance: 0.0005 },
+  ],
+  // Hellhounds
+  'hunt_hellhound_ran': [
+    { itemId: 'smouldering_stone', quantity: 1, chance: 0.003 },
+    { itemId: 'hellfire_metal', quantity: 1, chance: 0.02 },
+    { itemId: 'infernal_thread', quantity: 1, chance: 0.01 },
+  ],
+  // Void creatures
+  'farm_void_monsters': [
+    { itemId: 'void_sigil', quantity: 1, chance: 0.005 },
+    { itemId: 'void_crystal', quantity: 1, chance: 0.01 },
+    { itemId: 'void_walker_emblem', quantity: 1, chance: 0.001 },
+  ],
+  'hunt_void_ran': [
+    { itemId: 'void_sigil', quantity: 1, chance: 0.01 },
+    { itemId: 'void_crystal', quantity: 2, chance: 0.02 },
+    { itemId: 'void_walker_emblem', quantity: 1, chance: 0.005 },
+  ],
+  // Cerberus
+  'hunt_cerberus': [
+    { itemId: 'smouldering_stone', quantity: 1, chance: 0.01 },
+    { itemId: 'hellfire_metal', quantity: 2, chance: 0.05 },
+  ],
+  // Zulrah
+  'hunt_zulrah': [
+    { itemId: 'tanzanite_fang', quantity: 1, chance: 0.005 },
+    { itemId: 'magic_fang', quantity: 1, chance: 0.005 },
+    { itemId: 'serpentine_scale', quantity: 5, chance: 0.1 },
+  ],
+  // Vorkath
+  'hunt_vorkath': [
+    { itemId: 'vorkath_head', quantity: 1, chance: 0.02 },
+    { itemId: 'dragonbone_necklace_piece', quantity: 1, chance: 0.01 },
+    { itemId: 'skeletal_visage', quantity: 1, chance: 0.002 },
+  ],
+  // Hydra
+  'hunt_hydra': [
+    { itemId: 'hydra_leather', quantity: 1, chance: 0.02 },
+    { itemId: 'hydra_fang', quantity: 1, chance: 0.01 },
+  ],
+  'hunt_alchemical_hydra': [
+    { itemId: 'hydra_leather', quantity: 3, chance: 0.05 },
+    { itemId: 'hydra_claw', quantity: 1, chance: 0.005 },
+    { itemId: 'hydra_heart', quantity: 1, chance: 0.002 },
+  ],
+  // Elves
+  'hunt_elf_att': [
+    { itemId: 'crystal_seed', quantity: 1, chance: 0.01 },
+    { itemId: 'elven_signet', quantity: 1, chance: 0.002 },
+  ],
+  // Gargoyles
+  'hunt_gargoyle_att': [
+    { itemId: 'granite_maul_handle', quantity: 1, chance: 0.005 },
+    { itemId: 'gargoyle_heart', quantity: 1, chance: 0.002 },
+  ],
+  // Cave horror
+  'slay_cave_horror': [
+    { itemId: 'cave_horror_fang', quantity: 1, chance: 0.01 },
+  ],
+  // Dust devil
+  'slay_dust_devil': [
+    { itemId: 'dust_battlestaff_piece', quantity: 1, chance: 0.005 },
+  ],
+  // Smoke devil
+  'slay_smoke_devil': [
+    { itemId: 'smoke_battlestaff_piece', quantity: 1, chance: 0.005 },
+  ],
+  // Raids
+  'raid_theatre_of_blood': [
+    { itemId: 'avernic_defender_hilt', quantity: 1, chance: 0.01 },
+    { itemId: 'ghrazi_rapier', quantity: 1, chance: 0.005 },
+    { itemId: 'sanguinesti_staff_piece', quantity: 1, chance: 0.005 },
+  ],
+  'raid_chambers_of_xeric': [
+    { itemId: 'twisted_bow_limb', quantity: 1, chance: 0.005 },
+    { itemId: 'elder_maul_shaft', quantity: 1, chance: 0.008 },
+    { itemId: 'kodai_insignia', quantity: 1, chance: 0.008 },
+  ],
+};
+
 export const ACTIONS: SkillAction[] = [
   // Runecrafting
   { id: 'craft_air_rune', name: 'Craft Air Rune', skill: 'runecrafting', levelRequired: 1, xpReward: 10, duration: 2000, description: 'Harness the power of the wind.', inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'air_rune', quantity: 2, chance: 1 }] },
@@ -646,11 +885,11 @@ export const ACTIONS: SkillAction[] = [
   { id: 'mine_divine_essence', name: 'Mine Divine Essence', skill: 'mining', levelRequired: 99, xpReward: 5000, duration: 60000, outputs: [
     { itemId: 'divine_essence', quantity: 1, chance: 1 }
   ] },
-  { id: 'mine_necrite', name: 'Mine Necrite', skill: 'mining', levelRequired: 99, xpReward: 5000, duration: 60000, secondarySkillRequired: { skill: 'slayer', level: 90 }, outputs: [
+  { id: 'mine_necrite_deep', name: 'Deep Mine Necrite', skill: 'mining', levelRequired: 99, xpReward: 5000, duration: 60000, secondarySkillRequired: { skill: 'slayer', level: 90 }, outputs: [
     { itemId: 'necrite_ore', quantity: 1, chance: 1 },
     { itemId: 'ancient_bone', quantity: 1, chance: 0.1 }
   ] },
-  { id: 'mine_divine_essence', name: 'Mine Divine Essence', skill: 'mining', levelRequired: 90, xpReward: 500, duration: 10000, outputs: [
+  { id: 'mine_divine_essence_batch', name: 'Mine Divine Essence (Batch)', skill: 'mining', levelRequired: 90, xpReward: 500, duration: 10000, outputs: [
     { itemId: 'divine_essence', quantity: 5, chance: 1 }
   ] },
   
@@ -1579,6 +1818,52 @@ export const ACTIONS: SkillAction[] = [
   // New Crafting Combinations
   { id: 'assemble_godsword_blade', name: 'Assemble Godsword Blade', skill: 'crafting', levelRequired: 80, xpReward: 5000, duration: 30000, inputs: [{ itemId: 'godsword_shard_1', quantity: 1 }, { itemId: 'godsword_shard_2', quantity: 1 }, { itemId: 'godsword_shard_3', quantity: 1 }], outputs: [{ itemId: 'godsword_blade', quantity: 1, chance: 1 }] },
   { id: 'forge_armadyl_godsword', name: 'Forge Armadyl Godsword', skill: 'smithing', levelRequired: 90, xpReward: 20000, duration: 60000, inputs: [{ itemId: 'godsword_blade', quantity: 1 }, { itemId: 'armadyl_hilt', quantity: 1 }], outputs: [{ itemId: 'armadyl_godsword', quantity: 1, chance: 1 }] },
+
+  // ===== NEW: Signature Drop Crafting Chains =====
+  // Dragon crafting chain
+  { id: 'smith_dragonfire_shield', name: 'Smith Dragonfire Shield', skill: 'smithing', levelRequired: 90, xpReward: 15000, duration: 30000, description: 'Forge a shield from the face of a dragon.', inputs: [{ itemId: 'draconic_visage', quantity: 1 }, { itemId: 'dragonite_bar', quantity: 5 }], outputs: [{ itemId: 'dragonfire_shield', quantity: 1, chance: 1 }] },
+  { id: 'forge_dragon_claws', name: 'Forge Dragon Claws', skill: 'smithing', levelRequired: 95, xpReward: 25000, duration: 45000, description: 'Forge devastating claws from dragon fragments.', inputs: [{ itemId: 'dragon_claw_fragment', quantity: 4 }, { itemId: 'dragonite_bar', quantity: 2 }], outputs: [{ itemId: 'dragon_claws', quantity: 1, chance: 1 }] },
+  { id: 'assemble_dragon_egg', name: 'Assemble Dragon Egg', skill: 'crafting', levelRequired: 99, xpReward: 50000, duration: 60000, description: 'Piece together a petrified dragon egg.', inputs: [{ itemId: 'dragon_egg_shard', quantity: 3 }], outputs: [{ itemId: 'dragon_egg', quantity: 1, chance: 1 }] },
+
+  // Abyssal crafting chain
+  { id: 'assemble_abyssal_bludgeon', name: 'Assemble Abyssal Bludgeon', skill: 'crafting', levelRequired: 90, xpReward: 20000, duration: 30000, description: 'Piece together the abyssal weapon.', inputs: [{ itemId: 'abyssal_bludgeon_piece', quantity: 3 }], outputs: [{ itemId: 'abyssal_bludgeon', quantity: 1, chance: 1 }] },
+  { id: 'weave_abyssal_robe_top', name: 'Weave Abyssal Robe Top', skill: 'crafting', levelRequired: 85, xpReward: 8000, duration: 20000, description: 'Weave robes from abyssal thread.', inputs: [{ itemId: 'abyssal_thread', quantity: 5 }, { itemId: 'silk', quantity: 10 }], outputs: [{ itemId: 'abyssal_robe_top', quantity: 1, chance: 1 }] },
+  { id: 'weave_abyssal_robe_legs', name: 'Weave Abyssal Robe Legs', skill: 'crafting', levelRequired: 85, xpReward: 8000, duration: 20000, inputs: [{ itemId: 'abyssal_thread', quantity: 5 }, { itemId: 'silk', quantity: 10 }], outputs: [{ itemId: 'abyssal_robe_legs', quantity: 1, chance: 1 }] },
+
+  // Vampire crafting chain
+  { id: 'craft_blood_diamond_ring', name: 'Craft Blood Diamond Ring', skill: 'crafting', levelRequired: 80, xpReward: 5000, duration: 15000, inputs: [{ itemId: 'blood_diamond', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'blood_diamond_ring', quantity: 1, chance: 1 }] },
+  { id: 'brew_vampyrism_potion', name: 'Brew Vampyrism Potion', skill: 'herblore', levelRequired: 80, xpReward: 3000, duration: 10000, inputs: [{ itemId: 'vampire_fang', quantity: 3 }, { itemId: 'vial_of_blood', quantity: 2 }, { itemId: 'blood_rune', quantity: 5 }], outputs: [{ itemId: 'vampyrism_potion', quantity: 1, chance: 1 }] },
+  { id: 'assemble_sanguinesti_staff', name: 'Assemble Sanguinesti Staff', skill: 'crafting', levelRequired: 95, xpReward: 30000, duration: 45000, inputs: [{ itemId: 'sanguinesti_staff_piece', quantity: 3 }, { itemId: 'blood_rune', quantity: 100 }], outputs: [{ itemId: 'sanguinesti_staff', quantity: 1, chance: 1 }] },
+
+  // Hellfire crafting chain
+  { id: 'smith_hellfire_sword', name: 'Smith Hellfire Sword', skill: 'smithing', levelRequired: 85, xpReward: 10000, duration: 25000, inputs: [{ itemId: 'hellfire_metal', quantity: 5 }, { itemId: 'dragonite_bar', quantity: 2 }], outputs: [{ itemId: 'hellfire_sword', quantity: 1, chance: 1 }] },
+
+  // Zulrah crafting chain
+  { id: 'craft_toxic_blowpipe', name: 'Craft Toxic Blowpipe', skill: 'crafting', levelRequired: 90, xpReward: 12000, duration: 20000, inputs: [{ itemId: 'tanzanite_fang', quantity: 1 }], outputs: [{ itemId: 'toxic_blowpipe', quantity: 1, chance: 1 }] },
+  { id: 'craft_trident_of_swamp', name: 'Craft Trident of the Swamp', skill: 'crafting', levelRequired: 90, xpReward: 12000, duration: 20000, inputs: [{ itemId: 'magic_fang', quantity: 1 }, { itemId: 'death_rune', quantity: 50 }], outputs: [{ itemId: 'trident_of_swamp', quantity: 1, chance: 1 }] },
+  { id: 'craft_serpentine_helm', name: 'Craft Serpentine Helm', skill: 'crafting', levelRequired: 75, xpReward: 5000, duration: 15000, inputs: [{ itemId: 'serpentine_scale', quantity: 20 }], outputs: [{ itemId: 'serpentine_helm', quantity: 1, chance: 1 }] },
+
+  // Hydra crafting chain
+  { id: 'craft_ferocious_gloves', name: 'Craft Ferocious Gloves', skill: 'crafting', levelRequired: 85, xpReward: 8000, duration: 15000, inputs: [{ itemId: 'hydra_leather', quantity: 3 }], outputs: [{ itemId: 'ferocious_gloves', quantity: 1, chance: 1 }] },
+
+  // Elven crafting
+  { id: 'shape_crystal_bow', name: 'Shape Crystal Bow', skill: 'crafting', levelRequired: 85, xpReward: 10000, duration: 25000, inputs: [{ itemId: 'crystal_seed', quantity: 1 }], outputs: [{ itemId: 'crystal_bow', quantity: 1, chance: 1 }] },
+
+  // Twisted Bow assembly
+  { id: 'assemble_twisted_bow', name: 'Assemble Twisted Bow', skill: 'crafting', levelRequired: 99, xpReward: 100000, duration: 120000, description: 'Assemble THE legendary bow.', inputs: [{ itemId: 'twisted_bow_limb', quantity: 2 }, { itemId: 'magic_logs', quantity: 50 }, { itemId: 'bowstring', quantity: 10 }], outputs: [{ itemId: 'twisted_bow', quantity: 1, chance: 1 }] },
+
+  // Primal crafting chain (howl essence + wolf materials -> armor)
+  { id: 'tan_primal_leather', name: 'Tan Primal Leather', skill: 'crafting', levelRequired: 55, xpReward: 500, duration: 8000, inputs: [{ itemId: 'wolf_leather', quantity: 2 }, { itemId: 'howl_essence', quantity: 1 }], outputs: [{ itemId: 'primal_leather', quantity: 1, chance: 1 }] },
+  { id: 'craft_primal_body', name: 'Craft Primal Body', skill: 'crafting', levelRequired: 60, xpReward: 2000, duration: 12000, inputs: [{ itemId: 'primal_leather', quantity: 5 }], outputs: [{ itemId: 'primal_body', quantity: 1, chance: 1 }] },
+  { id: 'craft_primal_legs', name: 'Craft Primal Legs', skill: 'crafting', levelRequired: 60, xpReward: 2000, duration: 12000, inputs: [{ itemId: 'primal_leather', quantity: 4 }], outputs: [{ itemId: 'primal_legs', quantity: 1, chance: 1 }] },
+
+  // Enchanting chain
+  { id: 'enchant_ruby', name: 'Enchant Ruby', skill: 'magic', levelRequired: 49, xpReward: 200, duration: 3000, inputs: [{ itemId: 'uncut_ruby', quantity: 1 }, { itemId: 'cosmic_rune', quantity: 3 }], outputs: [{ itemId: 'enchanted_ruby', quantity: 1, chance: 1 }] },
+  { id: 'enchant_diamond', name: 'Enchant Diamond', skill: 'magic', levelRequired: 68, xpReward: 500, duration: 4000, inputs: [{ itemId: 'uncut_diamond', quantity: 1 }, { itemId: 'cosmic_rune', quantity: 5 }], outputs: [{ itemId: 'enchanted_diamond', quantity: 1, chance: 1 }] },
+
+  // Advanced cooking
+  { id: 'cook_wilderness_stew', name: 'Cook Wilderness Stew', skill: 'cooking', levelRequired: 75, xpReward: 2000, duration: 15000, description: 'A legendary stew made from wild ingredients.', inputs: [{ itemId: 'cooked_bear_meat', quantity: 2 }, { itemId: 'herbs', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'wilderness_stew', quantity: 1, chance: 1 }] },
+  { id: 'cook_dragon_feast', name: 'Cook Dragon Feast', skill: 'cooking', levelRequired: 95, xpReward: 10000, duration: 30000, description: 'A feast fit for a dragon slayer.', inputs: [{ itemId: 'cooked_dragon_meat', quantity: 3 }, { itemId: 'cooked_mantaray', quantity: 2 }, { itemId: 'spirit_herb', quantity: 3 }], outputs: [{ itemId: 'dragon_feast', quantity: 1, chance: 1 }] },
 ];
 
 export const KINGDOM_WORKERS: KingdomWorker[] = [

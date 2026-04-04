@@ -7,28 +7,32 @@ import { ShopView } from './components/ShopView';
 import { DashboardView } from './components/DashboardView';
 import { EventLog } from './components/EventLog';
 import { KingdomView } from './components/KingdomView';
+import { QuestView } from './components/QuestView';
+import { CollectionLogView } from './components/CollectionLogView';
 import { SkillId } from './types';
 
 import { CelestialForgeView } from './components/CelestialForgeView';
 
 export default function App() {
-  const { 
-    state, 
-    events, 
-    startAction, 
-    stopAction, 
-    addToInventory, 
-    removeFromInventory, 
-    addGp, 
-    equipItem, 
-    unequipItem, 
+  const {
+    state,
+    events,
+    startAction,
+    stopAction,
+    addToInventory,
+    removeFromInventory,
+    addGp,
+    equipItem,
+    unequipItem,
     toggleEdict,
     ascendSkill,
     buyRelic,
     hireWorker,
     toggleNotifications,
     salvageItem,
-    usePotion
+    usePotion,
+    startQuest,
+    setBankTab,
   } = useGame();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -38,11 +42,11 @@ export default function App() {
     }
     if (activeTab === 'bank') {
       return (
-        <BankView 
-          state={state} 
-          equipItem={equipItem} 
-          unequipItem={unequipItem} 
-          toggleEdict={toggleEdict} 
+        <BankView
+          state={state}
+          equipItem={equipItem}
+          unequipItem={unequipItem}
+          toggleEdict={toggleEdict}
           removeFromInventory={removeFromInventory}
           addGp={addGp}
           salvageItem={salvageItem}
@@ -52,11 +56,11 @@ export default function App() {
     }
     if (activeTab === 'shop') {
       return (
-        <ShopView 
-          state={state} 
-          addToInventory={addToInventory} 
-          removeFromInventory={removeFromInventory} 
-          addGp={addGp} 
+        <ShopView
+          state={state}
+          addToInventory={addToInventory}
+          removeFromInventory={removeFromInventory}
+          addGp={addGp}
         />
       );
     }
@@ -66,7 +70,13 @@ export default function App() {
     if (activeTab === 'kingdom') {
       return <KingdomView state={state} hireWorker={hireWorker} />;
     }
-    
+    if (activeTab === 'quests') {
+      return <QuestView state={state} startQuest={startQuest} />;
+    }
+    if (activeTab === 'collection') {
+      return <CollectionLogView state={state} />;
+    }
+
     // Check if activeTab is a SkillId
     const skillIds: SkillId[] = [
       'mining', 'woodcutting', 'fishing', 'hunting', 'farming',
@@ -74,14 +84,14 @@ export default function App() {
       'thieving', 'agility', 'attack', 'strength', 'defense', 'magic', 'ranged',
       'prayer', 'empire', 'raids', 'slayer'
     ];
-    
+
     if (skillIds.includes(activeTab as SkillId)) {
       return (
-        <SkillView 
-          skillId={activeTab as SkillId} 
-          state={state} 
-          startAction={startAction} 
-          stopAction={stopAction} 
+        <SkillView
+          skillId={activeTab as SkillId}
+          state={state}
+          startAction={startAction}
+          stopAction={stopAction}
           ascendSkill={ascendSkill}
         />
       );
@@ -91,7 +101,7 @@ export default function App() {
       <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
         <h2 className="text-4xl font-serif italic font-bold tracking-tight">Under Construction</h2>
         <p className="text-lg font-serif italic opacity-70">This area of the empire is still being developed.</p>
-        <button 
+        <button
           onClick={() => setActiveTab('dashboard')}
           className="px-6 py-3 bg-[#141414] text-[#E4E3E0] font-mono text-xs uppercase tracking-widest hover:bg-[#141414]/80 transition-colors"
         >
@@ -102,9 +112,9 @@ export default function App() {
   };
 
   return (
-    <Layout 
-      activeTab={activeTab} 
-      setActiveTab={setActiveTab} 
+    <Layout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
       gp={state.gp}
       showNotifications={state.showNotifications || false}
       toggleNotifications={toggleNotifications}

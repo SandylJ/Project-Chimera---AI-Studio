@@ -15,8 +15,8 @@ import {
   Target, 
   Castle, 
   Skull, 
-  Briefcase, 
-  Store, 
+  Briefcase,
+  Store,
   Coins,
   LayoutDashboard,
   Package,
@@ -27,7 +27,9 @@ import {
   Hand,
   Ghost,
   Footprints,
-  Users
+  Users,
+  ScrollText,
+  BookOpen
 } from 'lucide-react';
 import { SkillId } from '../types';
 
@@ -135,6 +137,24 @@ export function Layout({ children, activeTab, setActiveTab, gp, showNotification
           >
             <Users size={18} />
             Kingdom
+          </button>
+          <button
+            onClick={() => handleTabChange('quests')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'quests' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
+            }`}
+          >
+            <ScrollText size={18} />
+            Quests
+          </button>
+          <button
+            onClick={() => handleTabChange('collection')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'collection' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
+            }`}
+          >
+            <BookOpen size={18} />
+            Collection Log
           </button>
 
           <div className="pt-4 pb-2 px-3 text-[10px] font-serif italic uppercase opacity-50 tracking-widest">
