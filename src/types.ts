@@ -10,8 +10,14 @@ export interface Item {
   description: string;
   icon: string;
   value: number;
-  type: 'resource' | 'equipment' | 'food' | 'potion' | 'currency' | 'edict';
+  type: 'resource' | 'equipment' | 'food' | 'potion' | 'currency' | 'edict' | 'tool';
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'celestial';
   equipmentSlot?: EquipmentSlot;
+  toolBonus?: {
+    skillId: SkillId;
+    speedMultiplier: number;
+    xpMultiplier: number;
+  };
   stats?: {
     attack?: number;
     strength?: number;
@@ -32,10 +38,13 @@ export interface SkillAction {
   levelRequired: number;
   xpReward: number;
   duration: number; // in milliseconds
+  description?: string;
   inputs?: { itemId: string; quantity: number }[];
   outputs: { itemId: string; quantity: number; chance: number }[];
   isMonster?: boolean;
+  isBoss?: boolean;
   weakness?: SkillId;
+  toolRequired?: string; // itemId
   secondarySkillRequired?: { skill: SkillId; level: number };
 }
 
@@ -50,7 +59,7 @@ export interface InventoryItem {
   quantity: number;
 }
 
-export type EquipmentSlot = 'weapon' | 'shield' | 'head' | 'body' | 'legs' | 'feet' | 'hands' | 'neck' | 'ring';
+export type EquipmentSlot = 'weapon' | 'shield' | 'head' | 'body' | 'legs' | 'feet' | 'hands' | 'neck' | 'ring' | 'cape';
 
 export interface Equipment {
   weapon?: string;
@@ -62,6 +71,27 @@ export interface Equipment {
   hands?: string;
   neck?: string;
   ring?: string;
+  cape?: string;
+}
+
+export interface Buff {
+  id: string;
+  name: string;
+  type: 'speed' | 'combat' | 'xp';
+  multiplier: number;
+  remainingActions: number;
+}
+
+export interface KingdomWorker {
+  id: string;
+  name: string;
+  description: string;
+  baseCost: number;
+  costMultiplier: number;
+  bonusType: 'xp' | 'gp' | 'celestial_essence';
+  bonusValue: number;
+  primarySkillId: SkillId; // Used for hiring limits
+  requirements: { skillId: SkillId; level: number }[];
 }
 
 export interface PlayerState {
@@ -72,6 +102,8 @@ export interface PlayerState {
   equipment: Equipment;
   activeEdicts: string[];
   ascensions: Record<SkillId, number>; // Number of times each skill has ascended
+  buffs: Buff[];
+  kingdom: Record<string, number>; // workerId -> count
   activeAction?: {
     actionId: string;
     startTime: number;

@@ -25,7 +25,9 @@ import {
   Sparkles,
   Hexagon,
   Hand,
-  Ghost
+  Ghost,
+  Footprints,
+  Users
 } from 'lucide-react';
 import { SkillId } from '../types';
 
@@ -50,6 +52,7 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'crafting', name: 'Crafting', icon: Scissors },
   { id: 'runecrafting', name: 'Runecrafting', icon: Hexagon },
   { id: 'thieving', name: 'Thieving', icon: Hand },
+  { id: 'agility', name: 'Agility', icon: Footprints },
   { id: 'attack', name: 'Attack', icon: Sword },
   { id: 'strength', name: 'Strength', icon: Zap },
   { id: 'defense', name: 'Defense', icon: Shield },
@@ -123,6 +126,15 @@ export function Layout({ children, activeTab, setActiveTab, gp, showNotification
           >
             <Sparkles size={18} />
             Celestial Forge
+          </button>
+          <button
+            onClick={() => handleTabChange('kingdom')}
+            className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'kingdom' ? 'bg-[#141414] text-[#E4E3E0]' : 'hover:bg-[#141414]/10'
+            }`}
+          >
+            <Users size={18} />
+            Kingdom
           </button>
 
           <div className="pt-4 pb-2 px-3 text-[10px] font-serif italic uppercase opacity-50 tracking-widest">

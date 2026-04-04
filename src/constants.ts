@@ -1,4 +1,4 @@
-import { Item, SkillAction, SkillId } from './types';
+import { Item, SkillAction, SkillId, KingdomWorker } from './types';
 
 export const ITEMS: Record<string, Item> = {
   'raw_anchovies': { id: 'raw_anchovies', name: 'Raw Anchovies', description: 'Tiny fish.', icon: '🐟', value: 4, type: 'resource' },
@@ -23,7 +23,6 @@ export const ITEMS: Record<string, Item> = {
   'achey_logs': { id: 'achey_logs', name: 'Achey Logs', description: 'Used for ogre bows.', icon: '🪵', value: 10, type: 'resource' },
   'pine_logs': { id: 'pine_logs', name: 'Pine Logs', description: 'Smells like the forest.', icon: '🪵', value: 25, type: 'resource' },
   'eucalyptus_logs': { id: 'eucalyptus_logs', name: 'Eucalyptus Logs', description: 'Oily wood.', icon: '🪵', value: 90, type: 'resource' },
-  'redwood_logs': { id: 'redwood_logs', name: 'Redwood Logs', description: 'Giant tree logs.', icon: '🪵', value: 250, type: 'resource' },
   'raw_chicken': { id: 'raw_chicken', name: 'Raw Chicken', description: 'Needs cooking.', icon: '🍗', value: 3, type: 'food' },
   'cooked_chicken': { id: 'cooked_chicken', name: 'Cooked Chicken', description: 'Heals 2 HP.', icon: '🍗', value: 10, type: 'food' },
   'raw_beef': { id: 'raw_beef', name: 'Raw Beef', description: 'Needs cooking.', icon: '🥩', value: 10, type: 'food' },
@@ -66,6 +65,7 @@ export const ITEMS: Record<string, Item> = {
   'cooked_monkfish': { id: 'cooked_monkfish', name: 'Cooked Monkfish', description: 'Heals 40 HP.', icon: '🍣', value: 400, type: 'food' },
   'oak_logs': { id: 'oak_logs', name: 'Oak Logs', description: 'Sturdy oak logs.', icon: '🪵', value: 15, type: 'resource', skillHint: 'Woodcutting / Crafting', farmHint: 'Chop Oak Trees', usageHint: 'Used for better quality fletching.' },
   'iron_ore': { id: 'iron_ore', name: 'Iron Ore', description: 'A common ore for mid-tier gear.', icon: '🪨', value: 15, type: 'resource' },
+  'coal': { id: 'coal', name: 'Coal', description: 'Used as fuel for smithing.', icon: '🌑', value: 15, type: 'resource' },
   'iron_bar': { id: 'iron_bar', name: 'Iron Bar', description: 'A bar made from iron ore.', icon: '🧱', value: 45, type: 'resource' },
   'iron_sword': { id: 'iron_sword', name: 'Iron Sword', description: 'A sturdy iron sword.', icon: '⚔️', value: 150, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 12, strength: 5 } },
   'steel_ore': { id: 'steel_ore', name: 'Steel Ore', description: 'Actually just coal, used with iron.', icon: '🪨', value: 25, type: 'resource' },
@@ -126,7 +126,8 @@ export const ITEMS: Record<string, Item> = {
   'yew_logs': { id: 'yew_logs', name: 'Yew Logs', description: 'Ancient yew logs.', icon: '🪵', value: 150, type: 'resource' },
   'magic_logs': { id: 'magic_logs', name: 'Magic Logs', description: 'Logs that shimmer with energy.', icon: '🪵', value: 400, type: 'resource' },
   'blisterwood_logs': { id: 'blisterwood_logs', name: 'Blisterwood Logs', description: 'Vampire-slaying wood.', icon: '🪵', value: 180, type: 'resource' },
-  'elder_logs': { id: 'elder_logs', name: 'Elder Logs', description: 'Ancient wood.', icon: '🪵', value: 600, type: 'resource' },
+  'elder_logs': { id: 'elder_logs', name: 'Elder Logs', description: 'Logs from an ancient elder tree.', icon: '🪵', value: 500, type: 'resource' },
+  'redwood_logs': { id: 'redwood_logs', name: 'Redwood Logs', description: 'Logs from a massive redwood tree.', icon: '🪵', value: 1000, type: 'resource' },
   'teak_logs': { id: 'teak_logs', name: 'Teak Logs', description: 'Hard teak wood.', icon: '🪵', value: 40, type: 'resource' },
   'mahogany_logs': { id: 'mahogany_logs', name: 'Mahogany Logs', description: 'Beautiful mahogany wood.', icon: '🪵', value: 80, type: 'resource' },
   'arctic_pine_logs': { id: 'arctic_pine_logs', name: 'Arctic Pine Logs', description: 'Cold-resistant pine.', icon: '🪵', value: 120, type: 'resource' },
@@ -238,6 +239,46 @@ export const ITEMS: Record<string, Item> = {
   'magic_seeds': { id: 'magic_seeds', name: 'Magic Seeds', description: 'Extremely rare seeds.', icon: '✨', value: 500, type: 'resource' },
 
   // Combat Tokens
+  'mark_of_grace': { id: 'mark_of_grace', name: 'Mark of Grace', description: 'A token of agility prowess.', icon: '🏅', value: 100, type: 'resource' },
+  'bronze_axe': { id: 'bronze_axe', name: 'Bronze Axe', description: 'A basic axe for woodcutting. Increases speed by 5%.', icon: '🪓', value: 100, type: 'tool', rarity: 'common', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.05, xpMultiplier: 1 } },
+  'iron_axe': { id: 'iron_axe', name: 'Iron Axe', description: 'A stronger axe for woodcutting. Increases speed by 10%.', icon: '🪓', value: 500, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.1, xpMultiplier: 1 } },
+  'steel_axe': { id: 'steel_axe', name: 'Steel Axe', description: 'A durable axe for woodcutting. Increases speed by 15% and XP by 5%.', icon: '🪓', value: 2000, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.15, xpMultiplier: 1.05 } },
+  'mithril_axe': { id: 'mithril_axe', name: 'Mithril Axe', description: 'Lightweight and sharp. Increases speed by 20% and XP by 10%.', icon: '🪓', value: 8000, type: 'tool', rarity: 'rare', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.2, xpMultiplier: 1.1 } },
+  'adamant_axe': { id: 'adamant_axe', name: 'Adamant Axe', description: 'Heavy and powerful. Increases speed by 25% and XP by 15%.', icon: '🪓', value: 25000, type: 'tool', rarity: 'rare', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.25, xpMultiplier: 1.15 } },
+  'rune_axe': { id: 'rune_axe', name: 'Rune Axe', description: 'The finest woodcutting tool. Increases speed by 35% and XP by 20%.', icon: '🪓', value: 100000, type: 'tool', rarity: 'epic', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.35, xpMultiplier: 1.2 } },
+  'dragon_axe': { id: 'dragon_axe', name: 'Dragon Axe', description: 'Forged in dragon fire. Increases speed by 50% and XP by 25%.', icon: '🪓', value: 500000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.5, xpMultiplier: 1.25 } },
+
+  'bronze_pickaxe': { id: 'bronze_pickaxe', name: 'Bronze Pickaxe', description: 'A basic pickaxe for mining. Increases speed by 5%.', icon: '⛏️', value: 100, type: 'tool', rarity: 'common', toolBonus: { skillId: 'mining', speedMultiplier: 1.05, xpMultiplier: 1 } },
+  'iron_pickaxe': { id: 'iron_pickaxe', name: 'Iron Pickaxe', description: 'A stronger pickaxe for mining. Increases speed by 10%.', icon: '⛏️', value: 500, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'mining', speedMultiplier: 1.1, xpMultiplier: 1 } },
+  'steel_pickaxe': { id: 'steel_pickaxe', name: 'Steel Pickaxe', description: 'A durable pickaxe for mining. Increases speed by 15% and XP by 5%.', icon: '⛏️', value: 2000, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'mining', speedMultiplier: 1.15, xpMultiplier: 1.05 } },
+  'mithril_pickaxe': { id: 'mithril_pickaxe', name: 'Mithril Pickaxe', description: 'Lightweight and sharp. Increases speed by 20% and XP by 10%.', icon: '⛏️', value: 8000, type: 'tool', rarity: 'rare', toolBonus: { skillId: 'mining', speedMultiplier: 1.2, xpMultiplier: 1.1 } },
+  'adamant_pickaxe': { id: 'adamant_pickaxe', name: 'Adamant Pickaxe', description: 'Heavy and powerful. Increases speed by 25% and XP by 15%.', icon: '⛏️', value: 25000, type: 'tool', rarity: 'rare', toolBonus: { skillId: 'mining', speedMultiplier: 1.25, xpMultiplier: 1.15 } },
+  'rune_pickaxe': { id: 'rune_pickaxe', name: 'Rune Pickaxe', description: 'The finest mining tool. Increases speed by 35% and XP by 20%.', icon: '⛏️', value: 100000, type: 'tool', rarity: 'epic', toolBonus: { skillId: 'mining', speedMultiplier: 1.35, xpMultiplier: 1.2 } },
+  'dragon_pickaxe': { id: 'dragon_pickaxe', name: 'Dragon Pickaxe', description: 'Forged in dragon fire. Increases speed by 50% and XP by 25%.', icon: '⛏️', value: 500000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'mining', speedMultiplier: 1.5, xpMultiplier: 1.25 } },
+
+  'small_fishing_net': { id: 'small_fishing_net', name: 'Small Fishing Net', description: 'Used for catching small fish. Increases speed by 5%.', icon: '🕸️', value: 50, type: 'tool', rarity: 'common', toolBonus: { skillId: 'fishing', speedMultiplier: 1.05, xpMultiplier: 1 } },
+  'fishing_rod': { id: 'fishing_rod', name: 'Fishing Rod', description: 'Used for catching river fish. Increases speed by 10%.', icon: '🎣', value: 150, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'fishing', speedMultiplier: 1.1, xpMultiplier: 1 } },
+  'harpoon': { id: 'harpoon', name: 'Harpoon', description: 'Used for catching large fish. Increases speed by 15%.', icon: '🔱', value: 500, type: 'tool', rarity: 'uncommon', toolBonus: { skillId: 'fishing', speedMultiplier: 1.15, xpMultiplier: 1 } },
+  'dragon_harpoon': { id: 'dragon_harpoon', name: 'Dragon Harpoon', description: 'The ultimate fishing tool. Increases speed by 40% and XP by 20%.', icon: '🔱', value: 250000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'fishing', speedMultiplier: 1.4, xpMultiplier: 1.2 } },
+
+  'tinderbox': { id: 'tinderbox', name: 'Tinderbox', description: 'Used to light fires.', icon: '🔥', value: 50, type: 'tool', rarity: 'common' },
+  'hammer': { id: 'hammer', name: 'Hammer', description: 'Essential for smithing.', icon: '🔨', value: 50, type: 'tool', rarity: 'common' },
+  'chisel': { id: 'chisel', name: 'Chisel', description: 'Used for crafting gems and construction.', icon: '🪚', value: 50, type: 'tool', rarity: 'common' },
+  'needle': { id: 'needle', name: 'Needle', description: 'Used for leatherworking.', icon: '🪡', value: 10, type: 'tool', rarity: 'common' },
+  'thread': { id: 'thread', name: 'Thread', description: 'Used with a needle.', icon: '🧵', value: 1, type: 'resource', rarity: 'common' },
+
+  'charcoal': { id: 'charcoal', name: 'Charcoal', description: 'High-quality fuel for smithing. Increases speed by 10%.', icon: '🌑', value: 20, type: 'resource', rarity: 'common', usageHint: 'Use in advanced smithing recipes.' },
+  'magic_charcoal': { id: 'magic_charcoal', name: 'Magic Charcoal', description: 'Magically infused fuel. Increases speed by 25%.', icon: '✨', value: 100, type: 'resource', rarity: 'rare', usageHint: 'Required for dragonite and necrite smithing.' },
+  'graceful_hood': { id: 'graceful_hood', name: 'Graceful Hood', description: 'Reduces weight and boosts run energy.', icon: '🧥', value: 5000, type: 'equipment', equipmentSlot: 'head', stats: { defense: 2 } },
+  'graceful_cape': { id: 'graceful_cape', name: 'Graceful Cape', description: 'Reduces weight and boosts run energy.', icon: '🧥', value: 5000, type: 'equipment', equipmentSlot: 'cape', stats: { defense: 2 } },
+  'graceful_top': { id: 'graceful_top', name: 'Graceful Top', description: 'Reduces weight and boosts run energy.', icon: '👕', value: 5000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 5 } },
+  'graceful_legs': { id: 'graceful_legs', name: 'Graceful Legs', description: 'Reduces weight and boosts run energy.', icon: '👖', value: 5000, type: 'equipment', equipmentSlot: 'legs', stats: { defense: 5 } },
+  'graceful_gloves': { id: 'graceful_gloves', name: 'Graceful Gloves', description: 'Reduces weight and boosts run energy.', icon: '🧤', value: 5000, type: 'equipment', equipmentSlot: 'hands', stats: { defense: 1 } },
+  'graceful_boots': { id: 'graceful_boots', name: 'Graceful Boots', description: 'Reduces weight and boosts run energy.', icon: '🥾', value: 5000, type: 'equipment', equipmentSlot: 'feet', stats: { defense: 1 } },
+  'agility_potion': { id: 'agility_potion', name: 'Agility Potion', description: 'Boosts agility level.', icon: '🧪', value: 300, type: 'potion' },
+  'toadflax': { id: 'toadflax', name: 'Toadflax', description: 'A medicinal herb.', icon: '🌿', value: 40, type: 'resource' },
+  'toads_legs': { id: 'toads_legs', name: 'Toads Legs', description: 'Used in agility potions.', icon: '🐸', value: 20, type: 'resource' },
+  'toadflax_seeds': { id: 'toadflax_seeds', name: 'Toadflax Seeds', description: 'Plant to grow toadflax.', icon: '🌱', value: 15, type: 'resource' },
   'combat_token': { id: 'combat_token', name: 'Combat Token', description: 'Proof of martial prowess.', icon: '🎖️', value: 0, type: 'resource' },
   'bones': { id: 'bones', name: 'Bones', description: 'Standard animal bones.', icon: '🦴', value: 5, type: 'resource', skillHint: 'Prayer', farmHint: 'Goblins, Rats, Skeletons', usageHint: 'Bury them for XP or use them in rituals.' },
   'rat_tail': { id: 'rat_tail', name: 'Rat Tail', description: 'Gross.', icon: '🐀', value: 5, type: 'resource', skillHint: 'Herblore', farmHint: 'Giant Rats', usageHint: 'Used in low-level potions.' },
@@ -257,14 +298,64 @@ export const ITEMS: Record<string, Item> = {
   'dragon_scale': { id: 'dragon_scale', name: 'Dragon Scale', description: 'Harder than steel.', icon: '🛡️', value: 1000, type: 'resource' },
   'iron_dragon_scale': { id: 'iron_dragon_scale', name: 'Iron Dragon Scale', description: 'Metallic dragon scale.', icon: '🛡️', value: 1500, type: 'resource' },
   'steel_dragon_scale': { id: 'steel_dragon_scale', name: 'Steel Dragon Scale', description: 'Heavy metallic scale.', icon: '🛡️', value: 2500, type: 'resource' },
+  'dragonite_ore': { id: 'dragonite_ore', name: 'Dragonite Ore', description: 'A glowing red ore.', icon: '🪨', value: 1000, type: 'resource' },
+  'dragonite_bar': { id: 'dragonite_bar', name: 'Dragonite Bar', description: 'A bar of pure dragonite.', icon: '🧱', value: 5000, type: 'resource' },
+  'dragonite_sword': { id: 'dragonite_sword', name: 'Dragonite Sword', description: 'A blade forged in dragon fire.', icon: '⚔️', value: 25000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 100, strength: 60 } },
+  'dragonite_shield': { id: 'dragonite_shield', name: 'Dragonite Shield', description: 'A shield forged in dragon fire.', icon: '🛡️', value: 40000, type: 'equipment', equipmentSlot: 'shield', stats: { defense: 80 } },
+  'necrite_ore': { id: 'necrite_ore', name: 'Necrite Ore', description: 'A dark, soul-chilling ore.', icon: '🪨', value: 2500, type: 'resource' },
+  'necrite_bar': { id: 'necrite_bar', name: 'Necrite Bar', description: 'A bar of pure necrite.', icon: '🧱', value: 12000, type: 'resource' },
+  'necrite_sword': { id: 'necrite_sword', name: 'Necrite Sword', description: 'A blade that hungers for souls.', icon: '⚔️', value: 75000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 150, strength: 100 } },
+  'necrite_body': { id: 'necrite_body', name: 'Necrite Body', description: 'Armor that feels like a second skin.', icon: '👕', value: 150000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 200 } },
+  'necrite_legs': { id: 'necrite_legs', name: 'Necrite Legs', description: 'Leggings made from necrite.', icon: '👖', value: 100000, type: 'equipment', equipmentSlot: 'legs', stats: { defense: 180 } },
+  'necrite_head': { id: 'necrite_head', name: 'Necrite Head', description: 'A helmet made from necrite.', icon: '🪖', value: 80000, type: 'equipment', equipmentSlot: 'head', stats: { defense: 150 } },
+  'elder_shortbow_u': { id: 'elder_shortbow_u', name: 'Unstrung Elder Shortbow', description: 'An unstrung elder shortbow.', icon: '🏹', value: 640, type: 'resource' },
+  'elder_shortbow': { id: 'elder_shortbow', name: 'Elder Shortbow', description: 'A bow of ancient power.', icon: '🏹', value: 15000, type: 'equipment', equipmentSlot: 'weapon', stats: { ranged: 150 } },
+  'redwood_shortbow_u': { id: 'redwood_shortbow_u', name: 'Unstrung Redwood Shortbow', description: 'An unstrung redwood shortbow.', icon: '🏹', value: 1280, type: 'resource' },
+  'redwood_shortbow': { id: 'redwood_shortbow', name: 'Redwood Shortbow', description: 'A massive redwood bow.', icon: '🏹', value: 30000, type: 'equipment', equipmentSlot: 'weapon', stats: { ranged: 200 } },
+  'wrath_rune': { id: 'wrath_rune', name: 'Wrath Rune', description: 'Used for the most destructive spells.', icon: '🔮', value: 1000, type: 'resource', skillHint: 'Magic' },
+  'divine_essence': { id: 'divine_essence', name: 'Divine Essence', description: 'Essence touched by the gods.', icon: '✨', value: 2000, type: 'resource', skillHint: 'Mining / Runecrafting' },
+  'spirit_herb': { id: 'spirit_herb', name: 'Spirit Herb', description: 'An herb that glows with a faint light.', icon: '🌿', value: 1000, type: 'resource' },
+  'spirit_potion': { id: 'spirit_potion', name: 'Spirit Potion', description: 'A potion that boosts your spirit.', icon: '🧪', value: 5000, type: 'potion' },
+  'dragon_slayer_potion': { id: 'dragon_slayer_potion', name: 'Dragon Slayer Potion', description: 'Increases damage against dragons.', icon: '🧪', value: 10000, type: 'potion' },
+  'overload_potion': { id: 'overload_potion', name: 'Overload Potion', description: 'The ultimate combat boost.', icon: '🧪', value: 50000, type: 'potion' },
+  'void_essence': { id: 'void_essence', name: 'Void Essence', description: 'Essence from the void.', icon: '🌑', value: 5000, type: 'resource' },
+  'void_blade': { id: 'void_blade', name: 'Void Blade', description: 'A blade that cuts through reality.', icon: '⚔️', value: 500000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 200, strength: 150 } },
+  'dragon_lord_trophy': { id: 'dragon_lord_trophy', name: 'Dragon Lord Trophy', description: 'Proof of slaying the Dragon Lord.', icon: '🏆', value: 100000, type: 'resource' },
+  'void_reaper_trophy': { id: 'void_reaper_trophy', name: 'Void Reaper Trophy', description: 'Proof of slaying the Void Reaper.', icon: '🏆', value: 250000, type: 'resource' },
+  'master_clue_scroll': { id: 'master_clue_scroll', name: 'Master Clue Scroll', description: 'A very difficult riddle.', icon: '📜', value: 10000, type: 'resource' },
+  'clue_scroll_master': { id: 'clue_scroll_master', name: 'Master Clue Scroll', description: 'A very difficult riddle.', icon: '📜', value: 10000, type: 'resource' },
+  'clue_reward_box': { id: 'clue_reward_box', name: 'Clue Reward Box', description: 'Contains treasures.', icon: '🎁', value: 50000, type: 'resource' },
+  'imperial_crown': { id: 'imperial_crown', name: 'Imperial Crown', description: 'The ultimate symbol of power.', icon: '👑', value: 1000000, type: 'equipment', equipmentSlot: 'head', stats: { attack: 50, strength: 50, defense: 50, magic: 50, ranged: 50 } },
+  'ancient_relic': { id: 'ancient_relic', name: 'Ancient Relic', description: 'A mysterious artifact from a lost age.', icon: '🏺', value: 100000, type: 'resource' },
+  'imperial_decree': { id: 'imperial_decree', name: 'Imperial Decree', description: 'A scroll that commands respect.', icon: '📜', value: 10000, type: 'resource' },
+  'dragon_fruit': { id: 'dragon_fruit', name: 'Dragon Fruit', description: 'A fruit that tastes like fire.', icon: '🌵', value: 500, type: 'food' },
+  'spirit_seed': { id: 'spirit_seed', name: 'Spirit Seed', description: 'A seed that glows with a faint light.', icon: '🌱', value: 1000, type: 'resource' },
+  'raid_master_cape': { id: 'raid_master_cape', name: 'Raid Master Cape', description: 'Worn by those who have conquered all.', icon: '🧥', value: 2500000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 150, strength: 20, magic: 20, ranged: 20 } },
+  'dragon_slayer_blade': { id: 'dragon_slayer_blade', name: 'Dragon Slayer Blade', description: 'Forged in dragon fire.', icon: '🗡️', value: 500000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 120, strength: 80 } },
+
+  'dragonite_body': { id: 'dragonite_body', name: 'Dragonite Body', description: 'Armor forged from dragonite.', icon: '👕', value: 80000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 100 } },
   'mithril_dragon_scale': { id: 'mithril_dragon_scale', name: 'Mithril Dragon Scale', description: 'Lightweight metallic scale.', icon: '🛡️', value: 5000, type: 'resource' },
   'adamant_dragon_scale': { id: 'adamant_dragon_scale', name: 'Adamant Dragon Scale', description: 'Extremely hard metallic scale.', icon: '🛡️', value: 10000, type: 'resource' },
   'rune_dragon_scale': { id: 'rune_dragon_scale', name: 'Rune Dragon Scale', description: 'The ultimate metallic scale.', icon: '🛡️', value: 25000, type: 'resource' },
-  'imperial_seal': { id: 'imperial_seal', name: 'Imperial Seal', description: 'Authority of the Empire.', icon: '📜', value: 5000, type: 'resource' },
   'raid_relic': { id: 'raid_relic', name: 'Raid Relic', description: 'A trophy from a great battle.', icon: '🏆', value: 25000, type: 'resource' },
-  'imperial_crown': { id: 'imperial_crown', name: 'Imperial Crown', description: 'The ultimate symbol of power.', icon: '👑', value: 1000000, type: 'equipment', equipmentSlot: 'head', stats: { attack: 50, strength: 50, defense: 50, magic: 50, ranged: 50 } },
-  'raid_master_cape': { id: 'raid_master_cape', name: 'Raid Master Cape', description: 'Worn by those who have conquered all.', icon: '🧥', value: 2500000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 150, strength: 20, magic: 20, ranged: 20 } },
-  'dragon_slayer_blade': { id: 'dragon_slayer_blade', name: 'Dragon Slayer Blade', description: 'Forged in dragon fire.', icon: '🗡️', value: 500000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 120, strength: 80 } },
+  'imperial_seal': { id: 'imperial_seal', name: 'Imperial Seal', description: 'Authority of the Empire.', icon: '📜', value: 5000, type: 'resource' },
+  'gp': { id: 'gp', name: 'Gold Pieces', description: 'The currency of the realm.', icon: '💰', value: 1, type: 'resource' },
+  'celestial_essence': { id: 'celestial_essence', name: 'Celestial Essence', description: 'Essence from the stars.', icon: '✨', value: 1000, type: 'currency' },
+
+  // New High-Level Equipment
+  'dragon_med_helm': { id: 'dragon_med_helm', name: 'Dragon Med Helm', description: 'A helmet forged from dragonkin metal.', icon: '🪖', value: 60000, type: 'equipment', equipmentSlot: 'head', rarity: 'rare', stats: { defense: 40 } },
+  'dragon_sq_shield': { id: 'dragon_sq_shield', name: 'Dragon Sq Shield', description: 'A square shield made of dragon metal.', icon: '🛡️', value: 300000, type: 'equipment', equipmentSlot: 'shield', rarity: 'rare', stats: { defense: 50 } },
+  'dragon_platebody': { id: 'dragon_platebody', name: 'Dragon Platebody', description: 'The ultimate dragon metal armor.', icon: '👕', value: 1000000, type: 'equipment', equipmentSlot: 'body', rarity: 'rare', stats: { defense: 120 } },
+  'dragon_platelegs': { id: 'dragon_platelegs', name: 'Dragon Platelegs', description: 'Leggings forged from dragon metal.', icon: '👖', value: 800000, type: 'equipment', equipmentSlot: 'legs', rarity: 'rare', stats: { defense: 100 } },
+  'infernal_cape': { id: 'infernal_cape', name: 'Infernal Cape', description: 'A cape that glows with the heat of the inferno.', icon: '🧥', value: 5000000, type: 'equipment', equipmentSlot: 'body', rarity: 'legendary', stats: { strength: 8, attack: 4, defense: 4 } },
+  'primordial_boots': { id: 'primordial_boots', name: 'Primordial Boots', description: 'Boots infused with primordial crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { strength: 5, attack: 2, defense: 2 } },
+  'pegasian_boots': { id: 'pegasian_boots', name: 'Pegasian Boots', description: 'Boots infused with pegasian crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { ranged: 12 } },
+  'eternal_boots': { id: 'eternal_boots', name: 'Eternal Boots', description: 'Boots infused with eternal crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { magic: 8, defense: 5 } },
+  'zenyte_shard': { id: 'zenyte_shard', name: 'Zenyte Shard', description: 'A shard of the rarest gem.', icon: '💎', value: 500000, type: 'resource' },
+  'uncut_zenyte': { id: 'uncut_zenyte', name: 'Uncut Zenyte', description: 'An uncut zenyte gem.', icon: '💎', value: 1000000, type: 'resource' },
+  'torture_amulet': { id: 'torture_amulet', name: 'Amulet of Torture', description: 'The ultimate offensive amulet.', icon: '📿', value: 5000000, type: 'equipment', equipmentSlot: 'head', stats: { attack: 15, strength: 10 } },
+  'anguish_necklace': { id: 'anguish_necklace', name: 'Necklace of Anguish', description: 'The ultimate ranged necklace.', icon: '📿', value: 5000000, type: 'equipment', equipmentSlot: 'head', stats: { ranged: 15 } },
+  'tormented_bracelet': { id: 'tormented_bracelet', name: 'Tormented Bracelet', description: 'The ultimate magic bracelet.', icon: '🧤', value: 5000000, type: 'equipment', equipmentSlot: 'legs', stats: { magic: 10 } },
 
   // Slayer Items
   'crawler_meat': { id: 'crawler_meat', name: 'Crawler Meat', description: 'Tough and stringy meat from a cave crawler.', icon: '🥩', value: 15, type: 'resource', skillHint: 'Slayer' },
@@ -277,12 +368,18 @@ export const ITEMS: Record<string, Item> = {
   // Imperial Edicts (Empire Boosts)
   'edict_efficiency': { id: 'edict_efficiency', name: 'Edict of Efficiency', description: 'Increases action speed by 10%.', icon: '📜', value: 50000, type: 'edict' },
   'edict_prosperity': { id: 'edict_prosperity', name: 'Edict of Prosperity', description: 'Increases GP gains by 20%.', icon: '💰', value: 50000, type: 'edict' },
+  'edict_wisdom': { id: 'edict_wisdom', name: 'Edict of Wisdom', description: 'Increases XP gains by 15%.', icon: '🧠', value: 50000, type: 'edict' },
+  'edict_martial_law': { id: 'edict_martial_law', name: 'Edict of Martial Law', description: 'Increases combat speed by 15%.', icon: '⚔️', value: 75000, type: 'edict' },
+  'edict_war': { id: 'edict_war', name: 'Edict of War', description: 'Unlocks advanced combat training and 10% strength boost.', icon: '⚔️', value: 50, type: 'edict' },
+
+  // Potions
   'antipoison': { id: 'antipoison', name: 'Antipoison', description: 'Cures poison.', icon: '🧪', value: 150, type: 'potion' },
   'restore_potion': { id: 'restore_potion', name: 'Restore Potion', description: 'Restores lowered stats.', icon: '🧪', value: 300, type: 'potion' },
   'prayer_potion': { id: 'prayer_potion', name: 'Prayer Potion', description: 'Restores prayer points.', icon: '🧪', value: 800, type: 'potion' },
   'super_attack': { id: 'super_attack', name: 'Super Attack', description: 'Greatly boosts attack.', icon: '🧪', value: 1500, type: 'potion' },
   'super_strength': { id: 'super_strength', name: 'Super Strength', description: 'Greatly boosts strength.', icon: '🧪', value: 2500, type: 'potion' },
-  'overload': { id: 'overload', name: 'Overload', description: 'The ultimate combat boost.', icon: '🧪', value: 10000, type: 'potion' },
+
+  // Construction Materials
   'obsidian_bar': { id: 'obsidian_bar', name: 'Obsidian Bar', description: 'A bar of refined volcanic glass.', icon: '🧱', value: 1000, type: 'resource' },
   'limestone_brick': { id: 'limestone_brick', name: 'Limestone Brick', description: 'Used for building.', icon: '🧱', value: 50, type: 'resource' },
   'marble_block': { id: 'marble_block', name: 'Marble Block', description: 'A polished block of marble.', icon: '🧱', value: 500, type: 'resource' },
@@ -292,11 +389,65 @@ export const ITEMS: Record<string, Item> = {
   'relic_empire_heart': { id: 'relic_empire_heart', name: 'Heart of the Empire', description: 'Empire actions are 50% faster.', icon: '❤️', value: 15, type: 'edict' },
   'relic_void_blade': { id: 'relic_void_blade', name: 'Void Blade', description: '10% chance to instantly execute monsters.', icon: '🗡️', value: 25, type: 'edict' },
   'relic_eternal_wisdom': { id: 'relic_eternal_wisdom', name: 'Eternal Wisdom', description: 'All skills gain 25% more XP.', icon: '📜', value: 20, type: 'edict' },
+  'relic_dragon_soul': { id: 'relic_dragon_soul', name: 'Relic: Dragon Soul', description: 'Increases damage against dragons by 50%.', icon: '🐉', value: 50, type: 'edict' },
+  'relic_void_mastery': { id: 'relic_void_mastery', name: 'Relic: Void Mastery', description: 'Increases damage in raids by 30%.', icon: '🌑', value: 100, type: 'edict' },
+
+  // Skill Capes (Level 99 Rewards)
+  'cape_mining': { id: 'cape_mining', name: 'Mining Skillcape', description: 'A cape awarded for mastering Mining.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'mining', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the earth.' },
+  'cape_woodcutting': { id: 'cape_woodcutting', name: 'Woodcutting Skillcape', description: 'A cape awarded for mastering Woodcutting.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'woodcutting', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the forests.' },
+  'cape_fishing': { id: 'cape_fishing', name: 'Fishing Skillcape', description: 'A cape awarded for mastering Fishing.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'fishing', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the seas.' },
+  'cape_cooking': { id: 'cape_cooking', name: 'Cooking Skillcape', description: 'A cape awarded for mastering Cooking.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'cooking', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the kitchen.' },
+  'cape_smithing': { id: 'cape_smithing', name: 'Smithing Skillcape', description: 'A cape awarded for mastering Smithing.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'smithing', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the forge.' },
+  'cape_crafting': { id: 'cape_crafting', name: 'Crafting Skillcape', description: 'A cape awarded for mastering Crafting.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'crafting', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of creation.' },
+  'cape_thieving': { id: 'cape_thieving', name: 'Thieving Skillcape', description: 'A cape awarded for mastering Thieving.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'thieving', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of the shadows.' },
+  'cape_herblore': { id: 'cape_herblore', name: 'Herblore Skillcape', description: 'A cape awarded for mastering Herblore.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'herblore', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of alchemy.' },
+  'cape_slayer': { id: 'cape_slayer', name: 'Slayer Skillcape', description: 'A cape awarded for mastering Slayer.', icon: '🧥', value: 99000, type: 'tool', rarity: 'legendary', toolBonus: { skillId: 'slayer', speedMultiplier: 1.5, xpMultiplier: 1.1 }, usageHint: 'Wear to show your mastery of monsters.' },
+
+  // New Loot & Materials
+  'monster_hide': { id: 'monster_hide', name: 'Monster Hide', description: 'Tough skin from various beasts.', icon: '📜', value: 10, type: 'resource' },
+  'beast_claw': { id: 'beast_claw', name: 'Beast Claw', description: 'A sharp claw used in crafting.', icon: '💅', value: 25, type: 'resource' },
+  'vial_of_blood': { id: 'vial_of_blood', name: 'Vial of Blood', description: 'A dark, viscous liquid.', icon: '🧪', value: 50, type: 'resource' },
+  'dragon_scale_shard': { id: 'dragon_scale_shard', name: 'Dragon Scale Shard', description: 'A fragment of a dragon scale.', icon: '🛡️', value: 100, type: 'resource' },
+  'magic_scrap': { id: 'magic_scrap', name: 'Magic Scrap', description: 'Torn pieces of enchanted cloth.', icon: '🧵', value: 30, type: 'resource' },
+  'dark_energy_core': { id: 'dark_energy_core', name: 'Dark Energy Core', description: 'A pulsing core of pure darkness.', icon: '🌑', value: 500, type: 'resource' },
+  'ancient_mechanism': { id: 'ancient_mechanism', name: 'Ancient Mechanism', description: 'A complex part from a lost machine.', icon: '⚙️', value: 1000, type: 'resource' },
+  
+  // Loot Boxes / Dopamine Items
+  'bronze_loot_bag': { id: 'bronze_loot_bag', name: 'Bronze Loot Bag', description: 'A small bag of common loot.', icon: '💰', value: 100, type: 'resource', usageHint: 'Open for common materials and GP.' },
+  'iron_loot_chest': { id: 'iron_loot_chest', name: 'Iron Loot Chest', description: 'A sturdy chest filled with mid-tier loot.', icon: '📦', value: 500, type: 'resource', usageHint: 'Open for ores, bars, and GP.' },
+  'gold_treasure_coffer': { id: 'gold_treasure_coffer', name: 'Gold Treasure Coffer', description: 'A lavish coffer overflowing with riches.', icon: '💎', value: 2500, type: 'resource', usageHint: 'Open for gems, high-tier materials, and GP.' },
+  'void_relic_casket': { id: 'void_relic_casket', name: 'Void Relic Casket', description: 'A mysterious casket from the void.', icon: '🖤', value: 10000, type: 'resource', usageHint: 'Open for rare void materials and legendary gear.' },
+
+  // Keys & Access Items
+  'crypt_key': { id: 'crypt_key', name: 'Crypt Key', description: 'Unlocks the Ancient Crypt raid.', icon: '🗝️', value: 1000, type: 'resource' },
+  'fortress_sigil': { id: 'fortress_sigil', name: 'Fortress Sigil', description: 'Grants entry to the Orc Fortress.', icon: '🛡️', value: 5000, type: 'resource' },
+  'dragon_lord_seal': { id: 'dragon_lord_seal', name: 'Dragon Lord Seal', description: 'Required to enter the Dragon Lair.', icon: '🐉', value: 25000, type: 'resource' },
+  'void_citadel_pass': { id: 'void_citadel_pass', name: 'Void Citadel Pass', description: 'The only way into the Void Citadel.', icon: '🎟️', value: 100000, type: 'resource' },
+
+  // Intermediate Crafting Components
+  'reinforced_leather': { id: 'reinforced_leather', name: 'Reinforced Leather', description: 'Tough leather treated with oils.', icon: '🧥', value: 200, type: 'resource' },
+  'enchanted_string': { id: 'enchanted_string', name: 'Enchanted String', description: 'String that hums with magic.', icon: '🧵', value: 500, type: 'resource' },
+  'alchemical_catalyst': { id: 'alchemical_catalyst', name: 'Alchemical Catalyst', description: 'Speeds up chemical reactions.', icon: '🧪', value: 1000, type: 'resource' },
+  'master_crafting_kit': { id: 'master_crafting_kit', name: 'Master Crafting Kit', description: 'Tools for the finest artisans.', icon: '🧰', value: 5000, type: 'resource' },
+  
+  // More Farming Loot
+  'goblin_ear': { id: 'goblin_ear', name: 'Goblin Ear', description: 'A gruesome trophy.', icon: '👂', value: 5, type: 'resource' },
+  'wolf_pelt': { id: 'wolf_pelt', name: 'Wolf Pelt', description: 'Warm and fuzzy.', icon: '🦊', value: 20, type: 'resource' },
+  'dragon_fang': { id: 'dragon_fang', name: 'Dragon Fang', description: 'Sharp enough to cut through steel.', icon: '🦷', value: 200, type: 'resource' },
+  'void_shard': { id: 'void_shard', name: 'Void Shard', description: 'A piece of the void itself.', icon: '✨', value: 500, type: 'resource' },
+  
+  // Intermediate Potions & Materials
+  'agility_elixir': { id: 'agility_elixir', name: 'Agility Elixir', description: 'Makes you feel light as a feather.', icon: '🧪', value: 1000, type: 'potion' },
+  'thief_brew': { id: 'thief_brew', name: 'Thief\'s Brew', description: 'Sharpens your senses for thieving.', icon: '🧪', value: 1500, type: 'potion' },
+  'slayer_essence': { id: 'slayer_essence', name: 'Slayer Essence', description: 'Concentrated essence of monsters.', icon: '💧', value: 2000, type: 'resource' },
+  'pure_mana_crystal': { id: 'pure_mana_crystal', name: 'Pure Mana Crystal', description: 'A crystal pulsing with magical energy.', icon: '💎', value: 5000, type: 'resource' },
+  'kraken_tentacle': { id: 'kraken_tentacle', name: 'Kraken Tentacle', description: 'A writhing, powerful tentacle.', icon: '🐙', value: 10000, type: 'resource', rarity: 'rare' },
+  'abyssal_tentacle': { id: 'abyssal_tentacle', name: 'Abyssal Tentacle', description: 'A fusion of void and sea. The ultimate whip.', icon: '🔱', value: 150000, type: 'equipment', equipmentSlot: 'weapon', rarity: 'legendary', stats: { attack: 120, strength: 80, speed: 1.2 } },
 };
 
 export const ACTIONS: SkillAction[] = [
   // Runecrafting
-  { id: 'craft_air_rune', name: 'Craft Air Rune', skill: 'runecrafting', levelRequired: 1, xpReward: 10, duration: 2000, inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'air_rune', quantity: 2, chance: 1 }] },
+  { id: 'craft_air_rune', name: 'Craft Air Rune', skill: 'runecrafting', levelRequired: 1, xpReward: 10, duration: 2000, description: 'Harness the power of the wind.', inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'air_rune', quantity: 2, chance: 1 }] },
   { id: 'craft_mind_rune', name: 'Craft Mind Rune', skill: 'runecrafting', levelRequired: 5, xpReward: 15, duration: 2000, inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'mind_rune', quantity: 2, chance: 1 }] },
   { id: 'craft_water_rune', name: 'Craft Water Rune', skill: 'runecrafting', levelRequired: 10, xpReward: 20, duration: 2000, inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'water_rune', quantity: 2, chance: 1 }] },
   { id: 'craft_earth_rune', name: 'Craft Earth Rune', skill: 'runecrafting', levelRequired: 15, xpReward: 25, duration: 2000, inputs: [{ itemId: 'rune_essence', quantity: 1 }], outputs: [{ itemId: 'earth_rune', quantity: 2, chance: 1 }] },
@@ -309,22 +460,36 @@ export const ACTIONS: SkillAction[] = [
   { id: 'craft_law_rune', name: 'Craft Law Rune', skill: 'runecrafting', levelRequired: 54, xpReward: 85, duration: 3200, inputs: [{ itemId: 'rune_essence', quantity: 3 }], outputs: [{ itemId: 'law_rune', quantity: 1, chance: 1 }] },
   { id: 'craft_blood_rune', name: 'Craft Blood Rune', skill: 'runecrafting', levelRequired: 65, xpReward: 100, duration: 3500, inputs: [{ itemId: 'rune_essence', quantity: 4 }], outputs: [{ itemId: 'blood_rune', quantity: 1, chance: 1 }] },
   { id: 'craft_soul_rune', name: 'Craft Soul Rune', skill: 'runecrafting', levelRequired: 75, xpReward: 120, duration: 4000, inputs: [{ itemId: 'rune_essence', quantity: 4 }], outputs: [{ itemId: 'soul_rune', quantity: 1, chance: 1 }] },
+  { id: 'craft_wrath_rune', name: 'Craft Wrath Rune', skill: 'runecrafting', levelRequired: 95, xpReward: 1500, duration: 5000, inputs: [{ itemId: 'divine_essence', quantity: 1 }], outputs: [{ itemId: 'wrath_rune', quantity: 1, chance: 1 }] },
+  { id: 'craft_multi_air', name: 'Craft 50x Air Rune', skill: 'runecrafting', levelRequired: 99, xpReward: 2000, duration: 2000, inputs: [{ itemId: 'divine_essence', quantity: 1 }], outputs: [{ itemId: 'air_rune', quantity: 50, chance: 1 }] },
 
   // Thieving
-  { id: 'pickpocket_man', name: 'Pickpocket Man', skill: 'thieving', levelRequired: 1, xpReward: 15, duration: 2000, outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.5 }] },
-  { id: 'steal_tea', name: 'Steal Tea', skill: 'thieving', levelRequired: 5, xpReward: 20, duration: 2500, outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.6 }] },
-  { id: 'pickpocket_farmer', name: 'Pickpocket Farmer', skill: 'thieving', levelRequired: 10, xpReward: 25, duration: 2500, outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.7 }, { itemId: 'potato_seeds', quantity: 1, chance: 0.2 }] },
-  { id: 'steal_silk', name: 'Steal Silk', skill: 'thieving', levelRequired: 15, xpReward: 35, duration: 3000, outputs: [{ itemId: 'silk', quantity: 1, chance: 0.8 }] },
-  { id: 'pickpocket_warrior', name: 'Pickpocket Warrior', skill: 'thieving', levelRequired: 25, xpReward: 45, duration: 3500, outputs: [{ itemId: 'coin_purse', quantity: 2, chance: 0.5 }, { itemId: 'iron_ore', quantity: 1, chance: 0.1 }] },
-  { id: 'pickpocket_guard', name: 'Pickpocket Guard', skill: 'thieving', levelRequired: 30, xpReward: 60, duration: 4000, outputs: [{ itemId: 'coin_purse', quantity: 2, chance: 0.6 }, { itemId: 'iron_ore', quantity: 1, chance: 0.2 }] },
-  { id: 'steal_fur', name: 'Steal Fur', skill: 'thieving', levelRequired: 35, xpReward: 75, duration: 4500, outputs: [{ itemId: 'coin_purse', quantity: 3, chance: 0.7 }] },
-  { id: 'pickpocket_knight', name: 'Pickpocket Knight', skill: 'thieving', levelRequired: 45, xpReward: 90, duration: 5000, outputs: [{ itemId: 'coin_purse', quantity: 3, chance: 0.8 }, { itemId: 'steel_ore', quantity: 1, chance: 0.2 }] },
-  { id: 'crack_safe', name: 'Crack Safe', skill: 'thieving', levelRequired: 50, xpReward: 120, duration: 6000, inputs: [{ itemId: 'lockpick', quantity: 1 }], outputs: [{ itemId: 'coin_purse', quantity: 5, chance: 1 }, { itemId: 'uncut_ruby', quantity: 1, chance: 0.1 }] },
-  { id: 'steal_silver', name: 'Steal Silver', skill: 'thieving', levelRequired: 60, xpReward: 150, duration: 6500, outputs: [{ itemId: 'coin_purse', quantity: 4, chance: 0.9 }] },
-  { id: 'pickpocket_paladin', name: 'Pickpocket Paladin', skill: 'thieving', levelRequired: 70, xpReward: 200, duration: 7000, outputs: [{ itemId: 'coin_purse', quantity: 5, chance: 0.9 }, { itemId: 'mithril_ore', quantity: 1, chance: 0.3 }] },
-  { id: 'steal_spices', name: 'Steal Spices', skill: 'thieving', levelRequired: 75, xpReward: 250, duration: 7500, outputs: [{ itemId: 'coin_purse', quantity: 6, chance: 1 }] },
-  { id: 'pickpocket_hero', name: 'Pickpocket Hero', skill: 'thieving', levelRequired: 85, xpReward: 350, duration: 8000, outputs: [{ itemId: 'coin_purse', quantity: 8, chance: 1 }, { itemId: 'adamant_ore', quantity: 1, chance: 0.4 }, { itemId: 'runite_ore', quantity: 1, chance: 0.05 }] },
-  { id: 'steal_gems', name: 'Steal Gems', skill: 'thieving', levelRequired: 95, xpReward: 500, duration: 10000, inputs: [{ itemId: 'lockpick', quantity: 1 }], outputs: [{ itemId: 'uncut_diamond', quantity: 1, chance: 0.5 }, { itemId: 'uncut_ruby', quantity: 1, chance: 0.8 }, { itemId: 'coin_purse', quantity: 10, chance: 1 }] },
+  { id: 'pickpocket_man', name: 'Pickpocket Man', skill: 'thieving', levelRequired: 1, xpReward: 15, duration: 2000, description: 'A simple target for a novice thief.', outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.5 }] },
+  { id: 'steal_tea', name: 'Steal Tea', skill: 'thieving', levelRequired: 5, xpReward: 20, duration: 2500, description: 'A quick grab from the market stall.', outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.6 }] },
+  { id: 'pickpocket_farmer', name: 'Pickpocket Farmer', skill: 'thieving', levelRequired: 10, xpReward: 25, duration: 2500, description: 'Farmers often carry seeds and small change.', outputs: [{ itemId: 'coin_purse', quantity: 1, chance: 0.7 }, { itemId: 'potato_seeds', quantity: 1, chance: 0.2 }] },
+  { id: 'steal_silk', name: 'Steal Silk', skill: 'thieving', levelRequired: 15, xpReward: 35, duration: 3000, description: 'Fine silk is worth a pretty penny.', outputs: [{ itemId: 'silk', quantity: 1, chance: 0.8 }] },
+  { id: 'pickpocket_warrior', name: 'Pickpocket Warrior', skill: 'thieving', levelRequired: 25, xpReward: 45, duration: 3500, description: 'Warriors carry combat supplies and gold.', outputs: [{ itemId: 'coin_purse', quantity: 2, chance: 0.5 }, { itemId: 'iron_ore', quantity: 1, chance: 0.1 }] },
+  { id: 'pickpocket_guard', name: 'Pickpocket Guard', skill: 'thieving', levelRequired: 30, xpReward: 60, duration: 4000, description: 'Guards are alert, but their pockets are heavy.', outputs: [{ itemId: 'coin_purse', quantity: 2, chance: 0.6 }, { itemId: 'iron_ore', quantity: 1, chance: 0.2 }] },
+  { id: 'steal_fur', name: 'Steal Fur', skill: 'thieving', levelRequired: 35, xpReward: 75, duration: 4500, description: 'Soft furs from the trader.', outputs: [{ itemId: 'coin_purse', quantity: 3, chance: 0.7 }] },
+  { id: 'pickpocket_knight', name: 'Pickpocket Knight', skill: 'thieving', levelRequired: 45, xpReward: 90, duration: 5000, description: 'Knights carry high-quality ores and gold.', outputs: [{ itemId: 'coin_purse', quantity: 3, chance: 0.8 }, { itemId: 'steel_ore', quantity: 1, chance: 0.2 }] },
+  { id: 'crack_safe', name: 'Crack Safe', skill: 'thieving', levelRequired: 50, xpReward: 120, duration: 6000, description: 'Requires a lockpick. Contains gems and gold.', inputs: [{ itemId: 'lockpick', quantity: 1 }], outputs: [{ itemId: 'coin_purse', quantity: 5, chance: 1 }, { itemId: 'uncut_ruby', quantity: 1, chance: 0.1 }] },
+  { id: 'steal_silver', name: 'Steal Silver', skill: 'thieving', levelRequired: 60, xpReward: 150, duration: 6500, description: 'Shiny silver trinkets.', outputs: [{ itemId: 'coin_purse', quantity: 4, chance: 0.9 }] },
+  { id: 'pickpocket_paladin', name: 'Pickpocket Paladin', skill: 'thieving', levelRequired: 70, xpReward: 200, duration: 7000, description: 'Paladins carry blessed items and mithril.', outputs: [{ itemId: 'coin_purse', quantity: 5, chance: 0.9 }, { itemId: 'mithril_ore', quantity: 1, chance: 0.3 }] },
+  { id: 'steal_spices', name: 'Steal Spices', skill: 'thieving', levelRequired: 75, xpReward: 250, duration: 7500, description: 'Rare spices from distant lands.', outputs: [{ itemId: 'coin_purse', quantity: 6, chance: 1 }] },
+  { id: 'pickpocket_hero', name: 'Pickpocket Hero', skill: 'thieving', levelRequired: 85, xpReward: 350, duration: 8000, description: 'Only a master thief would dare rob a hero.', outputs: [{ itemId: 'coin_purse', quantity: 8, chance: 1 }, { itemId: 'adamant_ore', quantity: 1, chance: 0.4 }, { itemId: 'runite_ore', quantity: 1, chance: 0.05 }] },
+  { id: 'steal_gems', name: 'Steal Gems', skill: 'thieving', levelRequired: 95, xpReward: 500, duration: 10000, description: 'Requires a lockpick. The ultimate gem heist.', inputs: [{ itemId: 'lockpick', quantity: 1 }], outputs: [{ itemId: 'uncut_diamond', quantity: 1, chance: 0.5 }, { itemId: 'uncut_ruby', quantity: 1, chance: 0.8 }, { itemId: 'coin_purse', quantity: 10, chance: 1 }] },
+
+  { id: 'pickpocket_elf', name: 'Pickpocket Elf', skill: 'thieving', levelRequired: 90, xpReward: 1200, duration: 5000, outputs: [
+    { itemId: 'elf_dust', quantity: 2, chance: 0.5 },
+    { itemId: 'coin_purse', quantity: 15, chance: 1 },
+    { itemId: 'clue_scroll_master', quantity: 1, chance: 0.01 }
+  ] },
+  { id: 'pickpocket_tzhaar', name: 'Pickpocket TzHaar', skill: 'thieving', levelRequired: 95, xpReward: 2500, duration: 6000, outputs: [
+    { itemId: 'obsidian', quantity: 1, chance: 0.2 },
+    { itemId: 'coin_purse', quantity: 20, chance: 1 },
+    { itemId: 'clue_scroll_master', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'solve_master_clue', name: 'Solve Master Clue', skill: 'thieving', levelRequired: 99, xpReward: 10000, duration: 30000, inputs: [{ itemId: 'clue_scroll_master', quantity: 1 }], outputs: [{ itemId: 'clue_reward_box', quantity: 1, chance: 1 }] },
 
   // Prayer
   { id: 'bury_bones', name: 'Bury Bones', skill: 'prayer', levelRequired: 1, xpReward: 15, duration: 1000, inputs: [{ itemId: 'bones', quantity: 1 }], outputs: [] },
@@ -334,11 +499,11 @@ export const ACTIONS: SkillAction[] = [
   { id: 'bury_ancient_bones', name: 'Bury Ancient Bones', skill: 'prayer', levelRequired: 70, xpReward: 300, duration: 1000, inputs: [{ itemId: 'ancient_bone', quantity: 1 }], outputs: [] },
 
   // Mining Progression
-  { id: 'mine_copper', name: 'Mine Copper', skill: 'mining', levelRequired: 1, xpReward: 10, duration: 3000, outputs: [
+  { id: 'mine_copper', name: 'Mine Copper', skill: 'mining', levelRequired: 1, xpReward: 10, duration: 3000, description: 'Extract copper ore from the earth.', toolRequired: 'bronze_pickaxe', outputs: [
     { itemId: 'copper_ore', quantity: 1, chance: 1 },
     { itemId: 'uncut_sapphire', quantity: 1, chance: 0.01 },
   ] },
-  { id: 'mine_tin', name: 'Mine Tin', skill: 'mining', levelRequired: 1, xpReward: 10, duration: 3000, outputs: [
+  { id: 'mine_tin', name: 'Mine Tin', skill: 'mining', levelRequired: 1, xpReward: 10, duration: 3000, description: 'Extract tin ore from the earth.', toolRequired: 'bronze_pickaxe', outputs: [
     { itemId: 'tin_ore', quantity: 1, chance: 1 },
     { itemId: 'uncut_sapphire', quantity: 1, chance: 0.01 },
   ] },
@@ -412,8 +577,29 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'uncut_diamond', quantity: 1, chance: 0.1 }
   ] },
   
+  { id: 'mine_dragonite', name: 'Mine Dragonite', skill: 'mining', levelRequired: 99, xpReward: 2500, duration: 40000, outputs: [
+    { itemId: 'dragonite_ore', quantity: 1, chance: 1 },
+    { itemId: 'divine_essence', quantity: 1, chance: 0.05 },
+    { itemId: 'uncut_diamond', quantity: 1, chance: 0.2 }
+  ] },
+  { id: 'mine_necrite', name: 'Mine Necrite', skill: 'mining', levelRequired: 99, xpReward: 3000, duration: 45000, outputs: [
+    { itemId: 'necrite_ore', quantity: 1, chance: 1 },
+    { itemId: 'divine_essence', quantity: 1, chance: 0.1 },
+    { itemId: 'uncut_diamond', quantity: 1, chance: 0.3 }
+  ] },
+  { id: 'mine_divine_essence', name: 'Mine Divine Essence', skill: 'mining', levelRequired: 99, xpReward: 5000, duration: 60000, outputs: [
+    { itemId: 'divine_essence', quantity: 1, chance: 1 }
+  ] },
+  { id: 'mine_necrite', name: 'Mine Necrite', skill: 'mining', levelRequired: 99, xpReward: 5000, duration: 60000, secondarySkillRequired: { skill: 'slayer', level: 90 }, outputs: [
+    { itemId: 'necrite_ore', quantity: 1, chance: 1 },
+    { itemId: 'ancient_bone', quantity: 1, chance: 0.1 }
+  ] },
+  { id: 'mine_divine_essence', name: 'Mine Divine Essence', skill: 'mining', levelRequired: 90, xpReward: 500, duration: 10000, outputs: [
+    { itemId: 'divine_essence', quantity: 5, chance: 1 }
+  ] },
+  
   // Woodcutting Progression
-  { id: 'chop_logs', name: 'Chop Logs', skill: 'woodcutting', levelRequired: 1, xpReward: 10, duration: 3000, outputs: [
+  { id: 'chop_logs', name: 'Chop Logs', skill: 'woodcutting', levelRequired: 1, xpReward: 10, duration: 3000, description: 'Chop down a standard tree.', toolRequired: 'bronze_axe', outputs: [
     { itemId: 'logs', quantity: 1, chance: 1 },
     { itemId: 'bird_nest', quantity: 1, chance: 0.05 }
   ] },
@@ -517,6 +703,7 @@ export const ACTIONS: SkillAction[] = [
   { id: 'fish_shark', name: 'Fish Shark', skill: 'fishing', levelRequired: 99, xpReward: 2000, duration: 30000, outputs: [{ itemId: 'raw_shark', quantity: 1, chance: 1 }, { itemId: 'pearl', quantity: 1, chance: 0.2 }] },
   
   // Hunting Progression
+  { id: 'catch_toad', name: 'Catch Toad', skill: 'hunting', levelRequired: 1, xpReward: 10, duration: 3000, outputs: [{ itemId: 'toads_legs', quantity: 1, chance: 0.5 }] },
   { id: 'hunt_rabbit', name: 'Hunt Rabbit', skill: 'hunting', levelRequired: 1, xpReward: 15, duration: 4000, outputs: [
     { itemId: 'raw_meat', quantity: 1, chance: 1 },
     { itemId: 'fur', quantity: 1, chance: 0.5 }
@@ -581,6 +768,7 @@ export const ACTIONS: SkillAction[] = [
   { id: 'farm_flax', name: 'Farm Flax', skill: 'farming', levelRequired: 3, xpReward: 25, duration: 11000, inputs: [{ itemId: 'flax_seeds', quantity: 1 }], outputs: [{ itemId: 'flax', quantity: 3, chance: 1 }] },
   { id: 'farm_onions', name: 'Farm Onions', skill: 'farming', levelRequired: 5, xpReward: 35, duration: 12000, inputs: [{ itemId: 'onion_seeds', quantity: 1 }], outputs: [{ itemId: 'raw_onion', quantity: 4, chance: 1 }] },
   { id: 'farm_grapes', name: 'Farm Grapes', skill: 'farming', levelRequired: 8, xpReward: 45, duration: 13000, inputs: [{ itemId: 'grape_seeds', quantity: 1 }], outputs: [{ itemId: 'grapes', quantity: 4, chance: 1 }] },
+  { id: 'farm_toadflax', name: 'Farm Toadflax', skill: 'farming', levelRequired: 38, xpReward: 150, duration: 15000, inputs: [{ itemId: 'toadflax_seeds', quantity: 1 }], outputs: [{ itemId: 'toadflax', quantity: 1, chance: 1 }] },
   { id: 'farm_tomatoes', name: 'Farm Tomatoes', skill: 'farming', levelRequired: 12, xpReward: 50, duration: 14000, inputs: [{ itemId: 'tomato_seeds', quantity: 1 }], outputs: [{ itemId: 'raw_tomato', quantity: 4, chance: 1 }] },
   { id: 'farm_cabbage', name: 'Farm Cabbage', skill: 'farming', levelRequired: 20, xpReward: 70, duration: 16000, inputs: [{ itemId: 'cabbage_seeds', quantity: 1 }], outputs: [{ itemId: 'raw_cabbage', quantity: 5, chance: 1 }] },
   { id: 'farm_herbs', name: 'Farm Herbs', skill: 'farming', levelRequired: 30, xpReward: 100, duration: 20000, inputs: [{ itemId: 'herb_seeds', quantity: 1 }], outputs: [{ itemId: 'herbs', quantity: 2, chance: 1 }] },
@@ -595,10 +783,11 @@ export const ACTIONS: SkillAction[] = [
   { id: 'farm_magic', name: 'Farm Magic Tree', skill: 'farming', levelRequired: 99, xpReward: 3500, duration: 120000, inputs: [{ itemId: 'magic_seeds', quantity: 1 }], outputs: [{ itemId: 'magic_logs', quantity: 5, chance: 1 }] },
 
   // Smithing Progression
-  { id: 'smelt_bronze', name: 'Smelt Bronze', skill: 'smithing', levelRequired: 1, xpReward: 15, duration: 5000, inputs: [{ itemId: 'copper_ore', quantity: 1 }, { itemId: 'tin_ore', quantity: 1 }], outputs: [{ itemId: 'bronze_bar', quantity: 1, chance: 1 }] },
+  { id: 'make_charcoal', name: 'Burn Charcoal', skill: 'smithing', levelRequired: 1, xpReward: 15, duration: 5000, description: 'Burn logs to create charcoal for smelting.', inputs: [{ itemId: 'logs', quantity: 2 }], outputs: [{ itemId: 'charcoal', quantity: 1, chance: 1 }] },
+  { id: 'smelt_bronze', name: 'Smelt Bronze', skill: 'smithing', levelRequired: 1, xpReward: 15, duration: 5000, description: 'Combine copper and tin to make bronze.', inputs: [{ itemId: 'copper_ore', quantity: 1 }, { itemId: 'tin_ore', quantity: 1 }], outputs: [{ itemId: 'bronze_bar', quantity: 1, chance: 1 }] },
   { id: 'smelt_iron', name: 'Smelt Iron', skill: 'smithing', levelRequired: 15, xpReward: 35, duration: 7000, inputs: [{ itemId: 'iron_ore', quantity: 1 }], outputs: [{ itemId: 'iron_bar', quantity: 1, chance: 0.5 }] },
   { id: 'smelt_silver', name: 'Smelt Silver', skill: 'smithing', levelRequired: 25, xpReward: 45, duration: 8000, inputs: [{ itemId: 'silver_ore', quantity: 1 }], outputs: [{ itemId: 'silver_bar', quantity: 1, chance: 1 }] },
-  { id: 'smelt_steel', name: 'Smelt Steel', skill: 'smithing', levelRequired: 35, xpReward: 70, duration: 10000, inputs: [{ itemId: 'iron_ore', quantity: 1 }, { itemId: 'steel_ore', quantity: 2 }], outputs: [{ itemId: 'steel_bar', quantity: 1, chance: 1 }] },
+  { id: 'smelt_steel', name: 'Smelt Steel', skill: 'smithing', levelRequired: 35, xpReward: 70, duration: 10000, description: 'Smelt iron with charcoal for superior strength.', inputs: [{ itemId: 'iron_ore', quantity: 1 }, { itemId: 'charcoal', quantity: 2 }], outputs: [{ itemId: 'steel_bar', quantity: 1, chance: 1 }] },
   { id: 'smelt_gold', name: 'Smelt Gold', skill: 'smithing', levelRequired: 45, xpReward: 30, duration: 6000, inputs: [{ itemId: 'gold_ore', quantity: 1 }], outputs: [{ itemId: 'gold_bar', quantity: 1, chance: 1 }] },
   { id: 'smelt_mithril', name: 'Smelt Mithril', skill: 'smithing', levelRequired: 55, xpReward: 150, duration: 15000, inputs: [{ itemId: 'mithril_ore', quantity: 4 }, { itemId: 'steel_ore', quantity: 1 }], outputs: [{ itemId: 'mithril_bar', quantity: 1, chance: 1 }] },
   { id: 'smelt_platinum', name: 'Smelt Platinum', skill: 'smithing', levelRequired: 65, xpReward: 200, duration: 18000, inputs: [{ itemId: 'platinum_ore', quantity: 1 }], outputs: [{ itemId: 'platinum_bar', quantity: 1, chance: 1 }] },
@@ -606,6 +795,13 @@ export const ACTIONS: SkillAction[] = [
   { id: 'smelt_runite', name: 'Smelt Runite', skill: 'smithing', levelRequired: 85, xpReward: 600, duration: 30000, inputs: [{ itemId: 'runite_ore', quantity: 8 }, { itemId: 'steel_ore', quantity: 1 }], outputs: [{ itemId: 'runite_bar', quantity: 1, chance: 1 }] },
   { id: 'smelt_obsidian', name: 'Refine Obsidian', skill: 'smithing', levelRequired: 95, xpReward: 1000, duration: 40000, inputs: [{ itemId: 'obsidian', quantity: 5 }], outputs: [{ itemId: 'obsidian_bar', quantity: 1, chance: 1 }] },
   
+  { id: 'smelt_dragonite', name: 'Smelt Dragonite', skill: 'smithing', levelRequired: 99, xpReward: 2000, duration: 50000, inputs: [{ itemId: 'dragonite_ore', quantity: 5 }, { itemId: 'coal', quantity: 10 }], outputs: [{ itemId: 'dragonite_bar', quantity: 1, chance: 1 }] },
+  { id: 'smelt_necrite', name: 'Smelt Necrite', skill: 'smithing', levelRequired: 99, xpReward: 5000, duration: 80000, inputs: [{ itemId: 'necrite_ore', quantity: 10 }, { itemId: 'coal', quantity: 20 }], outputs: [{ itemId: 'necrite_bar', quantity: 1, chance: 1 }] },
+  { id: 'smith_dragonite_sword', name: 'Smith Dragonite Sword', skill: 'smithing', levelRequired: 99, xpReward: 5000, duration: 60000, inputs: [{ itemId: 'dragonite_bar', quantity: 3 }], outputs: [{ itemId: 'dragonite_sword', quantity: 1, chance: 1 }] },
+  { id: 'smith_dragonite_body', name: 'Smith Dragonite Body', skill: 'smithing', levelRequired: 99, xpReward: 10000, duration: 120000, inputs: [{ itemId: 'dragonite_bar', quantity: 5 }], outputs: [{ itemId: 'dragonite_body', quantity: 1, chance: 1 }] },
+  { id: 'smith_necrite_sword', name: 'Smith Necrite Sword', skill: 'smithing', levelRequired: 99, xpReward: 15000, duration: 180000, inputs: [{ itemId: 'necrite_bar', quantity: 5 }], outputs: [{ itemId: 'necrite_sword', quantity: 1, chance: 1 }] },
+  { id: 'smith_necrite_body', name: 'Smith Necrite Body', skill: 'smithing', levelRequired: 99, xpReward: 30000, duration: 300000, inputs: [{ itemId: 'necrite_bar', quantity: 10 }], outputs: [{ itemId: 'necrite_body', quantity: 1, chance: 1 }] },
+
   // Crafting Progression
   { id: 'fletch_shafts', name: 'Fletch Shafts', skill: 'crafting', levelRequired: 1, xpReward: 5, duration: 2000, inputs: [{ itemId: 'logs', quantity: 1 }], outputs: [{ itemId: 'arrow_shafts', quantity: 15, chance: 1 }] },
   { id: 'spin_flax', name: 'Spin Flax', skill: 'crafting', levelRequired: 10, xpReward: 15, duration: 3000, inputs: [{ itemId: 'flax', quantity: 1 }], outputs: [{ itemId: 'bowstring', quantity: 1, chance: 1 }] },
@@ -623,6 +819,11 @@ export const ACTIONS: SkillAction[] = [
   { id: 'string_yew_shortbow', name: 'String Yew Shortbow', skill: 'crafting', levelRequired: 65, xpReward: 67.5, duration: 2000, inputs: [{ itemId: 'yew_shortbow_u', quantity: 1 }, { itemId: 'bowstring', quantity: 1 }], outputs: [{ itemId: 'yew_shortbow', quantity: 1, chance: 1 }] },
   { id: 'fletch_magic_shortbow_u', name: 'Fletch Magic Shortbow (u)', skill: 'crafting', levelRequired: 80, xpReward: 83.3, duration: 5500, inputs: [{ itemId: 'magic_logs', quantity: 1 }], outputs: [{ itemId: 'magic_shortbow_u', quantity: 1, chance: 1 }] },
   { id: 'string_magic_shortbow', name: 'String Magic Shortbow', skill: 'crafting', levelRequired: 80, xpReward: 83.3, duration: 2000, inputs: [{ itemId: 'magic_shortbow_u', quantity: 1 }, { itemId: 'bowstring', quantity: 1 }], outputs: [{ itemId: 'magic_shortbow', quantity: 1, chance: 1 }] },
+
+  { id: 'fletch_elder_shortbow_u', name: 'Fletch Elder Shortbow (u)', skill: 'crafting', levelRequired: 92, xpReward: 120, duration: 6000, inputs: [{ itemId: 'elder_logs', quantity: 1 }], outputs: [{ itemId: 'elder_shortbow_u', quantity: 1, chance: 1 }] },
+  { id: 'string_elder_shortbow', name: 'String Elder Shortbow', skill: 'crafting', levelRequired: 92, xpReward: 120, duration: 2000, inputs: [{ itemId: 'elder_shortbow_u', quantity: 1 }, { itemId: 'bowstring', quantity: 1 }], outputs: [{ itemId: 'elder_shortbow', quantity: 1, chance: 1 }] },
+  { id: 'fletch_redwood_shortbow_u', name: 'Fletch Redwood Shortbow (u)', skill: 'crafting', levelRequired: 97, xpReward: 250, duration: 8000, inputs: [{ itemId: 'redwood_logs', quantity: 1 }], outputs: [{ itemId: 'redwood_shortbow_u', quantity: 1, chance: 1 }] },
+  { id: 'string_redwood_shortbow', name: 'String Redwood Shortbow', skill: 'crafting', levelRequired: 97, xpReward: 250, duration: 2000, inputs: [{ itemId: 'redwood_shortbow_u', quantity: 1 }, { itemId: 'bowstring', quantity: 1 }], outputs: [{ itemId: 'redwood_shortbow', quantity: 1, chance: 1 }] },
 
   { id: 'make_bronze_arrows', name: 'Make Bronze Arrows', skill: 'crafting', levelRequired: 5, xpReward: 15, duration: 5000, inputs: [{ itemId: 'arrow_shafts', quantity: 15 }, { itemId: 'feathers', quantity: 15 }, { itemId: 'bronze_bar', quantity: 1 }], outputs: [{ itemId: 'bronze_arrows', quantity: 15, chance: 1 }] },
   { id: 'make_iron_arrows', name: 'Make Iron Arrows', skill: 'crafting', levelRequired: 20, xpReward: 30, duration: 6000, inputs: [{ itemId: 'arrow_shafts', quantity: 15 }, { itemId: 'feathers', quantity: 15 }, { itemId: 'iron_bar', quantity: 1 }], outputs: [{ itemId: 'iron_arrows', quantity: 15, chance: 1 }] },
@@ -675,21 +876,25 @@ export const ACTIONS: SkillAction[] = [
   { id: 'cook_dragon', name: 'Cook Dragon Meat', skill: 'cooking', levelRequired: 99, xpReward: 5000, duration: 40000, inputs: [{ itemId: 'dragon_meat', quantity: 1 }], outputs: [{ itemId: 'cooked_dragon_meat', quantity: 1, chance: 1 }] },
 
   // Herblore Progression
-  { id: 'gather_vial_of_water', name: 'Gather Vial of Water', skill: 'herblore', levelRequired: 1, xpReward: 5, duration: 2000, outputs: [{ itemId: 'vial_of_water', quantity: 1, chance: 1 }] },
-  { id: 'gather_herbs', name: 'Gather Herbs', skill: 'herblore', levelRequired: 1, xpReward: 10, duration: 4000, outputs: [{ itemId: 'herbs', quantity: 1, chance: 1 }] },
-  { id: 'make_attack_potion', name: 'Brew Attack Potion', skill: 'herblore', levelRequired: 5, xpReward: 40, duration: 8000, inputs: [{ itemId: 'herbs', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'attack_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_antipoison', name: 'Brew Antipoison', skill: 'herblore', levelRequired: 15, xpReward: 70, duration: 9000, inputs: [{ itemId: 'herbs', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'antipoison', quantity: 1, chance: 1 }] },
-  { id: 'make_strength_potion', name: 'Brew Strength Potion', skill: 'herblore', levelRequired: 25, xpReward: 120, duration: 10000, inputs: [{ itemId: 'herbs', quantity: 2 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'strength_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_restore_potion', name: 'Brew Restore Potion', skill: 'herblore', levelRequired: 35, xpReward: 200, duration: 12000, inputs: [{ itemId: 'herbs', quantity: 2 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'restore_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_energy_potion', name: 'Brew Energy Potion', skill: 'herblore', levelRequired: 42, xpReward: 300, duration: 13000, inputs: [{ itemId: 'herbs', quantity: 3 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'energy_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_defense_potion', name: 'Brew Defense Potion', skill: 'herblore', levelRequired: 50, xpReward: 400, duration: 15000, inputs: [{ itemId: 'herbs', quantity: 4 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'defense_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_super_defense', name: 'Brew Super Defense', skill: 'herblore', levelRequired: 58, xpReward: 600, duration: 16000, inputs: [{ itemId: 'herbs', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_defense', quantity: 1, chance: 1 }] },
-  { id: 'make_prayer_potion', name: 'Brew Prayer Potion', skill: 'herblore', levelRequired: 65, xpReward: 800, duration: 18000, inputs: [{ itemId: 'herbs', quantity: 4 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'prayer_potion', quantity: 1, chance: 1 }] },
-  { id: 'make_super_energy', name: 'Brew Super Energy', skill: 'herblore', levelRequired: 72, xpReward: 1200, duration: 20000, inputs: [{ itemId: 'herbs', quantity: 6 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_energy', quantity: 1, chance: 1 }] },
-  { id: 'make_super_attack', name: 'Brew Super Attack', skill: 'herblore', levelRequired: 80, xpReward: 1500, duration: 22000, inputs: [{ itemId: 'herbs', quantity: 6 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_attack', quantity: 1, chance: 1 }] },
-  { id: 'make_saradomin_brew', name: 'Brew Saradomin Brew', skill: 'herblore', levelRequired: 82, xpReward: 2000, duration: 24000, inputs: [{ itemId: 'herbs', quantity: 8 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'saradomin_brew', quantity: 1, chance: 1 }] },
-  { id: 'make_super_strength', name: 'Brew Super Strength', skill: 'herblore', levelRequired: 90, xpReward: 3000, duration: 25000, inputs: [{ itemId: 'herbs', quantity: 8 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_strength', quantity: 1, chance: 1 }] },
-  { id: 'make_overload', name: 'Brew Overload', skill: 'herblore', levelRequired: 99, xpReward: 10000, duration: 45000, inputs: [{ itemId: 'herbs', quantity: 15 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'overload', quantity: 1, chance: 1 }] },
+  { id: 'gather_vial_of_water', name: 'Gather Vial of Water', skill: 'herblore', levelRequired: 1, xpReward: 5, duration: 2000, description: 'Fill a vial with fresh spring water.', outputs: [{ itemId: 'vial_of_water', quantity: 1, chance: 1 }] },
+  { id: 'gather_herbs', name: 'Gather Herbs', skill: 'herblore', levelRequired: 1, xpReward: 10, duration: 4000, description: 'Search the fields for wild herbs.', outputs: [{ itemId: 'herbs', quantity: 1, chance: 1 }] },
+  { id: 'make_attack_potion', name: 'Brew Attack Potion', skill: 'herblore', levelRequired: 5, xpReward: 40, duration: 8000, description: 'A basic potion to improve accuracy.', inputs: [{ itemId: 'herbs', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'attack_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_antipoison', name: 'Brew Antipoison', skill: 'herblore', levelRequired: 15, xpReward: 70, duration: 9000, description: 'Neutralizes common toxins.', inputs: [{ itemId: 'herbs', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'antipoison', quantity: 1, chance: 1 }] },
+  { id: 'make_strength_potion', name: 'Brew Strength Potion', skill: 'herblore', levelRequired: 25, xpReward: 120, duration: 10000, description: 'Increases physical power.', inputs: [{ itemId: 'herbs', quantity: 2 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'strength_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_restore_potion', name: 'Brew Restore Potion', skill: 'herblore', levelRequired: 35, xpReward: 200, duration: 12000, description: 'Restores drained skill levels.', inputs: [{ itemId: 'herbs', quantity: 2 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'restore_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_agility_potion', name: 'Brew Agility Potion', skill: 'herblore', levelRequired: 34, xpReward: 180, duration: 11000, description: 'Improves reflexes and speed.', inputs: [{ itemId: 'toadflax', quantity: 1 }, { itemId: 'toads_legs', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'agility_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_energy_potion', name: 'Brew Energy Potion', skill: 'herblore', levelRequired: 42, xpReward: 300, duration: 13000, description: 'Restores run energy.', inputs: [{ itemId: 'herbs', quantity: 3 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'energy_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_defense_potion', name: 'Brew Defense Potion', skill: 'herblore', levelRequired: 50, xpReward: 400, duration: 15000, description: 'Hardens the skin against attacks.', inputs: [{ itemId: 'herbs', quantity: 4 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'defense_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_super_defense', name: 'Brew Super Defense', skill: 'herblore', levelRequired: 58, xpReward: 600, duration: 16000, description: 'Significantly improves defense.', inputs: [{ itemId: 'herbs', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_defense', quantity: 1, chance: 1 }] },
+  { id: 'make_prayer_potion', name: 'Brew Prayer Potion', skill: 'herblore', levelRequired: 65, xpReward: 800, duration: 18000, description: 'Restores divine connection.', inputs: [{ itemId: 'herbs', quantity: 4 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'prayer_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_super_energy', name: 'Brew Super Energy', skill: 'herblore', levelRequired: 72, xpReward: 1200, duration: 20000, description: 'Restores massive run energy.', inputs: [{ itemId: 'herbs', quantity: 6 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_energy', quantity: 1, chance: 1 }] },
+  { id: 'make_super_attack', name: 'Brew Super Attack', skill: 'herblore', levelRequired: 80, xpReward: 1500, duration: 22000, description: 'Significantly improves accuracy.', inputs: [{ itemId: 'herbs', quantity: 6 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_attack', quantity: 1, chance: 1 }] },
+  { id: 'make_saradomin_brew', name: 'Brew Saradomin Brew', skill: 'herblore', levelRequired: 82, xpReward: 2000, duration: 24000, description: 'The ultimate healing potion.', inputs: [{ itemId: 'herbs', quantity: 8 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'saradomin_brew', quantity: 1, chance: 1 }] },
+  { id: 'make_super_strength', name: 'Brew Super Strength', skill: 'herblore', levelRequired: 90, xpReward: 3000, duration: 25000, description: 'Significantly improves physical power.', inputs: [{ itemId: 'herbs', quantity: 8 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_strength', quantity: 1, chance: 1 }] },
+  { id: 'make_spirit_potion', name: 'Brew Spirit Potion', skill: 'herblore', levelRequired: 92, xpReward: 4000, duration: 30000, description: 'Connects with the spirit realm.', inputs: [{ itemId: 'spirit_herb', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'spirit_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_dragon_slayer', name: 'Brew Dragon Slayer Potion', skill: 'herblore', levelRequired: 95, xpReward: 6000, duration: 35000, description: 'Specifically designed for hunting dragons.', inputs: [{ itemId: 'dragon_scale', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'dragon_slayer_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_overload', name: 'Brew Overload', skill: 'herblore', levelRequired: 99, xpReward: 15000, duration: 45000, description: 'The peak of alchemy. Boosts all combat stats.', inputs: [{ itemId: 'slayer_essence', quantity: 5 }, { itemId: 'pure_mana_crystal', quantity: 2 }, { itemId: 'alchemical_catalyst', quantity: 1 }], outputs: [{ itemId: 'overload_potion', quantity: 1, chance: 1 }] },
+  { id: 'craft_abyssal_tentacle', name: 'Craft Abyssal Tentacle', skill: 'crafting', levelRequired: 95, xpReward: 20000, duration: 60000, description: 'Combine the power of the Abyssal Whip and the Kraken Tentacle.', inputs: [{ itemId: 'abyssal_whip', quantity: 1 }, { itemId: 'kraken_tentacle', quantity: 1 }, { itemId: 'master_crafting_kit', quantity: 1 }], outputs: [{ itemId: 'abyssal_tentacle', quantity: 1, chance: 1 }] },
 
   // Combat Training (Level 1-5)
   { id: 'train_attack', name: 'Dummy Practice (Attack)', skill: 'attack', levelRequired: 1, xpReward: 15, duration: 3000, outputs: [{ itemId: 'gp', quantity: 1, chance: 0.1 }] },
@@ -697,6 +902,18 @@ export const ACTIONS: SkillAction[] = [
   { id: 'train_defense', name: 'Shield Drills (Defense)', skill: 'defense', levelRequired: 1, xpReward: 15, duration: 3000, outputs: [{ itemId: 'gp', quantity: 1, chance: 0.1 }] },
   { id: 'train_magic', name: 'Spark Casting (Magic)', skill: 'magic', levelRequired: 1, xpReward: 20, duration: 4000, outputs: [{ itemId: 'gp', quantity: 1, chance: 0.1 }] },
   { id: 'train_ranged', name: 'Target Practice (Ranged)', skill: 'ranged', levelRequired: 1, xpReward: 20, duration: 4000, outputs: [{ itemId: 'gp', quantity: 1, chance: 0.1 }] },
+
+  // Agility Progression
+  { id: 'gnome_stronghold_course', name: 'Gnome Stronghold Course', skill: 'agility', levelRequired: 1, xpReward: 10, duration: 5000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.05 }] },
+  { id: 'draynor_rooftop_course', name: 'Draynor Rooftop Course', skill: 'agility', levelRequired: 10, xpReward: 25, duration: 6000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.1 }] },
+  { id: 'al_kharid_rooftop_course', name: 'Al Kharid Rooftop Course', skill: 'agility', levelRequired: 20, xpReward: 50, duration: 7000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.12 }] },
+  { id: 'varrock_rooftop_course', name: 'Varrock Rooftop Course', skill: 'agility', levelRequired: 30, xpReward: 100, duration: 8000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.15 }] },
+  { id: 'canifis_rooftop_course', name: 'Canifis Rooftop Course', skill: 'agility', levelRequired: 40, xpReward: 200, duration: 9000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.2 }] },
+  { id: 'falador_rooftop_course', name: 'Falador Rooftop Course', skill: 'agility', levelRequired: 50, xpReward: 400, duration: 10000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.22 }] },
+  { id: 'seers_village_rooftop_course', name: 'Seers Village Rooftop Course', skill: 'agility', levelRequired: 60, xpReward: 800, duration: 11000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.25 }] },
+  { id: 'pollnivneach_rooftop_course', name: 'Pollnivneach Rooftop Course', skill: 'agility', levelRequired: 70, xpReward: 1500, duration: 12000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.28 }] },
+  { id: 'rellekka_rooftop_course', name: 'Rellekka Rooftop Course', skill: 'agility', levelRequired: 80, xpReward: 3000, duration: 13000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.3 }] },
+  { id: 'ardougne_rooftop_course', name: 'Ardougne Rooftop Course', skill: 'agility', levelRequired: 90, xpReward: 6000, duration: 15000, outputs: [{ itemId: 'mark_of_grace', quantity: 1, chance: 0.35 }] },
 
   // Monster Hunting (Level 5+)
   // Goblins: Weak to Melee (Attack/Strength)
@@ -1035,6 +1252,15 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'imperial_seal', quantity: 1, chance: 0.2 }
   ] },
 
+  { id: 'imperial_decree', name: 'Issue Imperial Decree', skill: 'empire', levelRequired: 80, xpReward: 5000, duration: 120000, outputs: [
+    { itemId: 'gp', quantity: 50000, chance: 1 },
+    { itemId: 'imperial_seal', quantity: 2, chance: 0.5 }
+  ] },
+  { id: 'establish_colony', name: 'Establish Colony', skill: 'empire', levelRequired: 95, xpReward: 15000, duration: 300000, outputs: [
+    { itemId: 'gp', quantity: 250000, chance: 1 },
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.1 }
+  ] },
+
   // Slayer (Monster Hunting)
   { id: 'slay_crawler', name: 'Slay Cave Crawler', skill: 'slayer', levelRequired: 1, xpReward: 25, duration: 4000, isMonster: true, weakness: 'attack', outputs: [
     { itemId: 'crawler_meat', quantity: 1, chance: 1 },
@@ -1070,6 +1296,16 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'runite_ore', quantity: 2, chance: 0.2 },
     { itemId: 'blood_rune', quantity: 50, chance: 0.5 }
   ] },
+  { id: 'slay_dragon_lord', name: 'Slay The Dragon Lord', skill: 'slayer', levelRequired: 99, xpReward: 50000, duration: 300000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'dragon_slayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'dragon_lord_trophy', quantity: 1, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 50, chance: 1 },
+    { itemId: 'clue_scroll_master', quantity: 1, chance: 0.5 }
+  ] },
+  { id: 'slay_void_reaper', name: 'Slay Void Reaper', skill: 'slayer', levelRequired: 99, xpReward: 100000, duration: 600000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'void_reaper_trophy', quantity: 1, chance: 1 },
+    { itemId: 'void_essence', quantity: 10, chance: 1 },
+    { itemId: 'void_blade', quantity: 1, chance: 0.01 }
+  ] },
 
   // Meta Skills: Raids (High-Level Challenges)
   { id: 'raid_crypt', name: 'Raid Ancient Crypt', skill: 'raids', levelRequired: 1, xpReward: 500, duration: 60000, outputs: [
@@ -1087,6 +1323,330 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'runite_bar', quantity: 10, chance: 0.5 },
     { itemId: 'raid_relic', quantity: 1, chance: 0.2 }
   ] },
+  { id: 'raid_void_citadel', name: 'Storm Void Citadel', skill: 'raids', levelRequired: 99, xpReward: 50000, duration: 600000, outputs: [
+    { itemId: 'gp', quantity: 500000, chance: 1 },
+    { itemId: 'necrite_bar', quantity: 5, chance: 0.5 },
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.5 }
+  ] },
+  { id: 'raid_void_citadel_hard', name: 'Storm Void Citadel (Hard)', skill: 'raids', levelRequired: 99, xpReward: 250000, duration: 1200000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'overload_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 20 }], outputs: [
+    { itemId: 'void_essence', quantity: 50, chance: 1 },
+    { itemId: 'imperial_crown', quantity: 1, chance: 0.001 },
+    { itemId: 'clue_reward_box', quantity: 1, chance: 0.1 }
+  ] },
+
+  // Magic Special Actions
+  { id: 'high_alchemy', name: 'High Alchemy', skill: 'magic', levelRequired: 55, xpReward: 65, duration: 1500, description: 'Turn items into gold.', inputs: [{ itemId: 'nature_rune', quantity: 1 }, { itemId: 'logs', quantity: 1 }], outputs: [{ itemId: 'gp', quantity: 100, chance: 1 }] },
+  { id: 'enchant_sapphire', name: 'Enchant Sapphire Ring', skill: 'magic', levelRequired: 7, xpReward: 17.5, duration: 2000, description: 'Infuse a sapphire ring with magic.', secondarySkillRequired: { skill: 'crafting', level: 20 }, inputs: [{ itemId: 'cosmic_rune', quantity: 1 }, { itemId: 'sapphire_ring', quantity: 1 }], outputs: [{ itemId: 'sapphire_ring', quantity: 1, chance: 1 }] },
+  
+  // Bosses
+  { id: 'boss_dragon_lord', name: 'The Dragon Lord', skill: 'slayer', levelRequired: 95, xpReward: 25000, duration: 120000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'cooked_shark', quantity: 5 }], outputs: [
+    { itemId: 'dragon_lord_trophy', quantity: 1, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 50, chance: 1 },
+    { itemId: 'dragon_slayer_blade', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'boss_void_reaper', name: 'Void Reaper', skill: 'slayer', levelRequired: 99, xpReward: 100000, duration: 300000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'void_essence', quantity: 10, chance: 1 },
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.2 },
+    { itemId: 'void_blade', quantity: 1, chance: 0.01 }
+  ] },
+  { id: 'smith_dragon_med_helm', name: 'Smith Dragon Med Helm', skill: 'smithing', levelRequired: 92, xpReward: 5000, duration: 15000, inputs: [{ itemId: 'dragonite_bar', quantity: 2 }], outputs: [{ itemId: 'dragon_med_helm', quantity: 1, chance: 1 }] },
+  { id: 'smith_dragon_sq_shield', name: 'Smith Dragon Sq Shield', skill: 'smithing', levelRequired: 95, xpReward: 10000, duration: 20000, inputs: [{ itemId: 'dragonite_bar', quantity: 5 }], outputs: [{ itemId: 'dragon_sq_shield', quantity: 1, chance: 1 }] },
+  { id: 'smith_dragon_platebody', name: 'Smith Dragon Platebody', skill: 'smithing', levelRequired: 99, xpReward: 25000, duration: 30000, inputs: [{ itemId: 'dragonite_bar', quantity: 10 }], outputs: [{ itemId: 'dragon_platebody', quantity: 1, chance: 1 }] },
+  { id: 'smith_dragon_platelegs', name: 'Smith Dragon Platelegs', skill: 'smithing', levelRequired: 98, xpReward: 20000, duration: 25000, inputs: [{ itemId: 'dragonite_bar', quantity: 8 }], outputs: [{ itemId: 'dragon_platelegs', quantity: 1, chance: 1 }] },
+
+  { id: 'cut_zenyte', name: 'Cut Zenyte', skill: 'crafting', levelRequired: 98, xpReward: 5000, duration: 5000, inputs: [{ itemId: 'uncut_zenyte', quantity: 1 }], outputs: [{ itemId: 'zenyte_shard', quantity: 1, chance: 1 }] },
+  { id: 'craft_torture_amulet', name: 'Craft Amulet of Torture', skill: 'crafting', levelRequired: 99, xpReward: 15000, duration: 20000, inputs: [{ itemId: 'zenyte_shard', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'torture_amulet', quantity: 1, chance: 1 }] },
+  { id: 'craft_anguish_necklace', name: 'Craft Necklace of Anguish', skill: 'crafting', levelRequired: 99, xpReward: 15000, duration: 20000, inputs: [{ itemId: 'zenyte_shard', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'anguish_necklace', quantity: 1, chance: 1 }] },
+  { id: 'craft_tormented_bracelet', name: 'Craft Tormented Bracelet', skill: 'crafting', levelRequired: 99, xpReward: 15000, duration: 20000, inputs: [{ itemId: 'zenyte_shard', quantity: 1 }, { itemId: 'gold_bar', quantity: 1 }], outputs: [{ itemId: 'tormented_bracelet', quantity: 1, chance: 1 }] },
+
+  { id: 'hunt_vorkath', name: 'Slay Vorkath', skill: 'slayer', levelRequired: 95, xpReward: 50000, duration: 120000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'dragon_slayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'dragon_bones', quantity: 5, chance: 1 },
+    { itemId: 'dragon_scale', quantity: 10, chance: 1 },
+    { itemId: 'dragonite_ore', quantity: 5, chance: 0.5 },
+    { itemId: 'dragon_med_helm', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'hunt_zulrah', name: 'Slay Zulrah', skill: 'slayer', levelRequired: 92, xpReward: 40000, duration: 100000, isMonster: true, weakness: 'magic', inputs: [{ itemId: 'antipoison', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'spider_venom', quantity: 5, chance: 1 },
+    { itemId: 'uncut_zenyte', quantity: 1, chance: 0.01 },
+    { itemId: 'spirit_seed', quantity: 1, chance: 0.1 }
+  ] },
+  { id: 'hunt_cerberus', name: 'Slay Cerberus', skill: 'slayer', levelRequired: 91, xpReward: 35000, duration: 90000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'prayer_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'bones', quantity: 10, chance: 1 },
+    { itemId: 'primordial_boots', quantity: 1, chance: 0.01 },
+    { itemId: 'pegasian_boots', quantity: 1, chance: 0.01 },
+    { itemId: 'eternal_boots', quantity: 1, chance: 0.01 }
+  ] },
+
+  { id: 'raid_theatre_of_blood', name: 'Raid Theatre of Blood', skill: 'raids', levelRequired: 95, xpReward: 150000, duration: 600000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 15 }], outputs: [
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.5 },
+    { itemId: 'raid_relic', quantity: 5, chance: 1 },
+    { itemId: 'infernal_cape', quantity: 1, chance: 0.01 }
+  ] },
+  { id: 'smith_dragonite_body', name: 'Smith Dragonite Body', skill: 'smithing', levelRequired: 99, xpReward: 30000, duration: 35000, inputs: [{ itemId: 'dragonite_bar', quantity: 15 }], outputs: [{ itemId: 'dragonite_body', quantity: 1, chance: 1 }] },
+
+  { id: 'raid_chambers_of_xeric', name: 'Raid Chambers of Xeric', skill: 'raids', levelRequired: 90, xpReward: 100000, duration: 450000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'ancient_relic', quantity: 1, chance: 0.3 },
+    { itemId: 'raid_relic', quantity: 3, chance: 1 },
+    { itemId: 'dragon_sq_shield', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'raid_theatre_of_blood_hard', name: 'Raid Theatre of Blood (Hard)', skill: 'raids', levelRequired: 99, xpReward: 300000, duration: 900000, isMonster: true, weakness: 'attack', inputs: [{ itemId: 'overload_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 25 }], outputs: [
+    { itemId: 'ancient_relic', quantity: 2, chance: 1 },
+    { itemId: 'raid_relic', quantity: 10, chance: 1 },
+    { itemId: 'infernal_cape', quantity: 1, chance: 0.05 }
+  ] },
+
+  { id: 'hunt_hydra', name: 'Slay Hydra', skill: 'slayer', levelRequired: 95, xpReward: 45000, duration: 110000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'bones', quantity: 10, chance: 1 },
+    { itemId: 'dragon_bones', quantity: 2, chance: 0.5 },
+    { itemId: 'mithril_dragon_scale', quantity: 5, chance: 1 }
+  ] },
+  { id: 'hunt_alchemical_hydra', name: 'Slay Alchemical Hydra', skill: 'slayer', levelRequired: 99, xpReward: 120000, duration: 300000, isMonster: true, weakness: 'ranged', inputs: [{ itemId: 'overload_potion', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'dragon_bones', quantity: 10, chance: 1 },
+    { itemId: 'rune_dragon_scale', quantity: 5, chance: 1 },
+    { itemId: 'primordial_boots', quantity: 1, chance: 0.05 }
+  ] },
+
+  // Mastery Actions (Level 99)
+  { id: 'mastery_mining', name: 'Mastery: Mining', skill: 'mining', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Mining Skillcape.', outputs: [{ itemId: 'cape_mining', quantity: 1, chance: 1 }] },
+  { id: 'mastery_woodcutting', name: 'Mastery: Woodcutting', skill: 'woodcutting', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Woodcutting Skillcape.', outputs: [{ itemId: 'cape_woodcutting', quantity: 1, chance: 1 }] },
+  { id: 'mastery_fishing', name: 'Mastery: Fishing', skill: 'fishing', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Fishing Skillcape.', outputs: [{ itemId: 'cape_fishing', quantity: 1, chance: 1 }] },
+  { id: 'mastery_cooking', name: 'Mastery: Cooking', skill: 'cooking', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Cooking Skillcape.', outputs: [{ itemId: 'cape_cooking', quantity: 1, chance: 1 }] },
+  { id: 'mastery_smithing', name: 'Mastery: Smithing', skill: 'smithing', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Smithing Skillcape.', outputs: [{ itemId: 'cape_smithing', quantity: 1, chance: 1 }] },
+  { id: 'mastery_crafting', name: 'Mastery: Crafting', skill: 'crafting', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Crafting Skillcape.', outputs: [{ itemId: 'cape_crafting', quantity: 1, chance: 1 }] },
+  { id: 'mastery_thieving', name: 'Mastery: Thieving', skill: 'thieving', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Thieving Skillcape.', outputs: [{ itemId: 'cape_thieving', quantity: 1, chance: 1 }] },
+  { id: 'mastery_herblore', name: 'Mastery: Herblore', skill: 'herblore', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Herblore Skillcape.', outputs: [{ itemId: 'cape_herblore', quantity: 1, chance: 1 }] },
+  { id: 'mastery_slayer', name: 'Mastery: Slayer', skill: 'slayer', levelRequired: 99, xpReward: 10000, duration: 60000, description: 'Claim your Slayer Skillcape.', outputs: [{ itemId: 'cape_slayer', quantity: 1, chance: 1 }] },
+
+  // New Farming/Grinding Actions
+  { id: 'farm_goblins', name: 'Farm Goblins', skill: 'slayer', levelRequired: 1, xpReward: 25, duration: 3000, isMonster: true, weakness: 'attack', outputs: [
+    { itemId: 'gp', quantity: 50, chance: 1 },
+    { itemId: 'goblin_ear', quantity: 1, chance: 0.8 },
+    { itemId: 'monster_hide', quantity: 1, chance: 0.5 },
+    { itemId: 'bronze_loot_bag', quantity: 1, chance: 0.1 }
+  ] },
+  { id: 'farm_wolves', name: 'Farm Wolves', skill: 'slayer', levelRequired: 10, xpReward: 50, duration: 4000, isMonster: true, weakness: 'attack', outputs: [
+    { itemId: 'bones', quantity: 1, chance: 1 },
+    { itemId: 'wolf_pelt', quantity: 1, chance: 0.6 },
+    { itemId: 'beast_claw', quantity: 1, chance: 0.4 },
+    { itemId: 'monster_hide', quantity: 2, chance: 0.3 }
+  ] },
+  { id: 'farm_zombies', name: 'Farm Zombies', skill: 'slayer', levelRequired: 20, xpReward: 100, duration: 5000, isMonster: true, weakness: 'magic', outputs: [
+    { itemId: 'zombie_brain', quantity: 1, chance: 0.7 },
+    { itemId: 'vial_of_blood', quantity: 1, chance: 0.5 },
+    { itemId: 'magic_scrap', quantity: 1, chance: 0.2 },
+    { itemId: 'iron_loot_chest', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'farm_dragons', name: 'Farm Green Dragons', skill: 'slayer', levelRequired: 50, xpReward: 500, duration: 10000, isMonster: true, weakness: 'ranged', outputs: [
+    { itemId: 'dragon_bones', quantity: 1, chance: 1 },
+    { itemId: 'dragon_fang', quantity: 1, chance: 0.4 },
+    { itemId: 'dragon_scale_shard', quantity: 3, chance: 0.8 },
+    { itemId: 'dragon_lord_seal', quantity: 1, chance: 0.01 }
+  ] },
+  { id: 'farm_void_monsters', name: 'Farm Void Horrors', skill: 'slayer', levelRequired: 80, xpReward: 2000, duration: 15000, isMonster: true, weakness: 'magic', outputs: [
+    { itemId: 'void_shard', quantity: 2, chance: 0.9 },
+    { itemId: 'dark_energy_core', quantity: 1, chance: 0.3 },
+    { itemId: 'void_relic_casket', quantity: 1, chance: 0.02 }
+  ] },
+
+  // New Herblore & Crafting Loops
+  { id: 'brew_agility_elixir', name: 'Brew Agility Elixir', skill: 'herblore', levelRequired: 40, xpReward: 500, duration: 5000, inputs: [{ itemId: 'spirit_herb', quantity: 2 }, { itemId: 'wolf_pelt', quantity: 1 }], outputs: [{ itemId: 'agility_elixir', quantity: 1, chance: 1 }] },
+  { id: 'brew_thief_brew', name: 'Brew Thief\'s Brew', skill: 'herblore', levelRequired: 55, xpReward: 800, duration: 6000, inputs: [{ itemId: 'spirit_herb', quantity: 3 }, { itemId: 'goblin_ear', quantity: 5 }], outputs: [{ itemId: 'thief_brew', quantity: 1, chance: 1 }] },
+  { id: 'refine_slayer_essence', name: 'Refine Slayer Essence', skill: 'herblore', levelRequired: 75, xpReward: 2000, duration: 10000, inputs: [{ itemId: 'vial_of_blood', quantity: 5 }, { itemId: 'zombie_brain', quantity: 2 }], outputs: [{ itemId: 'slayer_essence', quantity: 1, chance: 1 }] },
+  
+  { id: 'craft_master_kit', name: 'Craft Master Crafting Kit', skill: 'crafting', levelRequired: 85, xpReward: 5000, duration: 20000, inputs: [{ itemId: 'ancient_mechanism', quantity: 2 }, { itemId: 'necrite_bar', quantity: 1 }], outputs: [{ itemId: 'master_crafting_kit', quantity: 1, chance: 1 }] },
+  { id: 'forge_mana_crystal', name: 'Forge Pure Mana Crystal', skill: 'runecrafting', levelRequired: 90, xpReward: 10000, duration: 30000, inputs: [{ itemId: 'divine_essence', quantity: 10 }, { itemId: 'void_shard', quantity: 5 }], outputs: [{ itemId: 'pure_mana_crystal', quantity: 1, chance: 1 }] },
+
+  // Repurposing & Crafting Loops
+  { id: 'craft_reinforced_leather', name: 'Craft Reinforced Leather', skill: 'crafting', levelRequired: 30, xpReward: 150, duration: 5000, inputs: [{ itemId: 'monster_hide', quantity: 5 }, { itemId: 'vial_of_blood', quantity: 1 }], outputs: [{ itemId: 'reinforced_leather', quantity: 1, chance: 1 }] },
+  { id: 'craft_enchanted_string', name: 'Craft Enchanted String', skill: 'crafting', levelRequired: 45, xpReward: 300, duration: 6000, inputs: [{ itemId: 'magic_scrap', quantity: 10 }, { itemId: 'cosmic_rune', quantity: 5 }], outputs: [{ itemId: 'enchanted_string', quantity: 1, chance: 1 }] },
+  { id: 'create_alchemical_catalyst', name: 'Create Alchemical Catalyst', skill: 'herblore', levelRequired: 60, xpReward: 1000, duration: 10000, inputs: [{ itemId: 'spirit_herb', quantity: 5 }, { itemId: 'dark_energy_core', quantity: 1 }], outputs: [{ itemId: 'alchemical_catalyst', quantity: 1, chance: 1 }] },
+  
+  // Key Crafting
+  { id: 'craft_crypt_key', name: 'Craft Crypt Key', skill: 'crafting', levelRequired: 20, xpReward: 500, duration: 5000, inputs: [{ itemId: 'iron_bar', quantity: 2 }, { itemId: 'magic_scrap', quantity: 5 }], outputs: [{ itemId: 'crypt_key', quantity: 1, chance: 1 }] },
+  { id: 'craft_fortress_sigil', name: 'Craft Fortress Sigil', skill: 'crafting', levelRequired: 50, xpReward: 2000, duration: 10000, inputs: [{ itemId: 'steel_bar', quantity: 5 }, { itemId: 'ancient_mechanism', quantity: 1 }], outputs: [{ itemId: 'fortress_sigil', quantity: 1, chance: 1 }] },
+
+  // Loot Box Opening (Instant Actions)
+  { id: 'open_bronze_bag', name: 'Open Bronze Loot Bag', skill: 'thieving', levelRequired: 1, xpReward: 10, duration: 500, inputs: [{ itemId: 'bronze_loot_bag', quantity: 1 }], outputs: [{ itemId: 'gp', quantity: 250, chance: 1 }, { itemId: 'monster_hide', quantity: 5, chance: 0.5 }] },
+  { id: 'open_iron_chest', name: 'Open Iron Loot Chest', skill: 'thieving', levelRequired: 30, xpReward: 50, duration: 500, inputs: [{ itemId: 'iron_loot_chest', quantity: 1 }], outputs: [{ itemId: 'gp', quantity: 1500, chance: 1 }, { itemId: 'iron_bar', quantity: 10, chance: 0.8 }, { itemId: 'uncut_ruby', quantity: 2, chance: 0.2 }] },
+  { id: 'open_gold_coffer', name: 'Open Gold Treasure Coffer', skill: 'thieving', levelRequired: 70, xpReward: 250, duration: 500, inputs: [{ itemId: 'gold_treasure_coffer', quantity: 1 }], outputs: [{ itemId: 'gp', quantity: 10000, chance: 1 }, { itemId: 'runite_bar', quantity: 5, chance: 0.9 }, { itemId: 'uncut_diamond', quantity: 3, chance: 0.5 }] },
+  { id: 'open_void_casket', name: 'Open Void Relic Casket', skill: 'thieving', levelRequired: 99, xpReward: 1000, duration: 500, inputs: [{ itemId: 'void_relic_casket', quantity: 1 }], outputs: [{ itemId: 'gp', quantity: 50000, chance: 1 }, { itemId: 'void_essence', quantity: 20, chance: 1 }, { itemId: 'necrite_bar', quantity: 10, chance: 0.5 }, { itemId: 'void_blade', quantity: 1, chance: 0.05 }] },
+
+  // Mid-Tier Farming & Slaying
+  { id: 'hunt_abyssal_demons', name: 'Slay Abyssal Demons', skill: 'slayer', levelRequired: 85, xpReward: 800, duration: 15000, isMonster: true, weakness: 'magic', outputs: [
+    { itemId: 'gp', quantity: 1500, chance: 1 },
+    { itemId: 'abyssal_whip', quantity: 1, chance: 0.002 },
+    { itemId: 'necrite_ore', quantity: 5, chance: 0.1 },
+    { itemId: 'dragonite_ore', quantity: 10, chance: 0.2 },
+  ]},
+  { id: 'hunt_ancient_wyverns', name: 'Hunt Ancient Wyverns', skill: 'slayer', levelRequired: 75, xpReward: 600, duration: 12000, isMonster: true, weakness: 'ranged', outputs: [
+    { itemId: 'gp', quantity: 1000, chance: 1 },
+    { itemId: 'dragon_med_helm', quantity: 1, chance: 0.01 },
+    { itemId: 'dragonite_ore', quantity: 15, chance: 0.3 },
+  ]},
+  { id: 'raid_kraken_den', name: 'Raid Kraken Den', skill: 'raids', levelRequired: 70, xpReward: 5000, duration: 300000, isBoss: true, weakness: 'magic', inputs: [{ itemId: 'cooked_mantaray', quantity: 10 }], outputs: [
+    { itemId: 'gp', quantity: 25000, chance: 1 },
+    { itemId: 'kraken_tentacle', quantity: 1, chance: 0.05 },
+    { itemId: 'master_crafting_kit', quantity: 1, chance: 0.2 },
+  ]},
+];
+
+export const KINGDOM_WORKERS: KingdomWorker[] = [
+  {
+    id: 'worker_miner',
+    name: 'Kingdom Miner',
+    description: 'A humble miner who extracts gold for the treasury.',
+    baseCost: 1000,
+    costMultiplier: 1.15,
+    bonusType: 'gp',
+    bonusValue: 5,
+    primarySkillId: 'mining',
+    requirements: [
+      { skillId: 'mining', level: 20 },
+      { skillId: 'woodcutting', level: 10 }
+    ]
+  },
+  {
+    id: 'worker_blacksmith',
+    name: 'Kingdom Blacksmith',
+    description: 'Smelts ores into bars to fund the empire.',
+    baseCost: 5000,
+    costMultiplier: 1.15,
+    bonusType: 'gp',
+    bonusValue: 25,
+    primarySkillId: 'smithing',
+    requirements: [
+      { skillId: 'smithing', level: 20 },
+      { skillId: 'mining', level: 20 }
+    ]
+  },
+  {
+    id: 'worker_lumberjack',
+    name: 'Kingdom Lumberjack',
+    description: 'Chops wood to sell for the kingdom.',
+    baseCost: 12000,
+    costMultiplier: 1.15,
+    bonusType: 'gp',
+    bonusValue: 60,
+    primarySkillId: 'woodcutting',
+    requirements: [
+      { skillId: 'woodcutting', level: 20 },
+      { skillId: 'mining', level: 15 }
+    ]
+  },
+  {
+    id: 'worker_carpenter',
+    name: 'Royal Carpenter',
+    description: 'Crafts fine furniture, providing passive Crafting XP.',
+    baseCost: 30000,
+    costMultiplier: 1.2,
+    bonusType: 'xp',
+    bonusValue: 15,
+    primarySkillId: 'crafting',
+    requirements: [
+      { skillId: 'crafting', level: 25 },
+      { skillId: 'woodcutting', level: 25 }
+    ]
+  },
+  {
+    id: 'worker_fisherman',
+    name: 'Kingdom Fisherman',
+    description: 'Supplies the kingdom with fresh seafood.',
+    baseCost: 75000,
+    costMultiplier: 1.2,
+    bonusType: 'gp',
+    bonusValue: 150,
+    primarySkillId: 'fishing',
+    requirements: [
+      { skillId: 'fishing', level: 30 },
+      { skillId: 'cooking', level: 20 }
+    ]
+  },
+  {
+    id: 'worker_chef',
+    name: 'Royal Chef',
+    description: 'Prepares grand feasts, providing passive Cooking XP.',
+    baseCost: 150000,
+    costMultiplier: 1.2,
+    bonusType: 'xp',
+    bonusValue: 40,
+    primarySkillId: 'cooking',
+    requirements: [
+      { skillId: 'cooking', level: 35 },
+      { skillId: 'fishing', level: 30 }
+    ]
+  },
+  {
+    id: 'worker_knight',
+    name: 'Kingdom Knight',
+    description: 'Protects the realm and trains your Strength.',
+    baseCost: 300000,
+    costMultiplier: 1.2,
+    bonusType: 'xp',
+    bonusValue: 100,
+    primarySkillId: 'strength',
+    requirements: [
+      { skillId: 'strength', level: 40 },
+      { skillId: 'attack', level: 40 },
+      { skillId: 'defense', level: 40 }
+    ]
+  },
+  {
+    id: 'worker_scholar',
+    name: 'Royal Scholar',
+    description: 'Studies ancient texts, providing passive XP to Magic.',
+    baseCost: 750000,
+    costMultiplier: 1.25,
+    bonusType: 'xp',
+    bonusValue: 250,
+    primarySkillId: 'magic',
+    requirements: [
+      { skillId: 'magic', level: 50 },
+      { skillId: 'crafting', level: 40 }
+    ]
+  },
+  {
+    id: 'worker_priest',
+    name: 'High Priest',
+    description: 'Prays for the kingdom, generating Celestial Essence.',
+    baseCost: 2000000,
+    costMultiplier: 1.3,
+    bonusType: 'celestial_essence',
+    bonusValue: 0.05,
+    primarySkillId: 'prayer',
+    requirements: [
+      { skillId: 'prayer', level: 60 },
+      { skillId: 'magic', level: 50 }
+    ]
+  },
+  {
+    id: 'worker_general',
+    name: 'Grand General',
+    description: 'Commands the infantry, providing massive Strength XP.',
+    baseCost: 10000000,
+    costMultiplier: 1.35,
+    bonusType: 'xp',
+    bonusValue: 1000,
+    primarySkillId: 'strength',
+    requirements: [
+      { skillId: 'strength', level: 80 },
+      { skillId: 'attack', level: 70 },
+      { skillId: 'defense', level: 70 }
+    ]
+  },
+  {
+    id: 'worker_archmage',
+    name: 'Imperial Archmage',
+    description: 'Masters the arcane, generating significant Magic XP and Essence.',
+    baseCost: 50000000,
+    costMultiplier: 1.4,
+    bonusType: 'celestial_essence',
+    bonusValue: 0.5,
+    primarySkillId: 'magic',
+    requirements: [
+      { skillId: 'magic', level: 95 },
+      { skillId: 'prayer', level: 80 }
+    ]
+  }
 ];
 
 export const LEVEL_XP = (level: number) => {

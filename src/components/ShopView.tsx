@@ -18,9 +18,19 @@ const SHOP_ITEMS = [
   { itemId: 'onion_seeds', price: 15, currency: 'gp' },
   { itemId: 'herb_seeds', price: 50, currency: 'gp' },
   { itemId: 'willow_seeds', price: 250, currency: 'gp' },
+  { itemId: 'toadflax_seeds', price: 100, currency: 'gp' },
   { itemId: 'yew_seeds', price: 1000, currency: 'gp' },
   { itemId: 'magic_seeds', price: 5000, currency: 'gp' },
   { itemId: 'feathers', price: 2, currency: 'gp' },
+];
+
+const GRACEFUL_ITEMS = [
+  { itemId: 'graceful_hood', price: 35, currency: 'mark_of_grace' },
+  { itemId: 'graceful_cape', price: 40, currency: 'mark_of_grace' },
+  { itemId: 'graceful_top', price: 55, currency: 'mark_of_grace' },
+  { itemId: 'graceful_legs', price: 60, currency: 'mark_of_grace' },
+  { itemId: 'graceful_gloves', price: 30, currency: 'mark_of_grace' },
+  { itemId: 'graceful_boots', price: 40, currency: 'mark_of_grace' },
 ];
 
 const SPECIAL_ITEMS = [
@@ -77,6 +87,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
             <div className="grid grid-cols-1 gap-4">
               {SHOP_ITEMS.map(item => {
                 const itemData = ITEMS[item.itemId];
+                if (!itemData) return null;
                 return (
                   <div key={item.itemId} className="border border-[#141414] p-4 flex items-center justify-between hover:bg-[#141414] hover:text-[#E4E3E0] transition-all group">
                     <div className="flex items-center gap-4">
@@ -100,10 +111,45 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
           </div>
 
           <div className="space-y-6">
+            <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2 text-blue-700">Graceful Gear</h3>
+            <div className="grid grid-cols-1 gap-4">
+              {GRACEFUL_ITEMS.map(item => {
+                const itemData = ITEMS[item.itemId];
+                if (!itemData) return null;
+                const currencyData = ITEMS[item.currency];
+                const inv = state.inventory.find(i => i.itemId === item.currency);
+                const hasEnough = inv && inv.quantity >= item.price;
+                
+                return (
+                  <div key={item.itemId} className="border border-blue-700/30 p-4 flex items-center justify-between hover:bg-blue-900 hover:text-[#E4E3E0] transition-all group">
+                    <div className="flex items-center gap-4">
+                      <div className="text-3xl">{itemData.icon}</div>
+                      <div>
+                        <div className="font-serif italic font-bold">{itemData.name}</div>
+                        <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">
+                          {item.price} {currencyData?.name || item.currency}
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => buyItem(item.itemId, item.price, item.currency)}
+                      disabled={!hasEnough}
+                      className="px-4 py-2 border border-blue-700/50 group-hover:border-[#E4E3E0] text-xs font-mono uppercase tracking-widest disabled:opacity-30"
+                    >
+                      Buy
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-6">
             <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2 text-red-700">Imperial Relics</h3>
             <div className="grid grid-cols-1 gap-4">
               {SPECIAL_ITEMS.map(item => {
                 const itemData = ITEMS[item.itemId];
+                if (!itemData) return null;
                 const currencyData = item.currency === 'gp' ? { name: 'GP', icon: '💰' } : ITEMS[item.currency];
                 const inv = state.inventory.find(i => i.itemId === item.currency);
                 const hasEnough = item.currency === 'gp' ? state.gp >= item.price : (inv && inv.quantity >= item.price);
@@ -115,7 +161,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
                       <div>
                         <div className="font-serif italic font-bold">{itemData.name}</div>
                         <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">
-                          {item.price} {currencyData?.name}
+                          {item.price} {currencyData?.name || item.currency}
                         </div>
                       </div>
                     </div>
@@ -142,6 +188,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
             )}
             {state.inventory.map(item => {
               const itemData = ITEMS[item.itemId];
+              if (!itemData) return null;
               const sellPrice = Math.floor(itemData.value * 0.5);
               return (
                 <div key={item.itemId} className="border border-[#141414] p-4 flex items-center justify-between hover:bg-[#141414] hover:text-[#E4E3E0] transition-all group">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment } from './types';
-import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL } from './constants';
+import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS } from './constants';
 
 const INITIAL_STATE: PlayerState = {
   gp: 0,
@@ -34,9 +34,11 @@ const INITIAL_STATE: PlayerState = {
   ascensions: {
     mining: 0, woodcutting: 0, fishing: 0, hunting: 0, farming: 0,
     smithing: 0, cooking: 0, herblore: 0, crafting: 0, runecrafting: 0, thieving: 0,
-    attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0, prayer: 0,
-    empire: 0, raids: 0
+    agility: 0, attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0, prayer: 0,
+    empire: 0, raids: 0, slayer: 0
   },
+  buffs: [],
+  kingdom: {},
   showNotifications: true,
 };
 
@@ -45,10 +47,31 @@ export interface GameEvent {
   timestamp: number;
   message: string;
   type: 'loot' | 'level' | 'xp' | 'info';
+  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'celestial';
 }
 
-const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>) => {
+const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>, buffs: any[], inventory: InventoryItem[]) => {
   let actualDuration = action.duration;
+
+  // Tool Bonus
+  const bestTool = inventory
+    .map(i => ITEMS[i.itemId])
+    .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === action.skill)
+    .sort((a, b) => (b.toolBonus?.speedMultiplier || 1) - (a.toolBonus?.speedMultiplier || 1))[0];
+
+  if (bestTool?.toolBonus) {
+    actualDuration *= (1 / bestTool.toolBonus.speedMultiplier);
+  }
+
+  // Buffs
+  buffs.forEach(buff => {
+    if (buff.type === 'speed') {
+      actualDuration *= (1 / buff.multiplier);
+    }
+    if (buff.type === 'combat' && action.isMonster) {
+      actualDuration *= (1 / buff.multiplier);
+    }
+  });
 
   // Global Edict Efficiency
   if (activeEdicts.includes('edict_efficiency')) {
@@ -127,18 +150,22 @@ export function useGame() {
         skills: { ...INITIAL_STATE.skills, ...parsed.skills },
         ascensions: { ...INITIAL_STATE.ascensions, ...parsed.ascensions },
         equipment: { ...INITIAL_STATE.equipment, ...parsed.equipment },
+        buffs: parsed.buffs || [],
+        kingdom: parsed.kingdom || {},
       };
     } catch (e) {
       return INITIAL_STATE;
     }
   });
 
-  const addEvent = useCallback((message: string, type: GameEvent['type'] = 'info') => {
+  const addEvent = useCallback((message: string, type: GameEvent['type'] = 'info', icon?: string, rarity?: GameEvent['rarity']) => {
+    const displayMessage = icon ? `${icon} ${message}` : message;
     setEvents(prev => [{
       id: Math.random().toString(36).substr(2, 9),
       timestamp: Date.now(),
-      message,
-      type
+      message: displayMessage,
+      type,
+      rarity
     }, ...prev].slice(0, 20));
   }, []);
 
@@ -151,7 +178,10 @@ export function useGame() {
 
   const addToInventory = useCallback((itemId: string, quantity: number) => {
     const item = ITEMS[itemId];
-    if (item) addEvent(`Gained ${quantity}x ${item.name}`, 'loot');
+    if (item) {
+      const rarityIcon = item.rarity === 'legendary' ? '🌟' : item.rarity === 'rare' ? '💎' : '';
+      addEvent(`Gained ${quantity}x ${item.name}`, 'loot', rarityIcon || item.icon, item.rarity);
+    }
     
     setState(prev => {
       const existing = prev.inventory.find(i => i.itemId === itemId);
@@ -185,6 +215,8 @@ export function useGame() {
 
   const hasItems = useCallback((items: { itemId: string; quantity: number }[]) => {
     return items.every(req => {
+      if (req.itemId === 'gp') return stateRef.current.gp >= req.quantity;
+      if (req.itemId === 'celestial_essence') return stateRef.current.celestialEssence >= req.quantity;
       const inv = stateRef.current.inventory.find(i => i.itemId === req.itemId);
       return inv && inv.quantity >= req.quantity;
     });
@@ -208,12 +240,20 @@ export function useGame() {
       }
     }
 
+    if (action.toolRequired) {
+      const hasTool = stateRef.current.inventory.some(i => i.itemId === action.toolRequired);
+      if (!hasTool) {
+        addEvent(`Required tool missing: ${ITEMS[action.toolRequired!]?.name || action.toolRequired}`, 'info');
+        return;
+      }
+    }
+
     if (action.inputs && !hasItems(action.inputs)) {
       addEvent(`Missing required materials!`, 'info');
       return;
     }
 
-    const actualDuration = calculateDuration(action, stateRef.current.skills, stateRef.current.equipment, stateRef.current.activeEdicts, stateRef.current.ascensions);
+    const actualDuration = calculateDuration(action, stateRef.current.skills, stateRef.current.equipment, stateRef.current.activeEdicts, stateRef.current.ascensions, stateRef.current.buffs, stateRef.current.inventory);
 
     setState(prev => ({
       ...prev,
@@ -231,7 +271,7 @@ export function useGame() {
   }, []);
 
   const addGp = useCallback((amount: number) => {
-    if (amount > 0) addEvent(`Gained ${amount} GP`, 'loot');
+    if (amount > 0) addEvent(`Gained ${amount} GP`, 'loot', '💰');
     setState(prev => ({ ...prev, gp: prev.gp + amount }));
   }, [addEvent]);
 
@@ -245,7 +285,15 @@ export function useGame() {
 
     // Remove inputs
     if (action.inputs) {
-      action.inputs.forEach(input => removeFromInventory(input.itemId, input.quantity));
+      action.inputs.forEach(input => {
+        if (input.itemId === 'gp') {
+          setState(prev => ({ ...prev, gp: prev.gp - input.quantity }));
+        } else if (input.itemId === 'celestial_essence') {
+          setState(prev => ({ ...prev, celestialEssence: prev.celestialEssence - input.quantity }));
+        } else {
+          removeFromInventory(input.itemId, input.quantity);
+        }
+      });
     }
 
     // Add outputs
@@ -256,7 +304,7 @@ export function useGame() {
         // Relic: Eye of the Storm (20% chance to double)
         if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
           quantity *= 2;
-          addEvent(`Eye of the Storm doubled your ${ITEMS[output.itemId]?.name || 'GP'}!`, 'loot');
+          addEvent(`Eye of the Storm doubled your ${ITEMS[output.itemId]?.name || 'loot'}!`, 'loot');
         }
 
         if (output.itemId === 'gp') {
@@ -264,6 +312,9 @@ export function useGame() {
             quantity = Math.floor(quantity * 1.2);
           }
           addGp(quantity);
+        } else if (output.itemId === 'celestial_essence') {
+          setState(prev => ({ ...prev, celestialEssence: prev.celestialEssence + quantity }));
+          addEvent(`Gained ${quantity} Celestial Essence`, 'loot');
         } else {
           addToInventory(output.itemId, quantity);
         }
@@ -274,6 +325,13 @@ export function useGame() {
     setState(prev => {
       const skill = prev.skills[action.skill];
       let xpReward = action.xpReward;
+
+      // Buffs
+      prev.buffs.forEach(buff => {
+        if (buff.type === 'xp') {
+          xpReward = Math.floor(xpReward * buff.multiplier);
+        }
+      });
 
       // Edict: Wisdom
       if (prev.activeEdicts.includes('edict_wisdom')) {
@@ -289,6 +347,16 @@ export function useGame() {
       const ascensionCount = prev.ascensions[action.skill] || 0;
       xpReward = Math.floor(xpReward * (1 + ascensionCount * 0.05));
 
+      // Tool XP Bonus
+      const bestTool = prev.inventory
+        .map(i => ITEMS[i.itemId])
+        .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === action.skill)
+        .sort((a, b) => (b.toolBonus?.xpMultiplier || 1) - (a.toolBonus?.xpMultiplier || 1))[0];
+
+      if (bestTool?.toolBonus) {
+        xpReward = Math.floor(xpReward * bestTool.toolBonus.xpMultiplier);
+      }
+
       const newXp = skill.xp + xpReward;
       const newLevel = XP_TO_LEVEL(newXp);
       
@@ -301,11 +369,17 @@ export function useGame() {
         [action.skill]: { ...skill, xp: newXp, level: newLevel }
       };
 
-      const nextDuration = calculateDuration(action, nextSkills, prev.equipment, prev.activeEdicts, prev.ascensions);
+      const nextBuffs = prev.buffs.map(b => ({ ...b, remainingActions: b.remainingActions - 1 })).filter(b => b.remainingActions > 0);
+      if (nextBuffs.length < prev.buffs.length) {
+        addEvent(`A buff has expired!`, 'info');
+      }
+
+      const nextDuration = calculateDuration(action, nextSkills, prev.equipment, prev.activeEdicts, prev.ascensions, nextBuffs, prev.inventory);
 
       return {
         ...prev,
         skills: nextSkills,
+        buffs: nextBuffs,
         // Restart action if possible
         activeAction: prev.activeAction ? {
           ...prev.activeAction,
@@ -459,9 +533,164 @@ export function useGame() {
     });
   }, [addEvent]);
 
+  const hireWorker = useCallback((workerId: string) => {
+    const worker = KINGDOM_WORKERS.find(w => w.id === workerId);
+    if (!worker) return;
+
+    setState(prev => {
+      const currentCount = prev.kingdom[workerId] || 0;
+      const cost = Math.floor(worker.baseCost * Math.pow(worker.costMultiplier, currentCount));
+
+      if (prev.gp < cost) {
+        addEvent(`Not enough GP to hire ${worker.name}!`, 'info');
+        return prev;
+      }
+
+      // Check skill requirements
+      const missingReqs = worker.requirements.filter(req => prev.skills[req.skillId].level < req.level);
+      if (missingReqs.length > 0) {
+        const reqStr = missingReqs.map(r => `${r.skillId} Lv.${r.level}`).join(', ');
+        addEvent(`Requirements not met: ${reqStr}`, 'info');
+        return prev;
+      }
+
+      // Tiered hiring limits: 1 at base, 3 at lvl 20, 5 at lvl 40, 7 at lvl 60...
+      const primarySkill = prev.skills[worker.primarySkillId];
+      const maxWorkers = 1 + Math.floor(primarySkill.level / 20) * 2;
+      if (currentCount >= maxWorkers) {
+        addEvent(`Maximum ${worker.name}s reached for level ${primarySkill.level} (${maxWorkers})!`, 'info');
+        return prev;
+      }
+
+      addEvent(`Hired ${worker.name}!`, 'info');
+      return {
+        ...prev,
+        gp: prev.gp - cost,
+        kingdom: { ...prev.kingdom, [workerId]: currentCount + 1 }
+      };
+    });
+  }, [addEvent]);
+
+  const useItem = useCallback((itemId: string) => {
+    const item = ITEMS[itemId];
+    if (!item) return;
+
+    setState(prev => {
+      const existing = prev.inventory.find(i => i.itemId === itemId);
+      if (!existing || existing.quantity <= 0) return prev;
+
+      let nextBuffs = [...prev.buffs];
+      
+      if (item.type === 'food') {
+        // Food currently doesn't do much since there's no HP, 
+        // but we can make it give a small XP buff or speed buff for a few actions
+        nextBuffs.push({
+          id: `${itemId}_buff_${Date.now()}`,
+          name: `${item.name} Energy`,
+          type: 'speed',
+          multiplier: 1.05,
+          remainingActions: 5
+        });
+        addEvent(`Ate ${item.name}. Feeling energized!`, 'info');
+      } else if (item.type === 'potion') {
+        let buffType: 'speed' | 'combat' | 'xp' = 'speed';
+        let multiplier = 1.2;
+        let duration = 20;
+
+        if (itemId.includes('strength') || itemId.includes('attack') || itemId.includes('defense') || itemId.includes('combat')) {
+          buffType = 'combat';
+          multiplier = 1.5;
+        } else if (itemId.includes('wisdom') || itemId.includes('overload')) {
+          buffType = 'xp';
+          multiplier = 1.5;
+        }
+
+        if (itemId === 'overload_potion' || itemId === 'overload') {
+          multiplier = 2.0;
+          duration = 50;
+        }
+
+        nextBuffs.push({
+          id: `${itemId}_buff_${Date.now()}`,
+          name: item.name,
+          type: buffType,
+          multiplier,
+          remainingActions: duration
+        });
+        addEvent(`Drank ${item.name}. You feel powerful!`, 'info');
+      } else {
+        return prev;
+      }
+
+      const newInventory = prev.inventory
+        .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - 1 } : i)
+        .filter(i => i.quantity > 0);
+
+      return {
+        ...prev,
+        inventory: newInventory,
+        buffs: nextBuffs
+      };
+    });
+  }, [addEvent]);
+
   const toggleNotifications = useCallback(() => {
     setState(prev => ({ ...prev, showNotifications: !prev.showNotifications }));
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const { kingdom, skills } = stateRef.current;
+      
+      let gpGain = 0;
+      let essenceGain = 0;
+      const xpGains: Record<string, number> = {};
+
+      KINGDOM_WORKERS.forEach(worker => {
+        const count = kingdom[worker.id] || 0;
+        if (count === 0) return;
+
+        const totalBonus = worker.bonusValue * count;
+
+        if (worker.bonusType === 'gp') {
+          gpGain += totalBonus;
+        } else if (worker.bonusType === 'celestial_essence') {
+          essenceGain += totalBonus;
+        } else if (worker.bonusType === 'xp') {
+          xpGains[worker.primarySkillId] = (xpGains[worker.primarySkillId] || 0) + totalBonus;
+        }
+      });
+
+      if (gpGain > 0 || essenceGain > 0 || Object.keys(xpGains).length > 0) {
+        setState(prev => {
+          let nextGp = prev.gp + gpGain;
+          let nextEssence = prev.celestialEssence + essenceGain;
+          const nextSkills = { ...prev.skills };
+
+          Object.entries(xpGains).forEach(([skillId, xp]) => {
+            const sId = skillId as SkillId;
+            const skill = nextSkills[sId];
+            const newXp = skill.xp + xp;
+            const newLevel = XP_TO_LEVEL(newXp);
+            
+            if (newLevel > skill.level) {
+              addEvent(`KINGDOM LEVEL UP! ${sId.toUpperCase()} is now level ${newLevel}!`, 'level');
+            }
+            nextSkills[sId] = { ...skill, xp: newXp, level: newLevel };
+          });
+
+          return {
+            ...prev,
+            gp: nextGp,
+            celestialEssence: nextEssence,
+            skills: nextSkills
+          };
+        });
+      }
+    }, 1000); // Passive tick every second
+
+    return () => clearInterval(interval);
+  }, [addEvent]);
 
   return {
     state,
@@ -476,6 +705,8 @@ export function useGame() {
     toggleEdict,
     ascendSkill,
     buyRelic,
+    hireWorker,
+    useItem,
     toggleNotifications
   };
 }

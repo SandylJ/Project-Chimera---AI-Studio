@@ -6,6 +6,7 @@ import { BankView } from './components/BankView';
 import { ShopView } from './components/ShopView';
 import { DashboardView } from './components/DashboardView';
 import { EventLog } from './components/EventLog';
+import { KingdomView } from './components/KingdomView';
 import { SkillId } from './types';
 
 import { CelestialForgeView } from './components/CelestialForgeView';
@@ -24,13 +25,14 @@ export default function App() {
     toggleEdict,
     ascendSkill,
     buyRelic,
+    hireWorker,
     toggleNotifications
   } = useGame();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   const renderContent = () => {
     if (activeTab === 'dashboard') {
-      return <DashboardView state={state} setActiveTab={setActiveTab} />;
+      return <DashboardView state={state} events={events} setActiveTab={setActiveTab} />;
     }
     if (activeTab === 'bank') {
       return (
@@ -57,13 +59,16 @@ export default function App() {
     if (activeTab === 'forge') {
       return <CelestialForgeView state={state} buyRelic={buyRelic} toggleEdict={toggleEdict} />;
     }
+    if (activeTab === 'kingdom') {
+      return <KingdomView state={state} hireWorker={hireWorker} />;
+    }
     
     // Check if activeTab is a SkillId
     const skillIds: SkillId[] = [
       'mining', 'woodcutting', 'fishing', 'hunting', 'farming',
-      'smithing', 'cooking', 'herblore', 'crafting',
-      'attack', 'strength', 'defense', 'magic', 'ranged',
-      'empire', 'raids'
+      'smithing', 'cooking', 'herblore', 'crafting', 'runecrafting',
+      'thieving', 'agility', 'attack', 'strength', 'defense', 'magic', 'ranged',
+      'prayer', 'empire', 'raids', 'slayer'
     ];
     
     if (skillIds.includes(activeTab as SkillId)) {

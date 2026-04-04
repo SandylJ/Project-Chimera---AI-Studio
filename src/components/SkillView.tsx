@@ -19,6 +19,11 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
   const progressToNext = ((skill.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
   const ascensionCount = state.ascensions[skillId] || 0;
 
+  const bestTool = state.inventory
+    .map(i => ITEMS[i.itemId])
+    .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === skillId)
+    .sort((a, b) => (b.toolBonus?.speedMultiplier || 1) - (a.toolBonus?.speedMultiplier || 1))[0];
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Skill Header */}
@@ -29,6 +34,11 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
             {ascensionCount > 0 && (
               <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest bg-[#141414] text-[#E4E3E0] px-2 py-1">
                 ASCENSION {ascensionCount}
+              </span>
+            )}
+            {bestTool && (
+              <span className="text-[10px] font-mono opacity-50 uppercase tracking-widest bg-green-600 text-white px-2 py-1 flex items-center gap-1">
+                {bestTool.icon} {bestTool.name} ACTIVE
               </span>
             )}
           </h2>
@@ -119,11 +129,18 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
                 <div className="text-lg font-serif italic font-bold leading-tight flex items-center gap-2">
                   {action.name}
                   {action.isMonster && <span className="text-[8px] bg-red-500 text-white px-1 rounded-full not-italic font-mono">MOB</span>}
+                  {action.isBoss && <span className="text-[8px] bg-purple-600 text-white px-1 rounded-full not-italic font-mono">BOSS</span>}
                 </div>
                 <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">
-                  {action.duration / 1000}s
+                  {Math.round((action.duration / (bestTool?.toolBonus?.speedMultiplier || 1)) / 100) / 10}s
                 </div>
               </div>
+
+              {action.description && (
+                <div className="text-[10px] font-mono opacity-60 mb-3 leading-relaxed italic">
+                  {action.description}
+                </div>
+              )}
               
               <div className="space-y-3">
                 {/* Weakness */}
@@ -139,22 +156,50 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
                 <div className="space-y-1">
                   <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">REWARDS</div>
                   <div className="flex flex-wrap gap-2 text-xs font-mono">
-                    <span className="bg-[#141414]/5 group-hover:bg-[#E4E3E0]/10 px-1.5 py-0.5 rounded-sm">+{action.xpReward} XP</span>
-                    {action.outputs.map(o => (
-                      <span key={o.itemId} className="flex items-center gap-1 bg-[#141414]/5 group-hover:bg-[#E4E3E0]/10 px-1.5 py-0.5 rounded-sm">
-                        {ITEMS[o.itemId]?.icon} {o.quantity}
-                        {o.chance < 1 && <span className="opacity-50 text-[10px]">({(o.chance * 100).toFixed(1)}%)</span>}
-                      </span>
-                    ))}
+                    <span className="bg-[#141414]/5 group-hover:bg-[#E4E3E0]/10 px-1.5 py-0.5 rounded-sm">
+                      +{Math.floor(action.xpReward * (bestTool?.toolBonus?.xpMultiplier || 1))} XP
+                    </span>
+                  </div>
+                </div>
+
+                {/* Potential Loot */}
+                <div className="space-y-1">
+                  <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">POTENTIAL LOOT</div>
+                  <div className="flex flex-wrap gap-2 text-xs font-mono">
+                    {action.outputs.map(o => {
+                      const item = ITEMS[o.itemId];
+                      return (
+                        <span 
+                          key={o.itemId} 
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm ${
+                            item?.rarity === 'legendary' ? 'bg-purple-500/10 text-purple-700 group-hover:text-purple-300' :
+                            item?.rarity === 'rare' ? 'bg-blue-500/10 text-blue-700 group-hover:text-blue-300' :
+                            'bg-[#141414]/5 group-hover:bg-[#E4E3E0]/10'
+                          }`}
+                        >
+                          {item?.icon} {o.quantity}
+                          {o.chance < 1 && <span className="opacity-50 text-[10px]">({(o.chance * 100).toFixed(1)}%)</span>}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
                 
                 {/* Costs */}
-                {action.inputs && action.inputs.length > 0 && (
+                {(action.inputs || action.toolRequired) && (
                   <div className="space-y-1">
                     <div className="text-[9px] font-mono opacity-40 uppercase tracking-widest">REQUIRED</div>
                     <div className="flex flex-wrap gap-2 text-xs font-mono">
-                      {action.inputs.map(i => {
+                      {action.toolRequired && (
+                        <span 
+                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm ${
+                            state.inventory.some(i => i.itemId === action.toolRequired) ? 'bg-green-500/10 text-green-700 group-hover:text-green-300' : 'bg-red-500/10 text-red-700 group-hover:text-red-300'
+                          }`}
+                        >
+                          {ITEMS[action.toolRequired]?.icon} {ITEMS[action.toolRequired]?.name}
+                        </span>
+                      )}
+                      {action.inputs?.map(i => {
                         const inv = state.inventory.find(invItem => invItem.itemId === i.itemId);
                         const hasEnough = inv && inv.quantity >= i.quantity;
                         return (

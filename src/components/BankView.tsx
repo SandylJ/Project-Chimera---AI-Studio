@@ -15,12 +15,27 @@ interface BankViewProps {
 export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp }: BankViewProps) {
   const inventory = state.inventory;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>('all');
 
   const selectedItem = selectedItemId ? ITEMS[selectedItemId] : null;
   const selectedInventoryItem = inventory.find(i => i.itemId === selectedItemId);
   const isEquipped = selectedItemId ? Object.values(state.equipment).includes(selectedItemId) : false;
 
+  const filteredInventory = inventory.filter(item => {
+    const data = ITEMS[item.itemId];
+    if (!data) return false;
+    if (filter === 'all') return true;
+    if (filter === 'equipment') return data.type === 'equipment' || data.type === 'tool';
+    if (filter === 'resources') return data.type === 'resource' || data.type === 'currency';
+    if (filter === 'consumables') return data.type === 'food' || data.type === 'potion';
+    if (filter === 'rare') return data.rarity === 'rare' || data.rarity === 'legendary';
+    return true;
+  });
+
+  const totalValue = inventory.reduce((acc, item) => acc + (ITEMS[item.itemId]?.value || 0) * item.quantity, 0);
+
   const handleSell = (item: Item, quantity: number) => {
+    if (!item || item.value === undefined) return;
     if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) {
       const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id);
       if (slot) unequipItem(slot);
@@ -37,12 +52,32 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-      <div className="flex items-end justify-between border-b border-[#141414] pb-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-[#141414] pb-6 gap-6">
         <div>
-          <h2 className="text-4xl font-serif italic font-bold tracking-tight capitalize">Imperial Treasury</h2>
-          <div className="text-xs font-mono opacity-50 uppercase tracking-widest mt-1">
-            {inventory.length} / 100 SLOTS USED — {state.gp.toLocaleString()} GP
+          <h2 className="text-5xl font-serif italic font-bold tracking-tight capitalize">Imperial Treasury</h2>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="text-xs font-mono opacity-50 uppercase tracking-widest">
+              {inventory.length} / 100 SLOTS — {state.gp.toLocaleString()} GP
+            </div>
+            <div className="h-1 w-1 bg-[#141414]/20 rounded-full" />
+            <div className="text-xs font-mono text-amber-700 font-bold uppercase tracking-widest">
+              HOARD VALUE: {totalValue.toLocaleString()} GP
+            </div>
           </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          {['all', 'equipment', 'resources', 'consumables', 'rare'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all border ${
+                filter === f ? 'bg-[#141414] text-[#E4E3E0] border-[#141414]' : 'border-[#141414]/20 hover:border-[#141414]'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -112,7 +147,7 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
         <div className="lg:col-span-2 space-y-6">
           <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2">Vault</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
-            {inventory.map(item => {
+            {filteredInventory.map(item => {
               const itemData = ITEMS[item.itemId];
               if (!itemData) return null;
 
@@ -123,20 +158,32 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   onClick={() => setSelectedItemId(item.itemId)}
-                  className={`group border border-[#141414] p-4 flex flex-col items-center justify-center gap-2 hover:bg-[#141414] hover:text-[#E4E3E0] transition-all cursor-pointer relative ${selectedItemId === item.itemId ? 'bg-[#141414] text-[#E4E3E0] ring-2 ring-inset ring-[#E4E3E0]/30' : ''}`}
+                  className={`group border border-[#141414] p-4 flex flex-col items-center justify-center gap-2 hover:bg-[#141414] hover:text-[#E4E3E0] transition-all cursor-pointer relative ${selectedItemId === item.itemId ? 'bg-[#141414] text-[#E4E3E0] ring-2 ring-inset ring-[#E4E3E0]/30' : ''} ${
+                    itemData.rarity === 'celestial' ? 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.3)]' :
+                    itemData.rarity === 'legendary' ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 
+                    itemData.rarity === 'epic' ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
+                    itemData.rarity === 'rare' ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 
+                    itemData.rarity === 'uncommon' ? 'border-green-500' : ''
+                  }`}
                 >
-                  <div className="text-4xl">{itemData.icon}</div>
+                  <div className="text-4xl drop-shadow-sm">{itemData.icon}</div>
                   <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest text-center truncate w-full">
                     {itemData.name}
                   </div>
-                  <div className="absolute top-2 right-2 text-xs font-mono font-bold">
+                  <div className={`absolute top-2 right-2 text-xs font-mono font-bold ${
+                    itemData.rarity === 'celestial' ? 'text-cyan-500' :
+                    itemData.rarity === 'legendary' ? 'text-purple-500' : 
+                    itemData.rarity === 'epic' ? 'text-red-500' :
+                    itemData.rarity === 'rare' ? 'text-blue-500' : 
+                    itemData.rarity === 'uncommon' ? 'text-green-500' : ''
+                  }`}>
                     {item.quantity.toLocaleString()}
                   </div>
                 </motion.div>
               );
             })}
 
-            {Array.from({ length: Math.max(0, 18 - inventory.length) }).map((_, i) => (
+            {Array.from({ length: Math.max(0, 18 - filteredInventory.length) }).map((_, i) => (
               <div key={`empty-${i}`} className="border border-[#141414]/10 p-4 flex items-center justify-center opacity-20 grayscale">
                 <div className="w-8 h-8 rounded-full border border-dashed border-[#141414]" />
               </div>
@@ -249,13 +296,13 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                           onClick={() => handleSell(selectedItem, 1)}
                           className="py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest transition-all"
                         >
-                          Sell 1 ({selectedItem.value} GP)
+                          Sell 1 ({(selectedItem?.value || 0)} GP)
                         </button>
                         <button 
                           onClick={() => handleSell(selectedItem, selectedInventoryItem.quantity)}
                           className="py-3 border border-[#141414] hover:bg-[#141414] hover:text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest transition-all"
                         >
-                          Sell All ({selectedItem.value * selectedInventoryItem.quantity} GP)
+                          Sell All ({(selectedItem?.value || 0) * selectedInventoryItem.quantity} GP)
                         </button>
                       </div>
                     )}

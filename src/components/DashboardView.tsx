@@ -32,6 +32,7 @@ import { LEVEL_XP } from '../constants';
 
 interface DashboardViewProps {
   state: any;
+  events: any[];
   setActiveTab: (tab: string) => void;
 }
 
@@ -59,10 +60,12 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'slayer', name: 'Slayer', icon: Ghost },
 ];
 
-export function DashboardView({ state, setActiveTab }: DashboardViewProps) {
+export function DashboardView({ state, events, setActiveTab }: DashboardViewProps) {
   const totalLevel = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.level || 0), 0);
   const totalXp = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.xp || 0), 0);
   const totalAscensions = Object.values((state.ascensions || {}) as Record<string, number>).reduce((acc: number, count: number) => acc + (count || 0), 0);
+
+  const recentLoot = events.filter(e => e.type === 'loot').slice(0, 10);
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -89,49 +92,91 @@ export function DashboardView({ state, setActiveTab }: DashboardViewProps) {
         </div>
       </div>
 
-      {/* Skill Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {SKILLS.map(skill => {
-          const playerSkill = state.skills[skill.id];
-          const nextLevelXp = LEVEL_XP(playerSkill.level + 1);
-          const currentLevelXp = LEVEL_XP(playerSkill.level);
-          const progress = ((playerSkill.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        {/* Skill Grid */}
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {SKILLS.map(skill => {
+            const playerSkill = state.skills[skill.id];
+            const nextLevelXp = LEVEL_XP(playerSkill.level + 1);
+            const currentLevelXp = LEVEL_XP(playerSkill.level);
+            const progress = ((playerSkill.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
 
-          return (
-            <motion.div 
-              key={skill.id}
-              whileHover={{ scale: 1.02 }}
-              onClick={() => setActiveTab(skill.id)}
-              className="group border border-[#141414] p-4 flex flex-col gap-4 hover:bg-[#141414] hover:text-[#E4E3E0] transition-all cursor-pointer"
+            return (
+              <motion.div 
+                key={skill.id}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => setActiveTab(skill.id)}
+                className="group border border-[#141414] p-4 flex flex-col gap-4 hover:bg-[#141414] hover:text-[#E4E3E0] transition-all cursor-pointer"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="w-10 h-10 border border-[#141414] group-hover:border-[#E4E3E0] flex items-center justify-center transition-colors">
+                    <skill.icon size={20} />
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">LEVEL</div>
+                    <div className="text-2xl font-serif italic font-bold">{playerSkill.level}</div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="text-sm font-serif italic font-bold mb-1">{skill.name}</div>
+                  <div className="h-1 bg-[#141414]/10 group-hover:bg-[#E4E3E0]/20 overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-[#141414] group-hover:bg-[#E4E3E0]"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[8px] font-mono mt-1 opacity-50 uppercase tracking-widest">
+                    <span>{playerSkill.xp.toLocaleString()} XP</span>
+                    <span>{Math.floor(progress)}%</span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* Recent Loot Sidebar */}
+        <div className="space-y-6">
+          <h3 className="text-xl font-serif italic font-bold border-b border-[#141414] pb-2">Recent Loot</h3>
+          <div className="space-y-3">
+            {recentLoot.length > 0 ? (
+              recentLoot.map((loot, i) => (
+                <motion.div 
+                  key={loot.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className={`p-3 border border-[#141414]/10 rounded-sm text-xs font-mono flex items-center gap-3 ${
+                    loot.rarity === 'celestial' ? 'bg-cyan-400/20 border-cyan-400 text-cyan-900 font-black' :
+                    loot.rarity === 'legendary' ? 'bg-purple-500/10 border-purple-500 text-purple-900 font-bold' :
+                    loot.rarity === 'epic' ? 'bg-red-500/10 border-red-500 text-red-900 font-bold' :
+                    loot.rarity === 'rare' ? 'bg-blue-500/10 border-blue-500 text-blue-900' :
+                    loot.rarity === 'uncommon' ? 'bg-green-500/10 border-green-500 text-green-900' :
+                    'bg-[#141414]/5'
+                  }`}
+                >
+                  <span className="text-lg">{loot.message.split(' ')[0]}</span>
+                  <span className="opacity-80">{loot.message.split(' ').slice(1).join(' ')}</span>
+                </motion.div>
+              ))
+            ) : (
+              <div className="text-xs font-serif italic opacity-50 text-center py-12 border border-dashed border-[#141414]/20">
+                No loot recorded yet. Start an action to begin your hoard.
+              </div>
+            )}
+          </div>
+          {recentLoot.length > 0 && (
+            <button 
+              onClick={() => setActiveTab('bank')}
+              className="w-full py-3 bg-[#141414] text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest hover:bg-[#141414]/90 transition-all"
             >
-              <div className="flex justify-between items-start">
-                <div className="w-10 h-10 border border-[#141414] group-hover:border-[#E4E3E0] flex items-center justify-center transition-colors">
-                  <skill.icon size={20} />
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">LEVEL</div>
-                  <div className="text-2xl font-serif italic font-bold">{playerSkill.level}</div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-serif italic font-bold mb-1">{skill.name}</div>
-                <div className="h-1 bg-[#141414]/10 group-hover:bg-[#E4E3E0]/20 overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-[#141414] group-hover:bg-[#E4E3E0]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-                <div className="flex justify-between text-[8px] font-mono mt-1 opacity-50 uppercase tracking-widest">
-                  <span>{playerSkill.xp.toLocaleString()} XP</span>
-                  <span>{Math.floor(progress)}%</span>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+              View Treasury
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Quick Stats */}
