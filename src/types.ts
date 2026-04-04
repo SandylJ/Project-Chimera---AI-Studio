@@ -25,7 +25,18 @@ export interface Item {
     magic?: number;
     ranged?: number;
     speed?: number;
+    luck?: number; // Increases rare drop chances
+    health?: number; // Increases survivability
   };
+  setBonus?: {
+    setId: string;
+    piecesRequired: number;
+    bonus: Partial<Item['stats']>;
+  };
+  socketable?: boolean;
+  sockets?: number;
+  isGem?: boolean;
+  gemBonus?: Partial<Item['stats']>;
   skillHint?: string; // Which skill is this used for?
   farmHint?: string;  // Where can you get this?
   usageHint?: string; // What can you do with it?
@@ -59,7 +70,7 @@ export interface InventoryItem {
   quantity: number;
 }
 
-export type EquipmentSlot = 'weapon' | 'shield' | 'head' | 'body' | 'legs' | 'feet' | 'hands' | 'neck' | 'ring' | 'cape';
+export type EquipmentSlot = 'weapon' | 'shield' | 'head' | 'body' | 'legs' | 'feet' | 'hands' | 'neck' | 'ring' | 'cape' | 'back' | 'offhand';
 
 export interface Equipment {
   weapon?: string;
@@ -72,6 +83,8 @@ export interface Equipment {
   neck?: string;
   ring?: string;
   cape?: string;
+  back?: string;
+  offhand?: string;
 }
 
 export interface Buff {

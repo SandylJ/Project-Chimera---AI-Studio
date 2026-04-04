@@ -28,13 +28,24 @@ import {
   Footprints
 } from 'lucide-react';
 import { SkillId } from '../types';
-import { LEVEL_XP } from '../constants';
+import { LEVEL_XP, ITEMS } from '../constants';
 
 interface DashboardViewProps {
   state: any;
   events: any[];
   setActiveTab: (tab: string) => void;
 }
+
+const calculateLuck = (equipment: any) => {
+  let luck = 0;
+  Object.values(equipment || {}).forEach((itemId: any) => {
+    if (itemId) {
+      const item = ITEMS[itemId];
+      if (item?.stats?.luck) luck += item.stats.luck;
+    }
+  });
+  return luck;
+};
 
 const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'mining', name: 'Mining', icon: Pickaxe },
@@ -64,6 +75,7 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
   const totalLevel = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.level || 0), 0);
   const totalXp = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.xp || 0), 0);
   const totalAscensions = Object.values((state.ascensions || {}) as Record<string, number>).reduce((acc: number, count: number) => acc + (count || 0), 0);
+  const luck = calculateLuck(state.equipment);
 
   const recentLoot = events.filter(e => e.type === 'loot').slice(0, 10);
 
@@ -76,14 +88,21 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
           <p className="text-lg font-serif italic opacity-70 max-w-xl">
             Your empire stands at the precipice of greatness. Master the arts of gathering, crafting, and warfare to expand your reach across the realm.
           </p>
-          {totalAscensions > 0 && (
-            <div className="mt-6 flex items-center gap-4">
-              <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">ASCENSION STATUS</div>
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            {totalAscensions > 0 && (
               <div className="px-3 py-1 bg-[#141414] text-[#E4E3E0] text-[10px] font-mono uppercase tracking-widest">
                 TIER {totalAscensions} ASCENDANT
               </div>
+            )}
+            <div className="px-3 py-1 border border-emerald-600 text-emerald-800 text-[10px] font-mono uppercase tracking-widest flex items-center gap-2">
+              <Sparkles className="w-3 h-3" />
+              LUCK: {luck}
             </div>
-          )}
+            <div className="px-3 py-1 border border-cyan-600 text-cyan-800 text-[10px] font-mono uppercase tracking-widest flex items-center gap-2">
+              <Package className="w-3 h-3" />
+              ESSENCE: {state.celestialEssence.toLocaleString()}
+            </div>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="text-[10px] font-mono opacity-50 uppercase tracking-widest">TOTAL LEVEL</div>

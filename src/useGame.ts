@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment } from './types';
-import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS } from './constants';
+import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item } from './types';
+import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE } from './constants';
 
 const INITIAL_STATE: PlayerState = {
   gp: 0,
@@ -48,7 +48,52 @@ export interface GameEvent {
   message: string;
   type: 'loot' | 'level' | 'xp' | 'info';
   rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'celestial';
+  icon?: string;
 }
+
+const calculateLuck = (equipment: Equipment) => {
+  let luck = 0;
+  Object.values(equipment).forEach(itemId => {
+    if (itemId) {
+      const item = ITEMS[itemId];
+      if (item?.stats?.luck) luck += item.stats.luck;
+    }
+  });
+  return luck;
+};
+
+const calculateSetBonuses = (equipment: Equipment) => {
+  const setCounts: Record<string, number> = {};
+  const bonuses: Partial<Item['stats']> = {};
+
+  Object.values(equipment).forEach(itemId => {
+    if (itemId) {
+      const item = ITEMS[itemId];
+      if (item?.setBonus) {
+        setCounts[item.setBonus.setId] = (setCounts[item.setBonus.setId] || 0) + 1;
+      }
+    }
+  });
+
+  Object.values(equipment).forEach(itemId => {
+    if (itemId) {
+      const item = ITEMS[itemId];
+      if (item?.setBonus && setCounts[item.setBonus.setId] >= item.setBonus.piecesRequired) {
+        // Apply bonus once per set
+        const setId = item.setBonus.setId;
+        if (setCounts[setId] !== -1) {
+          Object.entries(item.setBonus.bonus).forEach(([stat, value]) => {
+            const s = stat as keyof Item['stats'];
+            bonuses[s] = (bonuses[s] || 0) + (value as number);
+          });
+          setCounts[setId] = -1; // Mark as applied
+        }
+      }
+    }
+  });
+
+  return bonuses;
+};
 
 const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>, buffs: any[], inventory: InventoryItem[]) => {
   let actualDuration = action.duration;
@@ -133,6 +178,13 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
       actualDuration *= 0.85; // 15% faster combat
     }
   }
+
+  // Set Bonus
+  const setBonuses = calculateSetBonuses(equipment);
+  if (setBonuses.speed) {
+    actualDuration /= (1 + setBonuses.speed);
+  }
+
   return Math.max(100, actualDuration);
 };
 
@@ -179,8 +231,16 @@ export function useGame() {
   const addToInventory = useCallback((itemId: string, quantity: number) => {
     const item = ITEMS[itemId];
     if (item) {
-      const rarityIcon = item.rarity === 'legendary' ? '🌟' : item.rarity === 'rare' ? '💎' : '';
-      addEvent(`Gained ${quantity}x ${item.name}`, 'loot', rarityIcon || item.icon, item.rarity);
+      if (item.rarity === 'celestial') {
+        addEvent(`✨ CELESTIAL DROP: ${quantity}x ${item.name} ✨`, 'loot', '🌌', 'celestial');
+      } else if (item.rarity === 'legendary') {
+        addEvent(`🌟 LEGENDARY DROP: ${quantity}x ${item.name} 🌟`, 'loot', '🔥', 'legendary');
+      } else if (item.rarity === 'epic') {
+        addEvent(`💎 EPIC DROP: ${quantity}x ${item.name} 💎`, 'loot', '🟣', 'epic');
+      } else {
+        const rarityIcon = item.rarity === 'rare' ? '🔷' : '';
+        addEvent(`Gained ${quantity}x ${item.name}`, 'loot', rarityIcon || item.icon, item.rarity);
+      }
     }
     
     setState(prev => {
@@ -196,6 +256,38 @@ export function useGame() {
       return {
         ...prev,
         inventory: [...prev.inventory, { itemId, quantity }]
+      };
+    });
+  }, [addEvent]);
+
+  const salvageItem = useCallback((itemId: string, quantity: number) => {
+    const item = ITEMS[itemId];
+    if (!item || item.type !== 'equipment') return;
+
+    setState(prev => {
+      const existing = prev.inventory.find(i => i.itemId === itemId);
+      if (!existing || existing.quantity < quantity) return prev;
+
+      // Calculate salvage value
+      let essenceAmount = 0;
+      switch (item.rarity) {
+        case 'common': essenceAmount = 1 * quantity; break;
+        case 'uncommon': essenceAmount = 5 * quantity; break;
+        case 'rare': essenceAmount = 25 * quantity; break;
+        case 'epic': essenceAmount = 100 * quantity; break;
+        case 'legendary': essenceAmount = 500 * quantity; break;
+        case 'celestial': essenceAmount = 2500 * quantity; break;
+        default: essenceAmount = 1 * quantity;
+      }
+
+      addEvent(`Salvaged ${quantity}x ${item.name} for ${essenceAmount} Celestial Essence`, 'info', '♻️');
+
+      return {
+        ...prev,
+        celestialEssence: prev.celestialEssence + essenceAmount,
+        inventory: prev.inventory
+          .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - quantity } : i)
+          .filter(i => i.quantity > 0)
       };
     });
   }, [addEvent]);
@@ -297,8 +389,12 @@ export function useGame() {
     }
 
     // Add outputs
+    const luck = calculateLuck(stateRef.current.equipment);
+    const luckMultiplier = 1 + (luck / 100);
+
     action.outputs.forEach(output => {
-      if (Math.random() <= output.chance) {
+      const rolledChance = output.chance * luckMultiplier;
+      if (Math.random() <= rolledChance) {
         let quantity = output.quantity;
         
         // Relic: Eye of the Storm (20% chance to double)
@@ -320,6 +416,29 @@ export function useGame() {
         }
       }
     });
+
+    // Rare Drop Table (RDT) roll for monsters
+    if (action.isMonster) {
+      const rdtChance = 0.05 * luckMultiplier; // Base 5% chance for RDT roll
+      if (Math.random() <= rdtChance) {
+        const rdtRoll = Math.random();
+        let cumulativeChance = 0;
+        for (const rdtItem of RARE_DROP_TABLE) {
+          cumulativeChance += rdtItem.chance;
+          if (rdtRoll <= cumulativeChance) {
+            if (rdtItem.itemId === 'gp') {
+              const gpAmount = Math.floor(Math.random() * 5000) + 1000;
+              addGp(gpAmount);
+              addEvent(`RARE DROP TABLE: You found a hidden stash of ${gpAmount} GP!`, 'loot', '💰', 'rare');
+            } else {
+              addToInventory(rdtItem.itemId, 1);
+              addEvent(`RARE DROP TABLE: You found a ${ITEMS[rdtItem.itemId]?.name}!`, 'loot', ITEMS[rdtItem.itemId]?.icon, ITEMS[rdtItem.itemId]?.rarity);
+            }
+            break;
+          }
+        }
+      }
+    }
 
     // Add XP
     setState(prev => {
@@ -486,6 +605,37 @@ export function useGame() {
         addEvent(`Activated ${item.name}`, 'info');
         return { ...prev, activeEdicts: [...prev.activeEdicts, itemId] };
       }
+    });
+  }, [addEvent]);
+
+  const usePotion = useCallback((itemId: string) => {
+    const item = ITEMS[itemId];
+    if (!item || item.type !== 'potion') return;
+
+    setState(prev => {
+      const existing = prev.inventory.find(i => i.itemId === itemId);
+      if (!existing || existing.quantity <= 0) return prev;
+
+      let buff: any = null;
+      if (itemId === 'luck_potion') {
+        buff = { id: 'luck_buff', name: 'Luck Boost', type: 'combat', multiplier: 1.5, remainingActions: 50 };
+      } else if (itemId === 'overload_potion') {
+        buff = { id: 'overload_buff', name: 'Overload', type: 'combat', multiplier: 2.0, remainingActions: 100 };
+      } else if (itemId === 'agility_elixir') {
+        buff = { id: 'agility_buff', name: 'Agility Boost', type: 'speed', multiplier: 1.25, remainingActions: 50 };
+      } else if (itemId === 'thief_brew') {
+        buff = { id: 'thief_buff', name: 'Thief\'s Brew', type: 'speed', multiplier: 1.5, remainingActions: 30 };
+      }
+
+      if (!buff) return prev;
+
+      addEvent(`Consumed ${item.name}!`, 'info', '🧪');
+
+      return {
+        ...prev,
+        inventory: prev.inventory.map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0),
+        buffs: [...prev.buffs.filter(b => b.id !== buff.id), buff]
+      };
     });
   }, [addEvent]);
 
@@ -707,6 +857,8 @@ export function useGame() {
     buyRelic,
     hireWorker,
     useItem,
-    toggleNotifications
+    toggleNotifications,
+    salvageItem,
+    usePotion
   };
 }

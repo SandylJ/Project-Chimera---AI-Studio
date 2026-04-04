@@ -26,7 +26,9 @@ export default function App() {
     ascendSkill,
     buyRelic,
     hireWorker,
-    toggleNotifications
+    toggleNotifications,
+    salvageItem,
+    usePotion
   } = useGame();
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
@@ -43,6 +45,8 @@ export default function App() {
           toggleEdict={toggleEdict} 
           removeFromInventory={removeFromInventory}
           addGp={addGp}
+          salvageItem={salvageItem}
+          usePotion={usePotion}
         />
       );
     }

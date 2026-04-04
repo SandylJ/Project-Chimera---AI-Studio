@@ -10,9 +10,11 @@ interface BankViewProps {
   toggleEdict: (itemId: string) => void;
   removeFromInventory: (itemId: string, quantity: number) => void;
   addGp: (amount: number) => void;
+  salvageItem: (itemId: string, quantity: number) => void;
+  usePotion: (itemId: string) => void;
 }
 
-export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp }: BankViewProps) {
+export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp, salvageItem, usePotion }: BankViewProps) {
   const inventory = state.inventory;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -20,6 +22,23 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
   const selectedItem = selectedItemId ? ITEMS[selectedItemId] : null;
   const selectedInventoryItem = inventory.find(i => i.itemId === selectedItemId);
   const isEquipped = selectedItemId ? Object.values(state.equipment).includes(selectedItemId) : false;
+
+  const handleUsePotion = (item: Item) => {
+    if (!item || item.type !== 'potion') return;
+    usePotion(item.id);
+  };
+
+  const handleSalvage = (item: Item, quantity: number) => {
+    if (!item || item.type !== 'equipment') return;
+    if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) {
+      const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id);
+      if (slot) unequipItem(slot);
+    }
+    salvageItem(item.id, quantity);
+    if (quantity >= (selectedInventoryItem?.quantity || 0)) {
+      setSelectedItemId(null);
+    }
+  };
 
   const filteredInventory = inventory.filter(item => {
     const data = ITEMS[item.itemId];
@@ -245,6 +264,20 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                     </div>
                   )}
 
+                  {selectedItem.setBonus && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm">
+                      <div className="text-[10px] font-mono text-amber-800 uppercase tracking-widest mb-1">Set Bonus: {selectedItem.setBonus.setId}</div>
+                      <div className="text-xs text-amber-900 italic">
+                        Requires {selectedItem.setBonus.piecesRequired} pieces.
+                        <div className="mt-1 font-bold">
+                          {Object.entries(selectedItem.setBonus.bonus).map(([stat, val]) => (
+                            <span key={stat} className="mr-2">+{val} {stat}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {(selectedItem.skillHint || selectedItem.farmHint || selectedItem.usageHint) && (
                     <div className="p-5 bg-[#141414]/5 border border-[#141414]/10 space-y-4 rounded-sm">
                       {selectedItem.skillHint && (
@@ -270,14 +303,31 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
 
                   <div className="pt-4 space-y-3">
                     {selectedItem.type === 'equipment' && selectedInventoryItem && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={() => {
+                            equipItem(selectedItem.id);
+                            setSelectedItemId(null);
+                          }}
+                          className="py-4 bg-[#141414] text-[#E4E3E0] hover:bg-[#141414]/90 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
+                        >
+                          Equip Item
+                        </button>
+                        <button 
+                          onClick={() => handleSalvage(selectedItem, 1)}
+                          className="py-4 border border-cyan-600 text-cyan-600 hover:bg-cyan-600 hover:text-white text-xs font-mono uppercase tracking-widest transition-all"
+                        >
+                          Salvage (Essence)
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedItem.type === 'potion' && selectedInventoryItem && (
                       <button 
-                        onClick={() => {
-                          equipItem(selectedItem.id);
-                          setSelectedItemId(null);
-                        }}
-                        className="w-full py-4 bg-[#141414] text-[#E4E3E0] hover:bg-[#141414]/90 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
+                        onClick={() => handleUsePotion(selectedItem)}
+                        className="w-full py-4 bg-emerald-800 text-white hover:bg-emerald-700 text-xs font-mono uppercase tracking-widest transition-all shadow-lg"
                       >
-                        Equip to Slot
+                        Consume Potion
                       </button>
                     )}
 

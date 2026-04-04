@@ -320,16 +320,12 @@ export const ITEMS: Record<string, Item> = {
   'overload_potion': { id: 'overload_potion', name: 'Overload Potion', description: 'The ultimate combat boost.', icon: '🧪', value: 50000, type: 'potion' },
   'void_essence': { id: 'void_essence', name: 'Void Essence', description: 'Essence from the void.', icon: '🌑', value: 5000, type: 'resource' },
   'void_blade': { id: 'void_blade', name: 'Void Blade', description: 'A blade that cuts through reality.', icon: '⚔️', value: 500000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 200, strength: 150 } },
-  'dragon_lord_trophy': { id: 'dragon_lord_trophy', name: 'Dragon Lord Trophy', description: 'Proof of slaying the Dragon Lord.', icon: '🏆', value: 100000, type: 'resource' },
-  'void_reaper_trophy': { id: 'void_reaper_trophy', name: 'Void Reaper Trophy', description: 'Proof of slaying the Void Reaper.', icon: '🏆', value: 250000, type: 'resource' },
   'master_clue_scroll': { id: 'master_clue_scroll', name: 'Master Clue Scroll', description: 'A very difficult riddle.', icon: '📜', value: 10000, type: 'resource' },
   'clue_scroll_master': { id: 'clue_scroll_master', name: 'Master Clue Scroll', description: 'A very difficult riddle.', icon: '📜', value: 10000, type: 'resource' },
   'clue_reward_box': { id: 'clue_reward_box', name: 'Clue Reward Box', description: 'Contains treasures.', icon: '🎁', value: 50000, type: 'resource' },
-  'imperial_crown': { id: 'imperial_crown', name: 'Imperial Crown', description: 'The ultimate symbol of power.', icon: '👑', value: 1000000, type: 'equipment', equipmentSlot: 'head', stats: { attack: 50, strength: 50, defense: 50, magic: 50, ranged: 50 } },
   'ancient_relic': { id: 'ancient_relic', name: 'Ancient Relic', description: 'A mysterious artifact from a lost age.', icon: '🏺', value: 100000, type: 'resource' },
   'imperial_decree': { id: 'imperial_decree', name: 'Imperial Decree', description: 'A scroll that commands respect.', icon: '📜', value: 10000, type: 'resource' },
   'dragon_fruit': { id: 'dragon_fruit', name: 'Dragon Fruit', description: 'A fruit that tastes like fire.', icon: '🌵', value: 500, type: 'food' },
-  'spirit_seed': { id: 'spirit_seed', name: 'Spirit Seed', description: 'A seed that glows with a faint light.', icon: '🌱', value: 1000, type: 'resource' },
   'raid_master_cape': { id: 'raid_master_cape', name: 'Raid Master Cape', description: 'Worn by those who have conquered all.', icon: '🧥', value: 2500000, type: 'equipment', equipmentSlot: 'body', stats: { defense: 150, strength: 20, magic: 20, ranged: 20 } },
   'dragon_slayer_blade': { id: 'dragon_slayer_blade', name: 'Dragon Slayer Blade', description: 'Forged in dragon fire.', icon: '🗡️', value: 500000, type: 'equipment', equipmentSlot: 'weapon', stats: { attack: 120, strength: 80 } },
 
@@ -347,10 +343,6 @@ export const ITEMS: Record<string, Item> = {
   'dragon_sq_shield': { id: 'dragon_sq_shield', name: 'Dragon Sq Shield', description: 'A square shield made of dragon metal.', icon: '🛡️', value: 300000, type: 'equipment', equipmentSlot: 'shield', rarity: 'rare', stats: { defense: 50 } },
   'dragon_platebody': { id: 'dragon_platebody', name: 'Dragon Platebody', description: 'The ultimate dragon metal armor.', icon: '👕', value: 1000000, type: 'equipment', equipmentSlot: 'body', rarity: 'rare', stats: { defense: 120 } },
   'dragon_platelegs': { id: 'dragon_platelegs', name: 'Dragon Platelegs', description: 'Leggings forged from dragon metal.', icon: '👖', value: 800000, type: 'equipment', equipmentSlot: 'legs', rarity: 'rare', stats: { defense: 100 } },
-  'infernal_cape': { id: 'infernal_cape', name: 'Infernal Cape', description: 'A cape that glows with the heat of the inferno.', icon: '🧥', value: 5000000, type: 'equipment', equipmentSlot: 'body', rarity: 'legendary', stats: { strength: 8, attack: 4, defense: 4 } },
-  'primordial_boots': { id: 'primordial_boots', name: 'Primordial Boots', description: 'Boots infused with primordial crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { strength: 5, attack: 2, defense: 2 } },
-  'pegasian_boots': { id: 'pegasian_boots', name: 'Pegasian Boots', description: 'Boots infused with pegasian crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { ranged: 12 } },
-  'eternal_boots': { id: 'eternal_boots', name: 'Eternal Boots', description: 'Boots infused with eternal crystals.', icon: '👞', value: 2000000, type: 'equipment', equipmentSlot: 'legs', stats: { magic: 8, defense: 5 } },
   'zenyte_shard': { id: 'zenyte_shard', name: 'Zenyte Shard', description: 'A shard of the rarest gem.', icon: '💎', value: 500000, type: 'resource' },
   'uncut_zenyte': { id: 'uncut_zenyte', name: 'Uncut Zenyte', description: 'An uncut zenyte gem.', icon: '💎', value: 1000000, type: 'resource' },
   'torture_amulet': { id: 'torture_amulet', name: 'Amulet of Torture', description: 'The ultimate offensive amulet.', icon: '📿', value: 5000000, type: 'equipment', equipmentSlot: 'head', stats: { attack: 15, strength: 10 } },
@@ -443,7 +435,71 @@ export const ITEMS: Record<string, Item> = {
   'pure_mana_crystal': { id: 'pure_mana_crystal', name: 'Pure Mana Crystal', description: 'A crystal pulsing with magical energy.', icon: '💎', value: 5000, type: 'resource' },
   'kraken_tentacle': { id: 'kraken_tentacle', name: 'Kraken Tentacle', description: 'A writhing, powerful tentacle.', icon: '🐙', value: 10000, type: 'resource', rarity: 'rare' },
   'abyssal_tentacle': { id: 'abyssal_tentacle', name: 'Abyssal Tentacle', description: 'A fusion of void and sea. The ultimate whip.', icon: '🔱', value: 150000, type: 'equipment', equipmentSlot: 'weapon', rarity: 'legendary', stats: { attack: 120, strength: 80, speed: 1.2 } },
+
+  // Gems for Socketing
+  'ruby_gem': { id: 'ruby_gem', name: 'Ruby Gem', description: 'A fiery red gem.', icon: '💎', value: 5000, type: 'resource', isGem: true, gemBonus: { strength: 10 }, rarity: 'rare' },
+  'sapphire_gem': { id: 'sapphire_gem', name: 'Sapphire Gem', description: 'A deep blue gem.', icon: '💎', value: 5000, type: 'resource', isGem: true, gemBonus: { magic: 10 }, rarity: 'rare' },
+  'emerald_gem': { id: 'emerald_gem', name: 'Emerald Gem', description: 'A vibrant green gem.', icon: '💎', value: 5000, type: 'resource', isGem: true, gemBonus: { luck: 5 }, rarity: 'rare' },
+  'diamond_gem': { id: 'diamond_gem', name: 'Diamond Gem', description: 'A brilliant clear gem.', icon: '💎', value: 15000, type: 'resource', isGem: true, gemBonus: { attack: 15, strength: 5 }, rarity: 'epic' },
+  'void_gem': { id: 'void_gem', name: 'Void Gem', description: 'A gem that absorbs light.', icon: '🌑', value: 50000, type: 'resource', isGem: true, gemBonus: { luck: 25, speed: 0.1 }, rarity: 'legendary' },
+
+  // Set Items: Void Set
+  'void_helm': { id: 'void_helm', name: 'Void Helm', description: 'Part of the Void Set.', icon: '🪖', value: 25000, type: 'equipment', equipmentSlot: 'head', rarity: 'epic', setBonus: { setId: 'void_set', piecesRequired: 3, bonus: { luck: 50, attack: 20 } } },
+  'void_body': { id: 'void_body', name: 'Void Body', description: 'Part of the Void Set.', icon: '🥋', value: 40000, type: 'equipment', equipmentSlot: 'body', rarity: 'epic', setBonus: { setId: 'void_set', piecesRequired: 3, bonus: { luck: 50, attack: 20 } } },
+  'void_legs': { id: 'void_legs', name: 'Void Legs', description: 'Part of the Void Set.', icon: '👖', value: 35000, type: 'equipment', equipmentSlot: 'legs', rarity: 'epic', setBonus: { setId: 'void_set', piecesRequired: 3, bonus: { luck: 50, attack: 20 } } },
+
+  // Luck Items
+  'lucky_rabbit_foot': { id: 'lucky_rabbit_foot', name: 'Lucky Rabbit Foot', description: 'A charm that brings good fortune.', icon: '🐇', value: 2000, type: 'equipment', equipmentSlot: 'neck', rarity: 'uncommon', stats: { luck: 10 } },
+  'ring_of_wealth': { id: 'ring_of_wealth', name: 'Ring of Wealth', description: 'Increases the chance of rare drops.', icon: '💍', value: 15000, type: 'equipment', equipmentSlot: 'ring', rarity: 'rare', stats: { luck: 25 } },
+  'luck_potion': { id: 'luck_potion', name: 'Luck Potion', description: 'Temporarily boosts your luck.', icon: '🧪', value: 5000, type: 'potion', rarity: 'rare' },
+
+  // Slayer Uniques & Boss Drops
+  'black_mask': { id: 'black_mask', name: 'Black Mask', description: 'A mask that increases Slayer damage.', icon: '🎭', value: 150000, type: 'equipment', equipmentSlot: 'head', rarity: 'rare', stats: { attack: 10, defense: 5 } },
+  'dragon_chainbody': { id: 'dragon_chainbody', name: 'Dragon Chainbody', description: 'A very rare and powerful chainmail.', icon: '⛓️', value: 500000, type: 'equipment', equipmentSlot: 'body', rarity: 'epic', stats: { defense: 80, attack: 5 } },
+  'rune_boots': { id: 'rune_boots', name: 'Rune Boots', description: 'Strong boots made of runite.', icon: '👢', value: 25000, type: 'equipment', equipmentSlot: 'feet', rarity: 'uncommon', stats: { defense: 15, attack: 2 } },
+  'occult_necklace': { id: 'occult_necklace', name: 'Occult Necklace', description: 'A necklace that boosts magic power significantly.', icon: '📿', value: 300000, type: 'equipment', equipmentSlot: 'neck', rarity: 'epic', stats: { magic: 25, attack: 5 } },
+  'primordial_boots': { id: 'primordial_boots', name: 'Primordial Boots', description: 'The best boots for a warrior.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { attack: 30, defense: 20 } },
+  'pegasian_boots': { id: 'pegasian_boots', name: 'Pegasian Boots', description: 'The best boots for a ranger.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { ranged: 30, defense: 10 } },
+  'eternal_boots': { id: 'eternal_boots', name: 'Eternal Boots', description: 'The best boots for a mage.', icon: '👢', value: 1000000, type: 'equipment', equipmentSlot: 'feet', rarity: 'legendary', stats: { magic: 30, defense: 10 } },
+  'infernal_cape': { id: 'infernal_cape', name: 'Infernal Cape', description: 'A cape that burns with the heat of the core.', icon: '🧥', value: 5000000, type: 'equipment', equipmentSlot: 'back', rarity: 'celestial', stats: { attack: 50, strength: 30, defense: 20 } },
+
+  // High-Level Sets
+  'justiciar_helm': { id: 'justiciar_helm', name: 'Justiciar Helm', description: 'Part of the Justiciar set.', icon: '🛡️', value: 1000000, type: 'equipment', equipmentSlot: 'head', rarity: 'legendary', setBonus: { setId: 'justiciar_set', piecesRequired: 3, bonus: { defense: 100, health: 50 } }, stats: { defense: 50 } },
+  'justiciar_chest': { id: 'justiciar_chest', name: 'Justiciar Chest', description: 'Part of the Justiciar set.', icon: '🧥', value: 2000000, type: 'equipment', equipmentSlot: 'body', rarity: 'legendary', setBonus: { setId: 'justiciar_set', piecesRequired: 3, bonus: { defense: 100, health: 50 } }, stats: { defense: 120 } },
+  'justiciar_legs': { id: 'justiciar_legs', name: 'Justiciar Legs', description: 'Part of the Justiciar set.', icon: '👖', value: 1500000, type: 'equipment', equipmentSlot: 'legs', rarity: 'legendary', setBonus: { setId: 'justiciar_set', piecesRequired: 3, bonus: { defense: 100, health: 50 } }, stats: { defense: 90 } },
+  'ancestral_hat': { id: 'ancestral_hat', name: 'Ancestral Hat', description: 'Part of the Ancestral set.', icon: '🧙', value: 1200000, type: 'equipment', equipmentSlot: 'head', rarity: 'legendary', setBonus: { setId: 'ancestral_set', piecesRequired: 3, bonus: { magic: 150, speed: 0.1 } }, stats: { magic: 60 } },
+  'ancestral_robe_top': { id: 'ancestral_robe_top', name: 'Ancestral Robe Top', description: 'Part of the Ancestral set.', icon: '👘', value: 2500000, type: 'equipment', equipmentSlot: 'body', rarity: 'legendary', setBonus: { setId: 'ancestral_set', piecesRequired: 3, bonus: { magic: 150, speed: 0.1 } }, stats: { magic: 100 } },
+  'ancestral_robe_bottom': { id: 'ancestral_robe_bottom', name: 'Ancestral Robe Bottom', description: 'Part of the Ancestral set.', icon: '👗', value: 2000000, type: 'equipment', equipmentSlot: 'legs', rarity: 'legendary', setBonus: { setId: 'ancestral_set', piecesRequired: 3, bonus: { magic: 150, speed: 0.1 } }, stats: { magic: 80 } },
+
+  // Trophies & Collection Items
+  'dragon_lord_trophy': { id: 'dragon_lord_trophy', name: 'Dragon Lord Trophy', description: 'A massive head of the Dragon Lord.', icon: '🐲', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'A symbol of your victory.' },
+  'void_reaper_trophy': { id: 'void_reaper_trophy', name: 'Void Reaper Trophy', description: 'A fragment of the Void Reaper\'s essence.', icon: '💀', value: 2000000, type: 'resource', rarity: 'legendary', usageHint: 'A symbol of your victory.' },
+  'imperial_crown': { id: 'imperial_crown', name: 'Imperial Crown', description: 'The crown of the first Emperor.', icon: '👑', value: 10000000, type: 'equipment', equipmentSlot: 'head', rarity: 'celestial', stats: { luck: 100, attack: 50, magic: 50, ranged: 50 } },
+
+  // Junk & Salvageables
+  'broken_shield': { id: 'broken_shield', name: 'Broken Shield', description: 'A damaged shield. Can be salvaged for metal.', icon: '🛡️', value: 50, type: 'equipment', equipmentSlot: 'offhand', rarity: 'common', usageHint: 'Salvage for Iron/Steel.', stats: { defense: 1 } },
+  'rusty_sword': { id: 'rusty_sword', name: 'Rusty Sword', description: 'A corroded blade. Can be salvaged for metal.', icon: '🗡️', value: 30, type: 'equipment', equipmentSlot: 'weapon', rarity: 'common', usageHint: 'Salvage for Iron.', stats: { attack: 1 } },
+  'ancient_parchment': { id: 'ancient_parchment', name: 'Ancient Parchment', description: 'Tattered paper with mysterious writing.', icon: '📜', value: 500, type: 'resource', rarity: 'uncommon', usageHint: 'Used in high-level Magic and Empire actions.' },
+  'spirit_seed': { id: 'spirit_seed', name: 'Spirit Seed', description: 'A seed that pulses with life.', icon: '🌱', value: 5000, type: 'resource', rarity: 'rare', usageHint: 'Used in high-level Farming.' },
+
+  // Global Rare Drops
+  'celestial_shard': { id: 'celestial_shard', name: 'Celestial Shard', description: 'A fragment of a fallen star.', icon: '✨', value: 250000, type: 'resource', rarity: 'celestial' },
 };
+
+export const RARE_DROP_TABLE: { itemId: string; chance: number }[] = [
+  { itemId: 'ruby_gem', chance: 0.05 },
+  { itemId: 'sapphire_gem', chance: 0.05 },
+  { itemId: 'emerald_gem', chance: 0.05 },
+  { itemId: 'diamond_gem', chance: 0.02 },
+  { itemId: 'void_gem', chance: 0.005 },
+  { itemId: 'ancient_relic', chance: 0.001 },
+  { itemId: 'celestial_shard', chance: 0.0001 },
+  { itemId: 'godsword_shard_1', chance: 0.001 },
+  { itemId: 'godsword_shard_2', chance: 0.001 },
+  { itemId: 'godsword_shard_3', chance: 0.001 },
+  { itemId: 'armadyl_hilt', chance: 0.0001 },
+  { itemId: 'gp', chance: 0.1 },
+];
 
 export const ACTIONS: SkillAction[] = [
   // Runecrafting
@@ -893,6 +949,7 @@ export const ACTIONS: SkillAction[] = [
   { id: 'make_super_strength', name: 'Brew Super Strength', skill: 'herblore', levelRequired: 90, xpReward: 3000, duration: 25000, description: 'Significantly improves physical power.', inputs: [{ itemId: 'herbs', quantity: 8 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'super_strength', quantity: 1, chance: 1 }] },
   { id: 'make_spirit_potion', name: 'Brew Spirit Potion', skill: 'herblore', levelRequired: 92, xpReward: 4000, duration: 30000, description: 'Connects with the spirit realm.', inputs: [{ itemId: 'spirit_herb', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'spirit_potion', quantity: 1, chance: 1 }] },
   { id: 'make_dragon_slayer', name: 'Brew Dragon Slayer Potion', skill: 'herblore', levelRequired: 95, xpReward: 6000, duration: 35000, description: 'Specifically designed for hunting dragons.', inputs: [{ itemId: 'dragon_scale', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'dragon_slayer_potion', quantity: 1, chance: 1 }] },
+  { id: 'make_luck_potion', name: 'Brew Luck Potion', skill: 'herblore', levelRequired: 85, xpReward: 4000, duration: 30000, description: 'A potion that brings good fortune.', inputs: [{ itemId: 'herbs', quantity: 10 }, { itemId: 'emerald_gem', quantity: 1 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'luck_potion', quantity: 1, chance: 1 }] },
   { id: 'make_overload', name: 'Brew Overload', skill: 'herblore', levelRequired: 99, xpReward: 15000, duration: 45000, description: 'The peak of alchemy. Boosts all combat stats.', inputs: [{ itemId: 'slayer_essence', quantity: 5 }, { itemId: 'pure_mana_crystal', quantity: 2 }, { itemId: 'alchemical_catalyst', quantity: 1 }], outputs: [{ itemId: 'overload_potion', quantity: 1, chance: 1 }] },
   { id: 'craft_abyssal_tentacle', name: 'Craft Abyssal Tentacle', skill: 'crafting', levelRequired: 95, xpReward: 20000, duration: 60000, description: 'Combine the power of the Abyssal Whip and the Kraken Tentacle.', inputs: [{ itemId: 'abyssal_whip', quantity: 1 }, { itemId: 'kraken_tentacle', quantity: 1 }, { itemId: 'master_crafting_kit', quantity: 1 }], outputs: [{ itemId: 'abyssal_tentacle', quantity: 1, chance: 1 }] },
 
@@ -920,12 +977,14 @@ export const ACTIONS: SkillAction[] = [
   { id: 'hunt_goblin_att', name: 'Slay Goblin (Attack)', skill: 'attack', levelRequired: 5, xpReward: 40, duration: 5000, isMonster: true, weakness: 'attack', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
     { itemId: 'gp', quantity: 10, chance: 0.5 },
-    { itemId: 'goblin_mail', quantity: 1, chance: 0.1 }
+    { itemId: 'goblin_mail', quantity: 1, chance: 0.1 },
+    { itemId: 'rusty_sword', quantity: 1, chance: 0.05 }
   ] },
   { id: 'hunt_goblin_str', name: 'Slay Goblin (Strength)', skill: 'strength', levelRequired: 5, xpReward: 40, duration: 5000, isMonster: true, weakness: 'strength', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
     { itemId: 'gp', quantity: 10, chance: 0.5 },
-    { itemId: 'goblin_mail', quantity: 1, chance: 0.1 }
+    { itemId: 'goblin_mail', quantity: 1, chance: 0.1 },
+    { itemId: 'rusty_sword', quantity: 1, chance: 0.05 }
   ] },
   { id: 'hunt_goblin_guard', name: 'Slay Goblin Guard', skill: 'attack', levelRequired: 7, xpReward: 50, duration: 5200, isMonster: true, weakness: 'attack', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
@@ -952,12 +1011,14 @@ export const ACTIONS: SkillAction[] = [
   { id: 'hunt_skeleton_att', name: 'Slay Skeleton (Attack)', skill: 'attack', levelRequired: 11, xpReward: 75, duration: 6000, isMonster: true, weakness: 'attack', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
     { itemId: 'skeleton_shard', quantity: 1, chance: 0.4 },
-    { itemId: 'gp', quantity: 25, chance: 0.5 }
+    { itemId: 'gp', quantity: 25, chance: 0.5 },
+    { itemId: 'broken_shield', quantity: 1, chance: 0.05 }
   ] },
   { id: 'hunt_skeleton_str', name: 'Slay Skeleton (Strength)', skill: 'strength', levelRequired: 11, xpReward: 75, duration: 6000, isMonster: true, weakness: 'strength', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
     { itemId: 'skeleton_shard', quantity: 1, chance: 0.4 },
-    { itemId: 'gp', quantity: 25, chance: 0.5 }
+    { itemId: 'gp', quantity: 25, chance: 0.5 },
+    { itemId: 'broken_shield', quantity: 1, chance: 0.05 }
   ] },
   { id: 'hunt_skeleton_archer', name: 'Slay Skeleton Archer', skill: 'ranged', levelRequired: 12, xpReward: 85, duration: 6500, isMonster: true, weakness: 'attack', outputs: [
     { itemId: 'bones', quantity: 1, chance: 1 },
@@ -1488,6 +1549,36 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'kraken_tentacle', quantity: 1, chance: 0.05 },
     { itemId: 'master_crafting_kit', quantity: 1, chance: 0.2 },
   ]},
+  // New Slayer Tasks
+  { id: 'slay_cave_horror', name: 'Slay Cave Horror', skill: 'slayer', levelRequired: 58, xpReward: 400, duration: 12000, isMonster: true, weakness: 'attack', outputs: [
+    { itemId: 'black_mask', quantity: 1, chance: 0.002 },
+    { itemId: 'bones', quantity: 1, chance: 1 },
+    { itemId: 'gp', quantity: 500, chance: 0.5 }
+  ] },
+  { id: 'slay_dust_devil', name: 'Slay Dust Devil', skill: 'slayer', levelRequired: 65, xpReward: 600, duration: 14000, isMonster: true, weakness: 'magic', outputs: [
+    { itemId: 'dragon_chainbody', quantity: 1, chance: 0.0005 },
+    { itemId: 'bones', quantity: 1, chance: 1 },
+    { itemId: 'gp', quantity: 800, chance: 0.8 }
+  ] },
+  { id: 'slay_nechryael', name: 'Slay Nechryael', skill: 'slayer', levelRequired: 80, xpReward: 1200, duration: 18000, isMonster: true, weakness: 'attack', outputs: [
+    { itemId: 'rune_boots', quantity: 1, chance: 0.05 },
+    { itemId: 'death_rune', quantity: 10, chance: 0.5 },
+    { itemId: 'gp', quantity: 1500, chance: 1 }
+  ] },
+  { id: 'slay_smoke_devil', name: 'Slay Smoke Devil', skill: 'slayer', levelRequired: 93, xpReward: 3000, duration: 22000, isMonster: true, weakness: 'magic', outputs: [
+    { itemId: 'occult_necklace', quantity: 1, chance: 0.01 },
+    { itemId: 'smoke_essence', quantity: 1, chance: 0.5 },
+    { itemId: 'gp', quantity: 5000, chance: 1 }
+  ] },
+
+  // New Farming & Herblore Loops
+  { id: 'farm_spirit_tree', name: 'Farm Spirit Tree', skill: 'farming', levelRequired: 83, xpReward: 15000, duration: 360000, inputs: [{ itemId: 'spirit_seed', quantity: 1 }], outputs: [{ itemId: 'spirit_herb', quantity: 10, chance: 1 }] },
+  { id: 'grind_bones', name: 'Grind Bones', skill: 'herblore', levelRequired: 10, xpReward: 20, duration: 2000, inputs: [{ itemId: 'bones', quantity: 1 }], outputs: [{ itemId: 'bone_meal', quantity: 1, chance: 1 }] },
+  { id: 'brew_holy_potion', name: 'Brew Holy Potion', skill: 'herblore', levelRequired: 70, xpReward: 1000, duration: 10000, inputs: [{ itemId: 'bone_meal', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'prayer_potion', quantity: 2, chance: 1 }] },
+
+  // New Crafting Combinations
+  { id: 'assemble_godsword_blade', name: 'Assemble Godsword Blade', skill: 'crafting', levelRequired: 80, xpReward: 5000, duration: 30000, inputs: [{ itemId: 'godsword_shard_1', quantity: 1 }, { itemId: 'godsword_shard_2', quantity: 1 }, { itemId: 'godsword_shard_3', quantity: 1 }], outputs: [{ itemId: 'godsword_blade', quantity: 1, chance: 1 }] },
+  { id: 'forge_armadyl_godsword', name: 'Forge Armadyl Godsword', skill: 'smithing', levelRequired: 90, xpReward: 20000, duration: 60000, inputs: [{ itemId: 'godsword_blade', quantity: 1 }, { itemId: 'armadyl_hilt', quantity: 1 }], outputs: [{ itemId: 'armadyl_godsword', quantity: 1, chance: 1 }] },
 ];
 
 export const KINGDOM_WORKERS: KingdomWorker[] = [
