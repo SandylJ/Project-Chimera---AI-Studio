@@ -6,7 +6,7 @@ import {
   Hand, Sparkles, Ghost, Footprints
 } from 'lucide-react';
 import { SkillId } from '../types';
-import { LEVEL_XP, ITEMS } from '../constants';
+import { LEVEL_XP, ITEMS, SKILL_PETS } from '../constants';
 import { playButtonPress } from '../sounds';
 
 interface DashboardViewProps {
@@ -15,7 +15,7 @@ interface DashboardViewProps {
   setActiveTab: (tab: string) => void;
 }
 
-const calculateLuck = (equipment: any) => {
+const calculateLuck = (equipment: any, socketedGems?: Record<string, string[]>) => {
   let luck = 0;
   Object.values(equipment || {}).forEach((itemId: any) => {
     if (itemId) {
@@ -23,38 +23,55 @@ const calculateLuck = (equipment: any) => {
       if (item?.stats?.luck) luck += item.stats.luck;
     }
   });
+  if (socketedGems) {
+    Object.values(socketedGems).forEach((gems: string[]) => {
+      gems.forEach(gemId => {
+        const gem = ITEMS[gemId];
+        if (gem?.gemBonus?.luck) luck += gem.gemBonus.luck;
+      });
+    });
+  }
   return luck;
 };
 
-const SKILLS: { id: SkillId; name: string; icon: any }[] = [
-  { id: 'mining', name: 'Mining', icon: Pickaxe },
-  { id: 'woodcutting', name: 'Woodcutting', icon: Trees },
-  { id: 'fishing', name: 'Fishing', icon: Fish },
-  { id: 'hunting', name: 'Hunting', icon: PawPrint },
-  { id: 'farming', name: 'Farming', icon: Sprout },
-  { id: 'smithing', name: 'Smithing', icon: Hammer },
-  { id: 'cooking', name: 'Cooking', icon: Utensils },
-  { id: 'herblore', name: 'Herblore', icon: FlaskConical },
-  { id: 'crafting', name: 'Crafting', icon: Scissors },
-  { id: 'runecrafting', name: 'Runecrafting', icon: Hexagon },
-  { id: 'thieving', name: 'Thieving', icon: Hand },
-  { id: 'agility', name: 'Agility', icon: Footprints },
-  { id: 'attack', name: 'Attack', icon: Sword },
-  { id: 'strength', name: 'Strength', icon: Zap },
-  { id: 'defense', name: 'Defense', icon: Shield },
-  { id: 'magic', name: 'Magic', icon: Zap },
-  { id: 'ranged', name: 'Ranged', icon: Target },
-  { id: 'prayer', name: 'Prayer', icon: Sparkles },
-  { id: 'empire', name: 'Empire', icon: Castle },
-  { id: 'raids', name: 'Raids', icon: Skull },
-  { id: 'slayer', name: 'Slayer', icon: Ghost },
+type SkillCategory = 'gathering' | 'combat' | 'artisan' | 'support';
+
+const CATEGORY_COLORS: Record<SkillCategory, { bar: string; icon: string; iconBorder: string; glow: string }> = {
+  gathering: { bar: 'from-emerald-600 to-green-400', icon: 'text-emerald-400', iconBorder: 'border-emerald-800 group-hover:border-emerald-500/50', glow: 'rgba(52, 211, 153, 0.3)' },
+  combat:    { bar: 'from-red-700 to-rose-400', icon: 'text-red-400', iconBorder: 'border-red-900 group-hover:border-red-500/50', glow: 'rgba(248, 113, 113, 0.3)' },
+  artisan:   { bar: 'from-amber-600 to-yellow-400', icon: 'text-amber-400', iconBorder: 'border-amber-800 group-hover:border-amber-500/50', glow: 'rgba(251, 191, 36, 0.3)' },
+  support:   { bar: 'from-purple-600 to-violet-400', icon: 'text-purple-400', iconBorder: 'border-purple-800 group-hover:border-purple-500/50', glow: 'rgba(167, 139, 250, 0.3)' },
+};
+
+const SKILLS: { id: SkillId; name: string; icon: any; category: SkillCategory }[] = [
+  { id: 'mining', name: 'Mining', icon: Pickaxe, category: 'gathering' },
+  { id: 'woodcutting', name: 'Woodcutting', icon: Trees, category: 'gathering' },
+  { id: 'fishing', name: 'Fishing', icon: Fish, category: 'gathering' },
+  { id: 'hunting', name: 'Hunting', icon: PawPrint, category: 'gathering' },
+  { id: 'farming', name: 'Farming', icon: Sprout, category: 'gathering' },
+  { id: 'smithing', name: 'Smithing', icon: Hammer, category: 'artisan' },
+  { id: 'cooking', name: 'Cooking', icon: Utensils, category: 'artisan' },
+  { id: 'herblore', name: 'Herblore', icon: FlaskConical, category: 'artisan' },
+  { id: 'crafting', name: 'Crafting', icon: Scissors, category: 'artisan' },
+  { id: 'runecrafting', name: 'Runecrafting', icon: Hexagon, category: 'artisan' },
+  { id: 'thieving', name: 'Thieving', icon: Hand, category: 'support' },
+  { id: 'agility', name: 'Agility', icon: Footprints, category: 'support' },
+  { id: 'attack', name: 'Attack', icon: Sword, category: 'combat' },
+  { id: 'strength', name: 'Strength', icon: Zap, category: 'combat' },
+  { id: 'defense', name: 'Defense', icon: Shield, category: 'combat' },
+  { id: 'magic', name: 'Magic', icon: Zap, category: 'combat' },
+  { id: 'ranged', name: 'Ranged', icon: Target, category: 'combat' },
+  { id: 'prayer', name: 'Prayer', icon: Sparkles, category: 'support' },
+  { id: 'empire', name: 'Empire', icon: Castle, category: 'support' },
+  { id: 'raids', name: 'Raids', icon: Skull, category: 'combat' },
+  { id: 'slayer', name: 'Slayer', icon: Ghost, category: 'combat' },
 ];
 
 export function DashboardView({ state, events, setActiveTab }: DashboardViewProps) {
   const totalLevel = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.level || 0), 0);
   const totalXp = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.xp || 0), 0);
   const totalAscensions = Object.values((state.ascensions || {}) as Record<string, number>).reduce((acc: number, count: number) => acc + (count || 0), 0);
-  const luck = calculateLuck(state.equipment);
+  const luck = calculateLuck(state.equipment, state.socketedGems);
   const recentLoot = events.filter(e => e.type === 'loot').slice(0, 10);
 
   return (
@@ -74,6 +91,16 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
             <div className="px-3 py-1.5 rounded-lg border border-cyan-800 bg-cyan-950/50 text-cyan-400 text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               <Package className="w-3 h-3" /> ESSENCE: {state.celestialEssence.toLocaleString()}
             </div>
+            {state.activePet && ITEMS[state.activePet] && (
+              <div className="px-3 py-1.5 rounded-lg border border-purple-800 bg-purple-950/50 text-purple-300 text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <span>{ITEMS[state.activePet].icon}</span> {ITEMS[state.activePet].name}
+              </div>
+            )}
+            {state.petsUnlocked && state.petsUnlocked.length > 0 && (
+              <div className="px-3 py-1.5 rounded-lg border border-[#3D3328] bg-[#1E1A16] text-[#7A6E60] text-[10px] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                PETS: {state.petsUnlocked.length}/{Object.keys(SKILL_PETS).length}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -90,24 +117,40 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
             const nextLevelXp = LEVEL_XP(playerSkill.level + 1);
             const currentLevelXp = LEVEL_XP(playerSkill.level);
             const progress = ((playerSkill.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
+            const colors = CATEGORY_COLORS[skill.category];
+            const isMaxed = playerSkill.level >= 99;
             return (
               <motion.div key={skill.id} whileHover={{ scale: 1.02 }}
                 onClick={() => { playButtonPress(); setActiveTab(skill.id); }}
-                className="group card p-4 flex flex-col gap-4 hover:bg-[#2A2520] hover:border-[#D4A943]/30 transition-all cursor-pointer">
+                className={`group card p-4 flex flex-col gap-4 hover:bg-[#2A2520] hover:border-[#D4A943]/30 transition-all cursor-pointer ${
+                  isMaxed ? 'ring-1 ring-[#D4A943]/20' : ''
+                }`}>
                 <div className="flex justify-between items-start">
-                  <div className="w-10 h-10 border border-[#3D3328] group-hover:border-[#D4A943]/30 rounded-lg flex items-center justify-center transition-colors">
+                  <div className={`w-10 h-10 border rounded-lg flex items-center justify-center transition-colors ${colors.iconBorder} ${colors.icon}`}>
                     <skill.icon size={20} />
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>LEVEL</div>
-                    <div className="text-2xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>{playerSkill.level}</div>
+                    <div className={`text-2xl font-bold ${isMaxed ? 'text-[#D4A943]' : ''}`} style={{ fontFamily: "'Cinzel', serif" }}>{playerSkill.level}</div>
                   </div>
                 </div>
                 <div>
                   <div className="text-sm font-bold mb-1">{skill.name}</div>
-                  <div className="h-1.5 bg-[#0D0B09] rounded-full overflow-hidden">
-                    <motion.div className="h-full bg-gradient-to-r from-[#C17F4E] to-[#D4A943] rounded-full"
-                      initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.5 }} />
+                  <div className="h-2 bg-[#0D0B09] rounded-full overflow-hidden relative">
+                    <motion.div
+                      className={`h-full bg-gradient-to-r ${colors.bar} rounded-full`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                    {progress > 85 && (
+                      <motion.div
+                        className="absolute inset-0 rounded-full"
+                        animate={{ opacity: [0.3, 0.6, 0.3] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ boxShadow: `inset 0 0 8px ${colors.glow}, 0 0 6px ${colors.glow}` }}
+                      />
+                    )}
                   </div>
                   <div className="flex justify-between text-[8px] mt-1 text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     <span>{playerSkill.xp.toLocaleString()} XP</span>

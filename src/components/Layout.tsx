@@ -29,10 +29,13 @@ import {
   Footprints,
   Users,
   ScrollText,
-  BookOpen
+  BookOpen,
+  Trophy,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { SkillId } from '../types';
-import { playTabClick } from '../sounds';
+import { playTabClick, isAudioEnabled, setAudioEnabled } from '../sounds';
 
 interface LayoutProps {
   children: ReactNode;
@@ -71,6 +74,7 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
 
 export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, showNotifications, toggleNotifications, adminPanel }: LayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [audioOn, setAudioOn] = React.useState(isAudioEnabled());
 
   const handleTabChange = (tab: string) => {
     if (tab !== activeTab) playTabClick();
@@ -132,6 +136,10 @@ export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, sho
             <BookOpen size={18} />
             Collection Log
           </button>
+          <button onClick={() => handleTabChange('achievements')} className={navButtonClass('achievements')}>
+            <Trophy size={18} />
+            Achievements
+          </button>
 
           <div className="pt-4 pb-2 px-3 text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'Cinzel', serif" }}>
             Gathering & Artisan
@@ -182,6 +190,18 @@ export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, sho
             </div>
           </div>
           <div className="flex items-center gap-4 lg:gap-6 text-[10px] lg:text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <button
+              onClick={() => { const next = !audioOn; setAudioOn(next); setAudioEnabled(next); }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-100 ${
+                audioOn
+                  ? 'bg-[#D4A943] text-[#1A1510] shadow-[0_2px_0_0_#8A6E1E] font-bold'
+                  : 'bg-[#1E1A16] text-[#7A6E60] shadow-[0_2px_0_0_#0D0B09]'
+              }`}
+              title={audioOn ? "Mute Audio" : "Enable Audio"}
+            >
+              {audioOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              <span className="hidden sm:inline">{audioOn ? "SFX ON" : "SFX OFF"}</span>
+            </button>
             <button
               onClick={toggleNotifications}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-100 ${

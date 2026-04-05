@@ -8,6 +8,14 @@ interface CollectionLogViewProps { state: PlayerState; }
 const RARITY_BORDER: Record<string, string> = { celestial: 'border-cyan-400', legendary: 'border-purple-500', epic: 'border-red-500', rare: 'border-blue-500', uncommon: 'border-green-500', common: 'border-[#3D3328]' };
 const RARITY_GLOW: Record<string, string> = { celestial: 'shadow-cyan-400/30', legendary: 'shadow-purple-500/30', epic: 'shadow-red-500/30', rare: 'shadow-blue-500/30', uncommon: 'shadow-green-500/30', common: '' };
 
+// Item Set definitions — derived from constants
+const ITEM_SETS = [
+  { setId: 'abyssal', name: 'Abyssal Robes', icon: '👘', pieces: ['abyssal_robe_top', 'abyssal_robe_legs'], piecesRequired: 2, bonus: { magic: 15, speed: 0.1 } },
+  { setId: 'void_set', name: 'Void Knight', icon: '🪖', pieces: ['void_helm', 'void_body', 'void_legs'], piecesRequired: 3, bonus: { luck: 50, attack: 20 } },
+  { setId: 'justiciar_set', name: 'Justiciar', icon: '🛡️', pieces: ['justiciar_helm', 'justiciar_chest', 'justiciar_legs'], piecesRequired: 3, bonus: { defense: 100, health: 50 } },
+  { setId: 'ancestral_set', name: 'Ancestral', icon: '🧙', pieces: ['ancestral_hat', 'ancestral_robe_top', 'ancestral_robe_bottom'], piecesRequired: 3, bonus: { magic: 150, speed: 0.1 } },
+];
+
 export function CollectionLogView({ state }: CollectionLogViewProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(COLLECTION_LOG_CATEGORIES[0]?.id ?? '');
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -65,6 +73,67 @@ export function CollectionLogView({ state }: CollectionLogViewProps) {
               </div>
             </motion.div></AnimatePresence>
           )}
+        </div>
+      </div>
+      {/* Item Sets Tracker */}
+      <div className="space-y-6 pt-8 border-t border-[#3D3328]">
+        <h3 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "'Cinzel', serif" }}>Equipment Sets</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ITEM_SETS.map(set => {
+            const ownedPieces = set.pieces.filter(pieceId => state.inventory.some(i => i.itemId === pieceId) || Object.values(state.equipment).includes(pieceId));
+            const equippedPieces = set.pieces.filter(pieceId => Object.values(state.equipment).includes(pieceId));
+            const isComplete = ownedPieces.length >= set.piecesRequired;
+            const isActive = equippedPieces.length >= set.piecesRequired;
+            return (
+              <div key={set.setId} className={`card p-5 space-y-3 ${isActive ? 'ring-1 ring-[#D4A943]/30' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{set.icon}</span>
+                    <div>
+                      <div className="font-bold text-sm" style={{ fontFamily: "'Cinzel', serif" }}>{set.name}</div>
+                      <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {ownedPieces.length}/{set.piecesRequired} owned
+                        {isActive && <span className="text-emerald-400 ml-2">ACTIVE</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {isComplete && (
+                    <span className="text-[9px] bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      Complete
+                    </span>
+                  )}
+                </div>
+                {/* Pieces */}
+                <div className="flex gap-2">
+                  {set.pieces.map(pieceId => {
+                    const item = ITEMS[pieceId];
+                    const owned = state.inventory.some(i => i.itemId === pieceId) || Object.values(state.equipment).includes(pieceId);
+                    const equipped = Object.values(state.equipment).includes(pieceId);
+                    return (
+                      <div key={pieceId} className={`flex-1 p-2 rounded-lg border text-center transition-all ${
+                        equipped ? 'bg-emerald-950/30 border-emerald-700/40' :
+                        owned ? 'bg-[#1E1A16] border-[#D4A943]/30' :
+                        'border-dashed border-[#3D3328] opacity-40'
+                      }`}>
+                        <div className={`text-xl ${owned ? '' : 'grayscale opacity-30'}`}>{item?.icon || '?'}</div>
+                        <div className="text-[8px] uppercase tracking-widest mt-1 truncate" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          {owned ? item?.name : '???'}
+                        </div>
+                        {equipped && <div className="text-[7px] text-emerald-400 uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Equipped</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Bonus preview */}
+                <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest border-t border-[#3D3328] pt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span className={isActive ? 'text-[#D4A943]' : ''}>Set Bonus ({set.piecesRequired}pc): </span>
+                  {Object.entries(set.bonus).map(([stat, val]) => (
+                    <span key={stat} className={`mr-2 ${isActive ? 'text-emerald-400' : ''}`}>+{val} {stat}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

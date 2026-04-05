@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item, QuestProgress, Quest, QuestObjective, BountyContract, BountyTier } from './types';
-import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE, MONSTER_DROP_TABLES, QUESTS } from './constants';
+import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE, MONSTER_DROP_TABLES, QUESTS, SKILL_PETS, PET_BASE_CHANCE, CLUE_REWARDS } from './constants';
 
 const INITIAL_STATE: PlayerState = {
   gp: 0,
@@ -52,6 +52,13 @@ const INITIAL_STATE: PlayerState = {
   bountyStreak: 0,
   bountyMarks: 0,
   totalBountiesCompleted: 0,
+  // Gem Socketing
+  socketedGems: {},
+  // Dry streak
+  dryStreak: 0,
+  // Pets
+  activePet: undefined,
+  petsUnlocked: [],
 };
 
 export interface GameEvent {
@@ -63,7 +70,7 @@ export interface GameEvent {
   icon?: string;
 }
 
-const calculateLuck = (equipment: Equipment) => {
+const calculateLuck = (equipment: Equipment, socketedGems?: Record<string, string[]>) => {
   let luck = 0;
   Object.values(equipment).forEach(itemId => {
     if (itemId) {
@@ -71,6 +78,10 @@ const calculateLuck = (equipment: Equipment) => {
       if (item?.stats?.luck) luck += item.stats.luck;
     }
   });
+  if (socketedGems) {
+    const gemBonuses = calculateGemBonuses(socketedGems);
+    luck += gemBonuses.luck || 0;
+  }
   return luck;
 };
 
@@ -106,7 +117,23 @@ const calculateSetBonuses = (equipment: Equipment) => {
   return bonuses;
 };
 
-const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>, buffs: any[], inventory: InventoryItem[]) => {
+const calculateGemBonuses = (socketedGems: Record<string, string[]>): Partial<Item['stats']> => {
+  const bonuses: Partial<Item['stats']> = {};
+  Object.values(socketedGems).forEach(gems => {
+    gems.forEach(gemId => {
+      const gem = ITEMS[gemId];
+      if (gem?.gemBonus) {
+        Object.entries(gem.gemBonus).forEach(([stat, value]) => {
+          const s = stat as keyof Item['stats'];
+          bonuses[s] = (bonuses[s] || 0) + (value as number);
+        });
+      }
+    });
+  });
+  return bonuses;
+};
+
+const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>, buffs: any[], inventory: InventoryItem[], socketedGems?: Record<string, string[]>) => {
   let actualDuration = action.duration;
 
   // Tool Bonus
@@ -175,6 +202,18 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
         }
       }
     });
+
+    // Gem Bonuses
+    if (socketedGems) {
+      const gemBonuses = calculateGemBonuses(socketedGems);
+      if (['attack', 'strength', 'defense'].includes(action.skill)) {
+        equipmentBonus += (gemBonuses.attack || 0) + (gemBonuses.strength || 0);
+      } else if (action.skill === 'magic') {
+        equipmentBonus += gemBonuses.magic || 0;
+      } else if (action.skill === 'ranged') {
+        equipmentBonus += gemBonuses.ranged || 0;
+      }
+    }
 
     actualDuration = actualDuration / (1 + (combatLevel - 1) * 0.05 + equipmentBonus * 0.01);
 
@@ -251,6 +290,10 @@ export function useGame() {
         bountyStreak: parsed.bountyStreak || 0,
         bountyMarks: parsed.bountyMarks || 0,
         totalBountiesCompleted: parsed.totalBountiesCompleted || 0,
+        socketedGems: parsed.socketedGems || {},
+        dryStreak: parsed.dryStreak || 0,
+        activePet: parsed.activePet || undefined,
+        petsUnlocked: parsed.petsUnlocked || [],
       };
     } catch (e) {
       return INITIAL_STATE;
@@ -271,8 +314,64 @@ export function useGame() {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Offline progress calculation — computed once on mount, applied to state
+  const [offlineGains, setOfflineGains] = useState<{ xp: number; gp: number; actions: number; duration: string; skillId: string } | null>(null);
+  const offlineAppliedRef = useRef(false);
+
   useEffect(() => {
-    localStorage.setItem('chimera_save', JSON.stringify(state));
+    if (offlineAppliedRef.current) return;
+    offlineAppliedRef.current = true;
+
+    const saved = localStorage.getItem('chimera_save');
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved);
+      const lastSave = parsed._lastSaveTime;
+      if (!lastSave || !parsed.activeAction) return;
+
+      const elapsed = Date.now() - lastSave;
+      if (elapsed < 60000) return; // less than 1 minute, skip
+
+      const action = ACTIONS.find(a => a.id === parsed.activeAction?.actionId);
+      if (!action) return;
+
+      const duration = parsed.activeAction.actualDuration || action.duration;
+      const completedActions = Math.min(Math.floor(elapsed / duration), 500); // cap at 500
+      if (completedActions < 1) return;
+
+      const totalXp = completedActions * action.xpReward;
+      let totalGp = 0;
+      action.outputs.forEach(o => {
+        if (o.itemId === 'gp' && o.chance >= 0.5) {
+          totalGp += o.quantity * completedActions;
+        }
+      });
+
+      // Apply gains to state
+      setState(prev => {
+        const skill = prev.skills[action.skill];
+        const newXp = skill.xp + totalXp;
+        const newLevel = XP_TO_LEVEL(newXp);
+        return {
+          ...prev,
+          gp: prev.gp + totalGp,
+          skills: {
+            ...prev.skills,
+            [action.skill]: { ...skill, xp: newXp, level: newLevel },
+          },
+        };
+      });
+
+      const mins = Math.floor(elapsed / 60000);
+      const hrs = Math.floor(mins / 60);
+      const durationStr = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
+
+      setOfflineGains({ xp: totalXp, gp: totalGp, actions: completedActions, duration: durationStr, skillId: action.skill });
+    } catch { /* invalid save */ }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('chimera_save', JSON.stringify({ ...state, _lastSaveTime: Date.now() }));
   }, [state]);
 
   // Track item in collection log
@@ -417,7 +516,7 @@ export function useGame() {
       return;
     }
 
-    const actualDuration = calculateDuration(action, stateRef.current.skills, stateRef.current.equipment, stateRef.current.activeEdicts, stateRef.current.ascensions, stateRef.current.buffs, stateRef.current.inventory);
+    const actualDuration = calculateDuration(action, stateRef.current.skills, stateRef.current.equipment, stateRef.current.activeEdicts, stateRef.current.ascensions, stateRef.current.buffs, stateRef.current.inventory, stateRef.current.socketedGems);
 
     setState(prev => ({
       ...prev,
@@ -555,7 +654,7 @@ export function useGame() {
     }
 
     // Add outputs
-    const luck = calculateLuck(stateRef.current.equipment);
+    const luck = calculateLuck(stateRef.current.equipment, stateRef.current.socketedGems);
     const luckMultiplier = 1 + (luck / 100);
 
     action.outputs.forEach(output => {
@@ -610,9 +709,14 @@ export function useGame() {
       }
     }
 
-    // Global Rare Drop Table (RDT) roll for monsters
+    // Global Rare Drop Table (RDT) roll for monsters — with dry streak protection
     if (action.isMonster) {
-      const rdtChance = 0.05 * luckMultiplier;
+      const currentDryStreak = stateRef.current.dryStreak;
+      // After 40 kills (2x expected rate of 1/20), boost chance by 2% per kill over threshold
+      const dryStreakBoost = currentDryStreak > 40 ? (currentDryStreak - 40) * 0.02 : 0;
+      const rdtChance = Math.min(0.5, (0.05 + dryStreakBoost) * luckMultiplier);
+      let gotRareDrop = false;
+
       if (Math.random() <= rdtChance) {
         const rdtRoll = Math.random();
         let cumulativeChance = 0;
@@ -627,9 +731,33 @@ export function useGame() {
               addToInventory(rdtItem.itemId, 1);
               addEvent(`RARE DROP TABLE: ${ITEMS[rdtItem.itemId]?.name}!`, 'loot', ITEMS[rdtItem.itemId]?.icon, ITEMS[rdtItem.itemId]?.rarity);
             }
+            gotRareDrop = true;
             break;
           }
         }
+      }
+
+      // Update dry streak counter
+      setState(prev => ({
+        ...prev,
+        dryStreak: gotRareDrop ? 0 : prev.dryStreak + 1,
+      }));
+    }
+
+    // ===== PET DROP ROLL =====
+    const petId = SKILL_PETS[action.skill];
+    if (petId && !stateRef.current.petsUnlocked.includes(petId)) {
+      // Higher skill level slightly improves chance
+      const levelBonus = stateRef.current.skills[action.skill].level * 0.0001;
+      const petChance = PET_BASE_CHANCE + levelBonus;
+      if (Math.random() <= petChance) {
+        addToInventory(petId, 1);
+        addEvent(`PET DROP: ${ITEMS[petId]?.name}! A new companion follows you!`, 'loot', ITEMS[petId]?.icon, 'celestial');
+        setState(prev => ({
+          ...prev,
+          petsUnlocked: [...prev.petsUnlocked, petId],
+          activePet: prev.activePet || petId, // auto-equip first pet
+        }));
       }
     }
 
@@ -743,7 +871,7 @@ export function useGame() {
         addEvent(`A buff has expired!`, 'info');
       }
 
-      const nextDuration = calculateDuration(action, nextSkills, prev.equipment, prev.activeEdicts, prev.ascensions, nextBuffs, prev.inventory);
+      const nextDuration = calculateDuration(action, nextSkills, prev.equipment, prev.activeEdicts, prev.ascensions, nextBuffs, prev.inventory, prev.socketedGems);
 
       return {
         ...prev,
@@ -817,20 +945,35 @@ export function useGame() {
       const itemId = prev.equipment[slot as keyof Equipment];
       if (!itemId) return prev;
 
-      const newInventory = [...prev.inventory];
+      // Return the item to inventory
+      let newInventory = [...prev.inventory];
       const existing = newInventory.find(i => i.itemId === itemId);
       if (existing) {
-        return {
-          ...prev,
-          inventory: prev.inventory.map(i => i.itemId === itemId ? { ...i, quantity: i.quantity + 1 } : i),
-          equipment: { ...prev.equipment, [slot]: undefined }
-        };
+        newInventory = newInventory.map(i => i.itemId === itemId ? { ...i, quantity: i.quantity + 1 } : i);
+      } else {
+        newInventory.push({ itemId, quantity: 1 });
       }
+
+      // Return any socketed gems to inventory
+      const socketedGems = prev.socketedGems[slot] || [];
+      socketedGems.forEach(gemId => {
+        const gemInInv = newInventory.find(i => i.itemId === gemId);
+        if (gemInInv) {
+          newInventory = newInventory.map(i => i.itemId === gemId ? { ...i, quantity: i.quantity + 1 } : i);
+        } else {
+          newInventory.push({ itemId: gemId, quantity: 1 });
+        }
+      });
+
+      // Clear socketed gems for this slot
+      const newSocketedGems = { ...prev.socketedGems };
+      delete newSocketedGems[slot];
 
       return {
         ...prev,
-        inventory: [...prev.inventory, { itemId, quantity: 1 }],
-        equipment: { ...prev.equipment, [slot]: undefined }
+        inventory: newInventory,
+        equipment: { ...prev.equipment, [slot]: undefined },
+        socketedGems: newSocketedGems,
       };
     });
     addEvent(`Unequipped item from ${slot}`, 'info');
@@ -1283,6 +1426,114 @@ export function useGame() {
     return () => clearInterval(interval);
   }, [addEvent]);
 
+  // === Gem Socketing ===
+  const socketGem = useCallback((equipmentSlot: string, gemItemId: string) => {
+    const gem = ITEMS[gemItemId];
+    if (!gem?.isGem) return;
+
+    setState(prev => {
+      const equippedItemId = prev.equipment[equipmentSlot as keyof Equipment];
+      if (!equippedItemId) return prev;
+      const equippedItem = ITEMS[equippedItemId];
+      if (!equippedItem?.socketable) return prev;
+
+      const currentGems = prev.socketedGems[equipmentSlot] || [];
+      const maxSockets = equippedItem.sockets || 0;
+      if (currentGems.length >= maxSockets) return prev;
+
+      // Must have the gem in inventory
+      const invGem = prev.inventory.find(i => i.itemId === gemItemId);
+      if (!invGem || invGem.quantity < 1) return prev;
+
+      addEvent(`Socketed ${gem.name} into ${equippedItem.name}`, 'info', '💎');
+
+      return {
+        ...prev,
+        inventory: prev.inventory
+          .map(i => i.itemId === gemItemId ? { ...i, quantity: i.quantity - 1 } : i)
+          .filter(i => i.quantity > 0),
+        socketedGems: {
+          ...prev.socketedGems,
+          [equipmentSlot]: [...currentGems, gemItemId],
+        },
+      };
+    });
+  }, [addEvent]);
+
+  const unsocketGem = useCallback((equipmentSlot: string, gemIndex: number) => {
+    setState(prev => {
+      const currentGems = prev.socketedGems[equipmentSlot];
+      if (!currentGems || gemIndex >= currentGems.length) return prev;
+
+      const gemId = currentGems[gemIndex];
+      const gem = ITEMS[gemId];
+      addEvent(`Removed ${gem?.name || 'gem'} from socket`, 'info', '💎');
+
+      const newGems = [...currentGems];
+      newGems.splice(gemIndex, 1);
+
+      // Return gem to inventory
+      const existing = prev.inventory.find(i => i.itemId === gemId);
+      const newInventory = existing
+        ? prev.inventory.map(i => i.itemId === gemId ? { ...i, quantity: i.quantity + 1 } : i)
+        : [...prev.inventory, { itemId: gemId, quantity: 1 }];
+
+      return {
+        ...prev,
+        inventory: newInventory,
+        socketedGems: {
+          ...prev.socketedGems,
+          [equipmentSlot]: newGems.length > 0 ? newGems : [],
+        },
+      };
+    });
+  }, [addEvent]);
+
+  // === Pets ===
+  const setActivePet = useCallback((petId: string | undefined) => {
+    setState(prev => ({ ...prev, activePet: petId }));
+    if (petId) {
+      addEvent(`${ITEMS[petId]?.name} is now following you!`, 'info', ITEMS[petId]?.icon);
+    }
+  }, [addEvent]);
+
+  // === Clue Scrolls ===
+  const openClueScroll = useCallback((clueItemId: string) => {
+    const rewards = CLUE_REWARDS[clueItemId];
+    if (!rewards) return;
+
+    // Must have the clue scroll
+    const hasClue = stateRef.current.inventory.find(i => i.itemId === clueItemId);
+    if (!hasClue || hasClue.quantity < 1) return;
+
+    // Remove the clue scroll
+    removeFromInventory(clueItemId, 1);
+
+    const tierName = clueItemId.replace('clue_scroll_', '').toUpperCase();
+    addEvent(`Opening ${tierName} Clue Scroll...`, 'info', '📜');
+
+    // Roll each reward independently
+    let gotAnything = false;
+    rewards.forEach(reward => {
+      if (Math.random() <= reward.chance) {
+        if (reward.itemId === 'gp') {
+          addGp(reward.quantity);
+        } else {
+          addToInventory(reward.itemId, reward.quantity);
+        }
+        gotAnything = true;
+      }
+    });
+
+    if (!gotAnything) {
+      // Consolation prize — always at least some GP
+      const consolation = clueItemId === 'clue_scroll_easy' ? 2000
+        : clueItemId === 'clue_scroll_medium' ? 10000
+        : clueItemId === 'clue_scroll_hard' ? 50000 : 200000;
+      addGp(consolation);
+    }
+  }, [addToInventory, removeFromInventory, addGp, addEvent]);
+
   return {
     state,
     events,
@@ -1315,5 +1566,15 @@ export function useGame() {
     adminResetSave,
     // Bounty shop
     buyBountyItem,
+    // Gem Socketing
+    socketGem,
+    unsocketGem,
+    // Pets
+    setActivePet,
+    // Clue Scrolls
+    openClueScroll,
+    // Offline progress
+    offlineGains,
+    dismissOfflineGains: () => setOfflineGains(null),
   };
 }

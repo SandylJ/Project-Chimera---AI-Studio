@@ -60,18 +60,33 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
       </div>
 
       {state.activeAction && ACTIONS.find(a => a.id === state.activeAction?.actionId)?.skill === skillId && (
-        <div className="bg-[#0D0B09] border border-[#D4A943]/30 text-[#E8E0D4] p-6 rounded-xl shadow-xl">
+        <div className={`bg-[#0D0B09] border text-[#E8E0D4] p-6 rounded-xl shadow-xl transition-all ${
+          state.activeAction.progress > 85 ? 'border-[#D4A943]/60' : 'border-[#D4A943]/30'
+        }`}>
           <div className="flex justify-between items-center mb-4">
             <div>
               <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>CURRENTLY PERFORMING</div>
               <div className="text-xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>{ACTIONS.find(a => a.id === state.activeAction?.actionId)?.name}</div>
             </div>
-            <button onClick={() => { playButtonPress(); stopAction(); }}
-              className="keycap keycap-sm text-xs uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Cancel</button>
+            <div className="flex items-center gap-3">
+              <div className="text-[10px] text-[#D4A943] font-bold uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {Math.floor(state.activeAction.progress)}%
+              </div>
+              <button onClick={() => { playButtonPress(); stopAction(); }}
+                className="keycap keycap-sm text-xs uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Cancel</button>
+            </div>
           </div>
-          <div className="h-2 bg-[#1E1A16] rounded-full overflow-hidden">
+          <div className="h-3 bg-[#1E1A16] rounded-full overflow-hidden relative">
             <motion.div className="h-full bg-gradient-to-r from-[#C17F4E] to-[#D4A943] rounded-full"
               initial={{ width: 0 }} animate={{ width: `${state.activeAction.progress}%` }} transition={{ duration: 0.1 }} />
+            {state.activeAction.progress > 85 && (
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                animate={{ opacity: [0.2, 0.5, 0.2] }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ boxShadow: 'inset 0 0 10px rgba(212, 169, 67, 0.5), 0 0 8px rgba(212, 169, 67, 0.3)' }}
+              />
+            )}
           </div>
         </div>
       )}
@@ -127,12 +142,34 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
                     {action.outputs.map(o => {
                       const item = ITEMS[o.itemId];
                       return (
-                        <span key={o.itemId} className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md ${
+                        <span key={o.itemId} className={`tooltip flex items-center gap-1 px-1.5 py-0.5 rounded-md ${
+                          item?.rarity === 'celestial' ? 'rarity-bg-celestial rarity-celestial' :
                           item?.rarity === 'legendary' ? 'rarity-bg-legendary rarity-legendary' :
-                          item?.rarity === 'rare' ? 'rarity-bg-rare rarity-rare' : 'bg-[#0D0B09]'
+                          item?.rarity === 'epic' ? 'rarity-bg-epic rarity-epic' :
+                          item?.rarity === 'rare' ? 'rarity-bg-rare rarity-rare' :
+                          item?.rarity === 'uncommon' ? 'rarity-bg-uncommon rarity-uncommon' : 'bg-[#0D0B09]'
                         }`}>
                           {item?.icon} {o.quantity}
                           {o.chance < 1 && <span className="opacity-50 text-[10px]">({(o.chance * 100).toFixed(1)}%)</span>}
+                          {item && (
+                            <span className="tooltip-content !whitespace-normal !w-48">
+                              <span className={`font-bold text-xs block mb-0.5 ${
+                                item.rarity === 'celestial' ? 'rarity-celestial' :
+                                item.rarity === 'legendary' ? 'rarity-legendary' :
+                                item.rarity === 'epic' ? 'rarity-epic' :
+                                item.rarity === 'rare' ? 'rarity-rare' :
+                                item.rarity === 'uncommon' ? 'rarity-uncommon' : ''
+                              }`} style={{ fontFamily: "'Cinzel', serif" }}>{item.name}</span>
+                              <span className="tooltip-desc block leading-snug">{item.description}</span>
+                              {item.stats && (
+                                <span className="block border-t border-[#3D3328] pt-1 mt-1">
+                                  {Object.entries(item.stats).filter(([,v]) => v !== 0).map(([stat, val]) => (
+                                    <span key={stat} className="tooltip-stat text-emerald-400 mr-2">+{val} {stat}</span>
+                                  ))}
+                                </span>
+                              )}
+                            </span>
+                          )}
                         </span>
                       );
                     })}

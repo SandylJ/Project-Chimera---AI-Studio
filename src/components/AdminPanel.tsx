@@ -72,7 +72,40 @@ export default function AdminPanel({ state, adminSetLevel, adminAddGp, adminAddB
               <button onClick={() => adminSetLevel(selectedSkill, skillLevel)} className={btnBase}>Set</button>
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-[#3D3328]">
+          <div className="mt-3 pt-2 border-t border-[#3D3328] space-y-1.5">
+            <label className="text-[10px] font-mono text-[#7A6E60] block mb-0.5">Save Management</label>
+            <div className="flex gap-1">
+              <button onClick={() => {
+                const data = JSON.stringify(state, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `imperial-idle-save-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }} className={btnBase + ' flex-1'}>Export Save</button>
+              <label className={btnBase + ' flex-1 text-center cursor-pointer'}>
+                Import Save
+                <input type="file" accept=".json" className="hidden" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    try {
+                      const parsed = JSON.parse(ev.target?.result as string);
+                      if (parsed && parsed.skills) {
+                        localStorage.setItem('chimera_save', JSON.stringify(parsed));
+                        window.location.reload();
+                      }
+                    } catch { /* invalid file */ }
+                  };
+                  reader.readAsText(file);
+                }} />
+              </label>
+            </div>
+          </div>
+          <div className="mt-2 pt-2 border-t border-[#3D3328]">
             <button onClick={() => { if (confirmReset) { adminResetSave(); setConfirmReset(false); } else { setConfirmReset(true); } }}
               onBlur={() => setConfirmReset(false)}
               className={`w-full px-2 py-1 text-[10px] font-mono border cursor-pointer transition-colors rounded ${

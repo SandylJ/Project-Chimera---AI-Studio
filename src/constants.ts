@@ -221,15 +221,15 @@ export const ITEMS: Record<string, Item> = {
   'dragon_egg_shard': { id: 'dragon_egg_shard', name: 'Dragon Egg Shard', description: 'A fragment of a petrified dragon egg. Radiates ancient heat.', icon: '🥚', value: 75000, type: 'resource', rarity: 'epic', usageHint: 'Collect 3 shards to assemble a Dragon Egg at 99 Crafting.' },
 
   // Dragon crafted items
-  'dragonfire_shield': { id: 'dragonfire_shield', name: 'Dragonfire Shield', description: 'A shield forged from a draconic visage. Absorbs dragonfire.', icon: '🛡️', value: 750000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'shield', stats: { defense: 60, strength: 10, magic: 10 }, farmHint: 'Smithed from Draconic Visage' },
-  'dragon_claws': { id: 'dragon_claws', name: 'Dragon Claws', description: 'Razor-sharp claws of pure dragonbone. Devastating special attack.', icon: '🦴', value: 350000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 80, strength: 60, speed: 0.2 }, farmHint: 'Smithed from 4 Dragon Claw Fragments' },
+  'dragonfire_shield': { id: 'dragonfire_shield', name: 'Dragonfire Shield', description: 'A shield forged from a draconic visage. Absorbs dragonfire.', icon: '🛡️', value: 750000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'shield', stats: { defense: 60, strength: 10, magic: 10 }, farmHint: 'Smithed from Draconic Visage', socketable: true, sockets: 1 },
+  'dragon_claws': { id: 'dragon_claws', name: 'Dragon Claws', description: 'Razor-sharp claws of pure dragonbone. Devastating special attack.', icon: '🦴', value: 350000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 80, strength: 60, speed: 0.2 }, farmHint: 'Smithed from 4 Dragon Claw Fragments', socketable: true, sockets: 2 },
   'dragon_egg': { id: 'dragon_egg', name: 'Dragon Egg', description: 'A reassembled petrified dragon egg. A trophy of immense value.', icon: '🥚', value: 1000000, type: 'resource', rarity: 'legendary', usageHint: 'Display trophy. Can be hatched at 99 Farming for Dragon Hatchling pet token.' },
 
   // Abyssal signature drops
   'abyssal_dagger': { id: 'abyssal_dagger', name: 'Abyssal Dagger', description: 'A dagger forged in the abyss. Attacks with otherworldly speed.', icon: '🗡️', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'weapon', stats: { attack: 55, strength: 30, speed: 0.3 }, farmHint: 'Rare drop from Abyssal Demons' },
   'abyssal_bludgeon_piece': { id: 'abyssal_bludgeon_piece', name: 'Abyssal Bludgeon Piece', description: 'A fragment of the Abyssal Bludgeon. Collect 3 to assemble.', icon: '🔩', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Collect 3 pieces to assemble Abyssal Bludgeon at 90 Crafting.' },
   'abyssal_thread': { id: 'abyssal_thread', name: 'Abyssal Thread', description: 'Dark thread from the abyss. Used to weave powerful robes.', icon: '🧵', value: 5000, type: 'resource', rarity: 'rare', usageHint: 'Weave into Abyssal Robes at 85 Crafting.' },
-  'abyssal_bludgeon': { id: 'abyssal_bludgeon', name: 'Abyssal Bludgeon', description: 'A massive weapon assembled from abyssal fragments.', icon: '🔨', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 30, strength: 95 }, farmHint: 'Assembled from 3 Abyssal Bludgeon Pieces' },
+  'abyssal_bludgeon': { id: 'abyssal_bludgeon', name: 'Abyssal Bludgeon', description: 'A massive weapon assembled from abyssal fragments.', icon: '🔨', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 30, strength: 95 }, farmHint: 'Assembled from 3 Abyssal Bludgeon Pieces', socketable: true, sockets: 1 },
   'abyssal_robe_top': { id: 'abyssal_robe_top', name: 'Abyssal Robe Top', description: 'Robes woven from the fabric of the abyss.', icon: '👘', value: 50000, type: 'equipment', rarity: 'rare', equipmentSlot: 'body', stats: { magic: 45, defense: 20 }, setBonus: { setId: 'abyssal', piecesRequired: 2, bonus: { magic: 15, speed: 0.1 } } },
   'abyssal_robe_legs': { id: 'abyssal_robe_legs', name: 'Abyssal Robe Legs', description: 'Dark leggings that shift like shadows.', icon: '👖', value: 50000, type: 'equipment', rarity: 'rare', equipmentSlot: 'legs', stats: { magic: 35, defense: 15 }, setBonus: { setId: 'abyssal', piecesRequired: 2, bonus: { magic: 15, speed: 0.1 } } },
 
@@ -240,7 +240,7 @@ export const ITEMS: Record<string, Item> = {
   'sanguinesti_staff_piece': { id: 'sanguinesti_staff_piece', name: 'Sanguinesti Staff Piece', description: 'A component of the legendary blood staff. Collect 3 to assemble.', icon: '🔮', value: 500000, type: 'resource', rarity: 'legendary', usageHint: 'Collect 3 to assemble Sanguinesti Staff at 95 Crafting.' },
   'blood_diamond_ring': { id: 'blood_diamond_ring', name: 'Blood Diamond Ring', description: 'A ring set with a blood diamond. Drains life from foes.', icon: '💍', value: 100000, type: 'equipment', rarity: 'epic', equipmentSlot: 'ring', stats: { luck: 15, health: 20, strength: 5 } },
   'vampyrism_potion': { id: 'vampyrism_potion', name: 'Vampyrism Potion', description: 'Grants life steal for 100 actions. Heal 5% of damage dealt.', icon: '🧪', value: 15000, type: 'potion', rarity: 'rare' },
-  'sanguinesti_staff': { id: 'sanguinesti_staff', name: 'Sanguinesti Staff', description: 'The legendary blood staff. Heals you as it damages enemies.', icon: '🔮', value: 2000000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, health: 30 }, farmHint: 'Assembled from 3 Sanguinesti Staff Pieces' },
+  'sanguinesti_staff': { id: 'sanguinesti_staff', name: 'Sanguinesti Staff', description: 'The legendary blood staff. Heals you as it damages enemies.', icon: '🔮', value: 2000000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, health: 30 }, farmHint: 'Assembled from 3 Sanguinesti Staff Pieces', socketable: true, sockets: 2 },
 
   // Hellhound signature drops
   'smouldering_stone': { id: 'smouldering_stone', name: 'Smouldering Stone', description: 'A stone that burns eternally. Used to upgrade tools.', icon: '🔥', value: 100000, type: 'resource', rarity: 'epic', usageHint: 'Combine with Dragon tools to create Infernal tools.' },
@@ -274,11 +274,11 @@ export const ITEMS: Record<string, Item> = {
 
   // Raid signature drops
   'avernic_defender_hilt': { id: 'avernic_defender_hilt', name: 'Avernic Defender Hilt', description: 'Hilt from the Theatre of Blood. Upgrades Dragon Defender.', icon: '🛡️', value: 750000, type: 'resource', rarity: 'legendary' },
-  'ghrazi_rapier': { id: 'ghrazi_rapier', name: 'Ghrazi Rapier', description: 'The fastest melee weapon. Thrusts with vampiric precision.', icon: '🗡️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 90, strength: 50, speed: 0.3 }, farmHint: 'Rare drop from Theatre of Blood' },
+  'ghrazi_rapier': { id: 'ghrazi_rapier', name: 'Ghrazi Rapier', description: 'The fastest melee weapon. Thrusts with vampiric precision.', icon: '🗡️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 90, strength: 50, speed: 0.3 }, farmHint: 'Rare drop from Theatre of Blood', socketable: true, sockets: 2 },
   'twisted_bow_limb': { id: 'twisted_bow_limb', name: 'Twisted Bow Limb', description: 'A limb of the legendary Twisted Bow. Collect 2 to assemble.', icon: '🏹', value: 500000, type: 'resource', rarity: 'legendary' },
   'elder_maul_shaft': { id: 'elder_maul_shaft', name: 'Elder Maul Shaft', description: 'Shaft of the Elder Maul. Combine with Elder Maul Head.', icon: '🔨', value: 200000, type: 'resource', rarity: 'epic' },
   'kodai_insignia': { id: 'kodai_insignia', name: 'Kodai Insignia', description: 'Magical insignia from Chambers of Xeric.', icon: '🔮', value: 300000, type: 'resource', rarity: 'epic' },
-  'twisted_bow': { id: 'twisted_bow', name: 'Twisted Bow', description: 'THE legendary bow. Stronger against high-magic foes.', icon: '🏹', value: 5000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { ranged: 120, speed: 0.2, luck: 10 }, farmHint: 'Assembled from 2 Twisted Bow Limbs' },
+  'twisted_bow': { id: 'twisted_bow', name: 'Twisted Bow', description: 'THE legendary bow. Stronger against high-magic foes.', icon: '🏹', value: 5000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { ranged: 120, speed: 0.2, luck: 10 }, farmHint: 'Assembled from 2 Twisted Bow Limbs', socketable: true, sockets: 3 },
 
   // Crafted boss gear
   'toxic_blowpipe': { id: 'toxic_blowpipe', name: 'Venom Spitter', description: 'A venomous ranged weapon crafted from Voidmother fang.', icon: '🐍', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 80, speed: 0.4 } },
@@ -589,12 +589,12 @@ export const ITEMS: Record<string, Item> = {
 
   // ===== ARCHFIEND BOSS SIGNATURE DROPS =====
   // The Hollow King
-  'hollow_crown': { id: 'hollow_crown', name: 'Hollow Crown', description: 'The cursed crown of the Hollow King. Whispers of power echo within.', icon: '👑', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'head', stats: { attack: 30, magic: 30, defense: 50, luck: 15 } },
-  'hollow_scepter': { id: 'hollow_scepter', name: 'Hollow Scepter', description: 'The Hollow King\'s scepter. Commands the dead.', icon: '🏛️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, attack: 20, luck: 10 } },
+  'hollow_crown': { id: 'hollow_crown', name: 'Hollow Crown', description: 'The cursed crown of the Hollow King. Whispers of power echo within.', icon: '👑', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'head', stats: { attack: 30, magic: 30, defense: 50, luck: 15 }, socketable: true, sockets: 2 },
+  'hollow_scepter': { id: 'hollow_scepter', name: 'Hollow Scepter', description: 'The Hollow King\'s scepter. Commands the dead.', icon: '🏛️', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 95, attack: 20, luck: 10 }, socketable: true, sockets: 2 },
   'kings_vestige': { id: 'kings_vestige', name: "King's Vestige", description: 'A fragment of the Hollow King\'s essence. Radiates dread.', icon: '💀', value: 500000, type: 'resource', rarity: 'legendary' },
 
   // Emberclaw
-  'emberclaws_fang': { id: 'emberclaws_fang', name: "Emberclaw's Fang", description: 'A molten fang that never cools. Burns anything it touches.', icon: '🔥', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 85, strength: 55, speed: 0.2 } },
+  'emberclaws_fang': { id: 'emberclaws_fang', name: "Emberclaw's Fang", description: 'A molten fang that never cools. Burns anything it touches.', icon: '🔥', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 85, strength: 55, speed: 0.2 }, socketable: true, sockets: 1 },
   'charred_crown': { id: 'charred_crown', name: 'Charred Crown', description: 'A crown of blackened bone from Emberclaw\'s mane.', icon: '🔥', value: 1200000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'head', stats: { strength: 30, defense: 35, attack: 15 } },
   'ember_core': { id: 'ember_core', name: 'Ember Core', description: 'The burning heart ripped from Emberclaw. Still aflame.', icon: '🌋', value: 800000, type: 'resource', rarity: 'legendary' },
 
@@ -604,16 +604,70 @@ export const ITEMS: Record<string, Item> = {
 
   // Stormwarden
   'stormwarden_crest_helm': { id: 'stormwarden_crest_helm', name: "Stormwarden's Crown", description: 'A crown of lightning. Crackles with static.', icon: '⚡', value: 1500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'head', stats: { ranged: 40, magic: 25, speed: 0.3, defense: 20 } },
-  'tempest_lance': { id: 'tempest_lance', name: 'Tempest Lance', description: 'A weapon forged from Stormwarden\'s spine. Calls lightning on each strike.', icon: '⚡', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { attack: 70, ranged: 50, strength: 40, speed: 0.2 } },
+  'tempest_lance': { id: 'tempest_lance', name: 'Tempest Lance', description: 'A weapon forged from Stormwarden\'s spine. Calls lightning on each strike.', icon: '⚡', value: 2000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'weapon', stats: { attack: 70, ranged: 50, strength: 40, speed: 0.2 }, socketable: true, sockets: 3 },
 
   // Ashen Wyrm / Elder Wyrm
-  'ashen_plate': { id: 'ashen_plate', name: 'Ashen Plate', description: 'Body armor forged from the Elder Wyrm\'s scales. Nearly indestructible.', icon: '🔥', value: 2500000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'body', stats: { defense: 80, strength: 20, attack: 15, health: 25 } },
-  'wyrm_spine_bow': { id: 'wyrm_spine_bow', name: 'Wyrmspine Bow', description: 'A recurve bow carved from the Elder Wyrm\'s vertebrae.', icon: '🏹', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 100, speed: 0.3, luck: 5 } },
+  'ashen_plate': { id: 'ashen_plate', name: 'Ashen Plate', description: 'Body armor forged from the Elder Wyrm\'s scales. Nearly indestructible.', icon: '🔥', value: 2500000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'body', stats: { defense: 80, strength: 20, attack: 15, health: 25 }, socketable: true, sockets: 2 },
+  'wyrm_spine_bow': { id: 'wyrm_spine_bow', name: 'Wyrmspine Bow', description: 'A recurve bow carved from the Elder Wyrm\'s vertebrae.', icon: '🏹', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 100, speed: 0.3, luck: 5 }, socketable: true, sockets: 2 },
 
   // ===== BOUNTY MARK SHOP ITEMS =====
   'huntsmans_vizor': { id: 'huntsmans_vizor', name: "Huntsman's Vizor", description: 'A helm forged from bounty marks. Increases slayer XP and damage.', icon: '🎭', value: 500, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { attack: 25, strength: 15, defense: 20, luck: 10 } },
   'bounty_ring': { id: 'bounty_ring', name: 'Contract Ring', description: 'A ring that marks you as a seasoned hunter. Boosts bounty mark gains.', icon: '💍', value: 300, type: 'equipment', rarity: 'rare', equipmentSlot: 'ring', stats: { luck: 20, attack: 10 } },
   'hunters_insignia': { id: 'hunters_insignia', name: "Hunter's Insignia", description: 'A cape marking your dedication to the Bounty Board. Feared by monsters.', icon: '🏅', value: 750, type: 'equipment', rarity: 'legendary', equipmentSlot: 'cape', stats: { attack: 20, strength: 20, defense: 15, speed: 0.1 } },
+
+  // ===== PETS — Rare cosmetic companions =====
+  'pet_rock_golem': { id: 'pet_rock_golem', name: 'Rock Golem', description: 'A tiny golem made of ore. Follows you devotedly.', icon: '🪨', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Mining' },
+  'pet_beaver': { id: 'pet_beaver', name: 'Beaver', description: 'An industrious beaver. Loves the smell of sawdust.', icon: '🦫', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Woodcutting' },
+  'pet_heron': { id: 'pet_heron', name: 'Heron', description: 'A majestic fishing companion. Incredibly patient.', icon: '🦅', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Fishing' },
+  'pet_chinchompa': { id: 'pet_chinchompa', name: 'Baby Chinchompa', description: 'An explosive little ball of fluff.', icon: '🐹', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Hunting' },
+  'pet_tangleroot': { id: 'pet_tangleroot', name: 'Tangleroot', description: 'A sentient plant that follows you around.', icon: '🌱', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Farming' },
+  'pet_smithing_golem': { id: 'pet_smithing_golem', name: 'Smoldering Golem', description: 'A miniature golem forged in the hottest furnace.', icon: '🔥', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Smithing' },
+  'pet_sous_chef': { id: 'pet_sous_chef', name: 'Sous Chef', description: 'A tiny chef that critiques everything you cook.', icon: '👨‍🍳', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Cooking' },
+  'pet_herbi': { id: 'pet_herbi', name: 'Herbi', description: 'A herbivore that eats nothing but rare herbs.', icon: '🦎', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Herblore' },
+  'pet_crafting_spider': { id: 'pet_crafting_spider', name: 'Golden Spider', description: 'Spins threads of pure gold. Very delicate.', icon: '🕷️', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Crafting' },
+  'pet_rift_guardian': { id: 'pet_rift_guardian', name: 'Rift Guardian', description: 'A being of pure runic energy from another dimension.', icon: '🌀', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Runecrafting' },
+  'pet_rocky': { id: 'pet_rocky', name: 'Rocky', description: 'A raccoon with sticky fingers. Suspiciously wealthy.', icon: '🦝', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Thieving' },
+  'pet_squirrel': { id: 'pet_squirrel', name: 'Giant Squirrel', description: 'An absurdly nimble squirrel. Parkour champion.', icon: '🐿️', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Agility' },
+  'pet_war_hound': { id: 'pet_war_hound', name: 'War Hound', description: 'A ferocious battle companion. Loyal to the death.', icon: '🐕', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Attack' },
+  'pet_minotaur': { id: 'pet_minotaur', name: 'Mini Minotaur', description: 'A pint-sized minotaur with rage issues.', icon: '🐂', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Strength' },
+  'pet_turtle': { id: 'pet_turtle', name: 'Ironshell', description: 'An ancient turtle whose shell is literally unbreakable.', icon: '🐢', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Defense' },
+  'pet_phoenix': { id: 'pet_phoenix', name: 'Phoenix', description: 'A tiny phoenix that bursts into flame when excited.', icon: '🔥', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Magic' },
+  'pet_hawk': { id: 'pet_hawk', name: 'Shadow Hawk', description: 'A raptor from the shadow realm. Deadly accurate.', icon: '🦅', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Ranged' },
+  'pet_spirit_wolf': { id: 'pet_spirit_wolf', name: 'Spirit Wolf', description: 'A translucent wolf visible only to the devout.', icon: '🐺', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Prayer' },
+  'pet_crown_prince': { id: 'pet_crown_prince', name: 'Crown Prince', description: 'A tiny royal who insists on being carried everywhere.', icon: '👶', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Empire' },
+  'pet_shadow_drake': { id: 'pet_shadow_drake', name: 'Shadow Drake', description: 'A dragon whelpling born from darkness. Burns cold fire.', icon: '🐉', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Raids' },
+  'pet_reaper': { id: 'pet_reaper', name: 'Lil Reaper', description: 'Death incarnate. Except tiny and kind of cute.', icon: '💀', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Slayer' },
+
+  // ===== CLUE SCROLL ITEMS =====
+  'clue_scroll_easy': { id: 'clue_scroll_easy', name: 'Clue Scroll (Easy)', description: 'A mysterious scroll with simple instructions. Open to receive a reward.', icon: '📜', value: 500, type: 'resource', rarity: 'uncommon' },
+  'clue_scroll_medium': { id: 'clue_scroll_medium', name: 'Clue Scroll (Medium)', description: 'A scroll with moderately challenging clues. Better rewards await.', icon: '📜', value: 2000, type: 'resource', rarity: 'rare' },
+  'clue_scroll_hard': { id: 'clue_scroll_hard', name: 'Clue Scroll (Hard)', description: 'A complex scroll promising valuable treasures.', icon: '📜', value: 10000, type: 'resource', rarity: 'epic' },
+  'clue_scroll_elite': { id: 'clue_scroll_elite', name: 'Clue Scroll (Elite)', description: 'An ancient scroll. Only the worthy may claim its reward.', icon: '📜', value: 50000, type: 'resource', rarity: 'legendary' },
+
+  // Clue-exclusive rewards
+  'rangers_tunic': { id: 'rangers_tunic', name: "Ranger's Tunic", description: 'A tunic worn by legendary marksmen. Extremely rare.', icon: '👕', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'body', stats: { ranged: 50, speed: 0.3 } },
+  'holy_sandals': { id: 'holy_sandals', name: 'Holy Sandals', description: 'Blessed footwear that enhances prayer.', icon: '👡', value: 200000, type: 'equipment', rarity: 'epic', equipmentSlot: 'feet', stats: { defense: 15, magic: 10, speed: 0.1 } },
+  'gilded_platebody': { id: 'gilded_platebody', name: 'Gilded Platebody', description: 'Armor plated in pure gold. A trophy of clue hunting.', icon: '🥇', value: 1000000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'body', stats: { defense: 90, strength: 15 }, socketable: true, sockets: 1 },
+  'third_age_amulet': { id: 'third_age_amulet', name: 'Third Age Amulet', description: 'An amulet from the Third Age. Priceless and ancient.', icon: '📿', value: 5000000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'neck', stats: { attack: 30, strength: 20, defense: 30, magic: 30, ranged: 30, luck: 20 }, socketable: true, sockets: 2 },
+  'bloodhound_pet': { id: 'bloodhound_pet', name: 'Bloodhound', description: 'An elite tracking dog. Only found in elite clue caskets.', icon: '🐕‍🦺', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Clue Scrolls' },
+  'ornament_kit': { id: 'ornament_kit', name: 'Ornament Kit', description: 'Used to customize equipment with cosmetic flair.', icon: '🎨', value: 100000, type: 'resource', rarity: 'epic' },
+  'treasure_chest': { id: 'treasure_chest', name: 'Buried Treasure', description: 'A chest overflowing with ancient coins.', icon: '🪙', value: 25000, type: 'resource', rarity: 'rare' },
+
+  // ===== MID-GAME BOSS DROPS =====
+  // Stoneguard Titan (lvl 50 boss)
+  'titan_core': { id: 'titan_core', name: "Titan's Core", description: 'A pulsing stone heart ripped from the Stoneguard Titan.', icon: '🪨', value: 100000, type: 'resource', rarity: 'epic' },
+  'titan_gauntlets': { id: 'titan_gauntlets', name: "Titan's Gauntlets", description: 'Gauntlets carved from living rock. Immense crushing power.', icon: '🧤', value: 250000, type: 'equipment', rarity: 'epic', equipmentSlot: 'hands', stats: { strength: 35, defense: 25, attack: 10 } },
+  'earthshaker_maul': { id: 'earthshaker_maul', name: 'Earthshaker Maul', description: 'A colossal hammer that cracks the ground with each swing.', icon: '🔨', value: 500000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { strength: 75, attack: 40 }, socketable: true, sockets: 1 },
+
+  // Shadowfang Alpha (lvl 70 boss)
+  'shadow_fang': { id: 'shadow_fang', name: 'Shadow Fang', description: 'A fang that drips liquid darkness.', icon: '🦷', value: 50000, type: 'resource', rarity: 'rare' },
+  'shadow_cloak': { id: 'shadow_cloak', name: 'Shadow Cloak', description: 'A cloak woven from pure shadow. Makes the wearer near-invisible.', icon: '🧥', value: 400000, type: 'equipment', rarity: 'epic', equipmentSlot: 'cape', stats: { speed: 0.3, luck: 15, defense: 10 } },
+  'nightfang_daggers': { id: 'nightfang_daggers', name: 'Nightfang Daggers', description: 'Twin daggers that strike from the shadows. Impossibly fast.', icon: '🗡️', value: 750000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { attack: 65, speed: 0.5, luck: 10 }, socketable: true, sockets: 1 },
+
+  // Tidecaller Leviathan (lvl 80 boss)
+  'leviathan_scale': { id: 'leviathan_scale', name: 'Leviathan Scale', description: 'An iridescent scale from the deep. Harder than any metal.', icon: '🐚', value: 75000, type: 'resource', rarity: 'epic' },
+  'trident_of_tides': { id: 'trident_of_tides', name: 'Trident of the Tides', description: 'Commands the ocean itself. Water bends to its will.', icon: '🔱', value: 1000000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { magic: 80, attack: 20, speed: 0.2 }, socketable: true, sockets: 2 },
+  'leviathan_helm': { id: 'leviathan_helm', name: "Leviathan's Crown", description: 'A helm made from the Leviathan\'s skull plate. Terrifying.', icon: '👹', value: 600000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'head', stats: { defense: 45, magic: 25, health: 20 } },
 };
 
 export const RARE_DROP_TABLE: { itemId: string; chance: number }[] = [
@@ -629,6 +683,11 @@ export const RARE_DROP_TABLE: { itemId: string; chance: number }[] = [
   { itemId: 'godsword_shard_3', chance: 0.001 },
   { itemId: 'armadyl_hilt', chance: 0.0001 },
   { itemId: 'gp', chance: 0.1 },
+  // Clue scroll drops from RDT
+  { itemId: 'clue_scroll_easy', chance: 0.08 },
+  { itemId: 'clue_scroll_medium', chance: 0.04 },
+  { itemId: 'clue_scroll_hard', chance: 0.01 },
+  { itemId: 'clue_scroll_elite', chance: 0.002 },
 ];
 
 // ===== UNIQUE MONSTER DROP TABLES =====
@@ -765,6 +824,22 @@ export const MONSTER_DROP_TABLES: Record<string, { itemId: string; quantity: num
     { itemId: 'twisted_bow_limb', quantity: 1, chance: 0.005 },
     { itemId: 'elder_maul_shaft', quantity: 1, chance: 0.008 },
     { itemId: 'kodai_insignia', quantity: 1, chance: 0.008 },
+  ],
+  // Mid-game boss unique drops
+  'boss_stoneguard': [
+    { itemId: 'titan_gauntlets', quantity: 1, chance: 0.01 },
+    { itemId: 'earthshaker_maul', quantity: 1, chance: 0.003 },
+    { itemId: 'titan_core', quantity: 1, chance: 0.05 },
+  ],
+  'boss_shadowfang': [
+    { itemId: 'shadow_cloak', quantity: 1, chance: 0.008 },
+    { itemId: 'nightfang_daggers', quantity: 1, chance: 0.003 },
+    { itemId: 'shadow_fang', quantity: 2, chance: 0.05 },
+  ],
+  'boss_leviathan': [
+    { itemId: 'trident_of_tides', quantity: 1, chance: 0.003 },
+    { itemId: 'leviathan_helm', quantity: 1, chance: 0.005 },
+    { itemId: 'leviathan_scale', quantity: 2, chance: 0.05 },
   ],
   // Archfiend unique drops
   'archfiend_hollow_king': [
@@ -1594,18 +1669,38 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'copper_ore', quantity: 10, chance: 0.5 },
     { itemId: 'gp', quantity: 500, chance: 1 }
   ] },
+  { id: 'inspect_garrison', name: 'Inspect Garrison', skill: 'empire', levelRequired: 20, xpReward: 200, duration: 20000, description: 'Review your military outpost for readiness.', outputs: [
+    { itemId: 'gp', quantity: 1000, chance: 1 },
+    { itemId: 'iron_bar', quantity: 3, chance: 0.3 }
+  ] },
   { id: 'imperial_trade', name: 'Oversee Trade Route', skill: 'empire', levelRequired: 30, xpReward: 400, duration: 30000, outputs: [
     { itemId: 'gp', quantity: 2500, chance: 1 },
     { itemId: 'imperial_seal', quantity: 1, chance: 0.05 }
+  ] },
+  { id: 'diplomatic_envoy', name: 'Send Diplomatic Envoy', skill: 'empire', levelRequired: 40, xpReward: 650, duration: 40000, description: 'Negotiate alliances with neighboring kingdoms.', outputs: [
+    { itemId: 'gp', quantity: 5000, chance: 1 },
+    { itemId: 'imperial_seal', quantity: 1, chance: 0.1 }
+  ] },
+  { id: 'build_monument', name: 'Commission Monument', skill: 'empire', levelRequired: 50, xpReward: 1000, duration: 50000, description: 'Erect a monument to inspire your people.', outputs: [
+    { itemId: 'gp', quantity: 7500, chance: 1 },
+    { itemId: 'celestial_essence', quantity: 5, chance: 0.15 }
   ] },
   { id: 'conquer_territory', name: 'Expand Borders', skill: 'empire', levelRequired: 60, xpReward: 1500, duration: 60000, outputs: [
     { itemId: 'gp', quantity: 10000, chance: 1 },
     { itemId: 'imperial_seal', quantity: 1, chance: 0.2 }
   ] },
-
+  { id: 'establish_academy', name: 'Establish Academy', skill: 'empire', levelRequired: 70, xpReward: 3000, duration: 90000, description: 'Found a centre of learning. Knowledge is power.', outputs: [
+    { itemId: 'gp', quantity: 25000, chance: 1 },
+    { itemId: 'imperial_seal', quantity: 1, chance: 0.3 }
+  ] },
   { id: 'imperial_decree', name: 'Issue Imperial Decree', skill: 'empire', levelRequired: 80, xpReward: 5000, duration: 120000, outputs: [
     { itemId: 'gp', quantity: 50000, chance: 1 },
     { itemId: 'imperial_seal', quantity: 2, chance: 0.5 }
+  ] },
+  { id: 'crown_champion', name: 'Crown a Champion', skill: 'empire', levelRequired: 88, xpReward: 8000, duration: 180000, description: 'Appoint a legendary warrior to defend the realm.', outputs: [
+    { itemId: 'gp', quantity: 100000, chance: 1 },
+    { itemId: 'imperial_seal', quantity: 3, chance: 0.4 },
+    { itemId: 'celestial_essence', quantity: 10, chance: 0.2 }
   ] },
   { id: 'establish_colony', name: 'Establish Colony', skill: 'empire', levelRequired: 95, xpReward: 15000, duration: 300000, outputs: [
     { itemId: 'gp', quantity: 250000, chance: 1 },
@@ -1916,6 +2011,20 @@ export const ACTIONS: SkillAction[] = [
   { id: 'cook_wilderness_stew', name: 'Cook Wilderness Stew', skill: 'cooking', levelRequired: 75, xpReward: 2000, duration: 15000, description: 'A legendary stew made from wild ingredients.', inputs: [{ itemId: 'cooked_bear_meat', quantity: 2 }, { itemId: 'herbs', quantity: 5 }, { itemId: 'vial_of_water', quantity: 1 }], outputs: [{ itemId: 'wilderness_stew', quantity: 1, chance: 1 }] },
   { id: 'cook_dragon_feast', name: 'Cook Dragon Feast', skill: 'cooking', levelRequired: 95, xpReward: 10000, duration: 30000, description: 'A feast fit for a dragon slayer.', inputs: [{ itemId: 'cooked_dragon_meat', quantity: 3 }, { itemId: 'cooked_mantaray', quantity: 2 }, { itemId: 'spirit_herb', quantity: 3 }], outputs: [{ itemId: 'dragon_feast', quantity: 1, chance: 1 }] },
 
+  // ===== MID-GAME BOSSES =====
+  { id: 'boss_stoneguard', name: 'Boss: Stoneguard Titan', skill: 'slayer', levelRequired: 50, xpReward: 8000, duration: 60000, isMonster: true, isBoss: true, weakness: 'strength', description: 'A massive golem awakened from ancient ruins. Impervious to blades — crush it.', inputs: [{ itemId: 'cooked_swordfish', quantity: 5 }], outputs: [
+    { itemId: 'gp', quantity: 15000, chance: 1 },
+    { itemId: 'titan_core', quantity: 1, chance: 0.08 },
+  ] },
+  { id: 'boss_shadowfang', name: 'Boss: Shadowfang Alpha', skill: 'slayer', levelRequired: 70, xpReward: 20000, duration: 80000, isMonster: true, isBoss: true, weakness: 'ranged', description: 'The alpha of a shadow wolf pack. Strikes from darkness with blinding speed.', inputs: [{ itemId: 'cooked_shark', quantity: 5 }], outputs: [
+    { itemId: 'gp', quantity: 30000, chance: 1 },
+    { itemId: 'shadow_fang', quantity: 1, chance: 0.1 },
+  ] },
+  { id: 'boss_leviathan', name: 'Boss: Tidecaller Leviathan', skill: 'slayer', levelRequired: 80, xpReward: 35000, duration: 100000, isMonster: true, isBoss: true, weakness: 'magic', description: 'A colossal sea serpent that controls the tides. Its roar creates tidal waves.', inputs: [{ itemId: 'antipoison', quantity: 1 }, { itemId: 'cooked_mantaray', quantity: 5 }], outputs: [
+    { itemId: 'gp', quantity: 50000, chance: 1 },
+    { itemId: 'leviathan_scale', quantity: 1, chance: 0.08 },
+  ] },
+
   // ===== ARCHFIEND ENCOUNTERS =====
   { id: 'archfiend_hollow_king', name: 'Archfiend: The Hollow King', skill: 'slayer', levelRequired: 90, xpReward: 60000, duration: 180000, isMonster: true, isBoss: true, weakness: 'magic', description: 'A skeletal monarch who refuses to relinquish his throne. Commands legions of the dead.', inputs: [{ itemId: 'prayer_potion', quantity: 2 }, { itemId: 'cooked_mantaray', quantity: 8 }], outputs: [
     { itemId: 'kings_vestige', quantity: 1, chance: 0.3 },
@@ -2117,4 +2226,68 @@ export const XP_TO_LEVEL = (xp: number) => {
     level++;
   }
   return level;
+};
+
+// ===== PET SYSTEM =====
+// Each skill has a pet. Base chance ~1/3000 per action, halved at higher levels.
+export const SKILL_PETS: Record<SkillId, string> = {
+  mining: 'pet_rock_golem',
+  woodcutting: 'pet_beaver',
+  fishing: 'pet_heron',
+  hunting: 'pet_chinchompa',
+  farming: 'pet_tangleroot',
+  smithing: 'pet_smithing_golem',
+  cooking: 'pet_sous_chef',
+  herblore: 'pet_herbi',
+  crafting: 'pet_crafting_spider',
+  runecrafting: 'pet_rift_guardian',
+  thieving: 'pet_rocky',
+  agility: 'pet_squirrel',
+  attack: 'pet_war_hound',
+  strength: 'pet_minotaur',
+  defense: 'pet_turtle',
+  magic: 'pet_phoenix',
+  ranged: 'pet_hawk',
+  prayer: 'pet_spirit_wolf',
+  empire: 'pet_crown_prince',
+  raids: 'pet_shadow_drake',
+  slayer: 'pet_reaper',
+};
+
+export const PET_BASE_CHANCE = 1 / 3000; // ~1 in 3000 actions
+
+// ===== CLUE SCROLL REWARD TABLES =====
+export const CLUE_REWARDS: Record<string, { itemId: string; quantity: number; chance: number }[]> = {
+  clue_scroll_easy: [
+    { itemId: 'gp', quantity: 5000, chance: 0.5 },
+    { itemId: 'gp', quantity: 15000, chance: 0.25 },
+    { itemId: 'holy_sandals', chance: 0.02, quantity: 1 },
+    { itemId: 'ornament_kit', chance: 0.05, quantity: 1 },
+    { itemId: 'treasure_chest', chance: 0.15, quantity: 1 },
+    { itemId: 'clue_scroll_medium', chance: 0.03, quantity: 1 },
+  ],
+  clue_scroll_medium: [
+    { itemId: 'gp', quantity: 25000, chance: 0.4 },
+    { itemId: 'gp', quantity: 75000, chance: 0.2 },
+    { itemId: 'rangers_tunic', chance: 0.01, quantity: 1 },
+    { itemId: 'ornament_kit', chance: 0.08, quantity: 1 },
+    { itemId: 'treasure_chest', chance: 0.2, quantity: 1 },
+    { itemId: 'clue_scroll_hard', chance: 0.05, quantity: 1 },
+  ],
+  clue_scroll_hard: [
+    { itemId: 'gp', quantity: 100000, chance: 0.35 },
+    { itemId: 'gp', quantity: 300000, chance: 0.15 },
+    { itemId: 'gilded_platebody', chance: 0.008, quantity: 1 },
+    { itemId: 'rangers_tunic', chance: 0.03, quantity: 1 },
+    { itemId: 'ornament_kit', chance: 0.1, quantity: 1 },
+    { itemId: 'clue_scroll_elite', chance: 0.03, quantity: 1 },
+  ],
+  clue_scroll_elite: [
+    { itemId: 'gp', quantity: 500000, chance: 0.3 },
+    { itemId: 'gp', quantity: 1500000, chance: 0.1 },
+    { itemId: 'third_age_amulet', chance: 0.003, quantity: 1 },
+    { itemId: 'gilded_platebody', chance: 0.02, quantity: 1 },
+    { itemId: 'bloodhound_pet', chance: 0.005, quantity: 1 },
+    { itemId: 'ornament_kit', chance: 0.15, quantity: 1 },
+  ],
 };

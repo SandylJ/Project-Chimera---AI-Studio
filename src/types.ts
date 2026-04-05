@@ -219,6 +219,13 @@ export interface PlayerState {
   bountyStreak: number;
   bountyMarks: number;
   totalBountiesCompleted: number;
+  // Gem Socketing — maps equipped item slot to array of socketed gem itemIds
+  socketedGems: Record<string, string[]>;
+  // Dry streak protection — consecutive monster kills without rare+ drop
+  dryStreak: number;
+  // Pets
+  activePet?: string; // itemId of active pet
+  petsUnlocked: string[]; // itemIds of all pets ever obtained
 }
 
 export interface QuestProgress {

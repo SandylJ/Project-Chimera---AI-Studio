@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PlayerState, Quest, QuestStatus, QuestObjective, QuestReward, QuestRequirement } from '../types';
 import { QUESTS, ITEMS } from '../constants';
-import { playButtonPress, playSuccess } from '../sounds';
+import { playButtonPress, playSuccess, playQuestStart } from '../sounds';
 
 interface QuestViewProps { state: PlayerState; startQuest: (questId: string) => void; }
 const CATEGORIES = ['all', 'combat', 'gathering', 'artisan', 'exploration', 'special'] as const;
@@ -131,7 +131,7 @@ export function QuestView({ state, startQuest }: QuestViewProps) {
                         <div className="space-y-2"><div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Rewards</div>
                           <div className="flex flex-wrap gap-2">{quest.rewards.map((reward, i) => (<span key={i} className="px-2 py-1 text-[10px] uppercase tracking-widest border border-[#3D3328] bg-[#0D0B09] rounded-md" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatReward(reward)}</span>))}</div></div>
                         <div className="pt-2">
-                          {status === 'available' && <button onClick={() => { playSuccess(); startQuest(quest.id); }} className="keycap keycap-gold text-[10px] uppercase tracking-widest px-6 py-2.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Start Quest</button>}
+                          {status === 'available' && <button onClick={() => { playQuestStart(); startQuest(quest.id); }} className="keycap keycap-gold text-[10px] uppercase tracking-widest px-6 py-2.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Start Quest</button>}
                           {status === 'in_progress' && <div className="flex items-center gap-2 text-[#D4A943]"><span className="w-2 h-2 rounded-full bg-[#D4A943] animate-pulse" /><span className="text-[10px] font-bold uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>In Progress</span></div>}
                           {status === 'completed' && <div className="flex items-center gap-2 text-emerald-400"><span>✓</span><span className="text-[10px] font-bold uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Completed</span>{state.quests[quest.id]?.completedAt && <span className="text-[10px] text-[#7A6E60] ml-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{new Date(state.quests[quest.id].completedAt!).toLocaleDateString()}</span>}</div>}
                           {status === 'locked' && <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Complete prerequisites to unlock</div>}
