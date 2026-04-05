@@ -17,7 +17,7 @@ export function LevelUpOverlay({ levelUp, onDismiss }: LevelUpOverlayProps) {
   useEffect(() => {
     if (!levelUp) return;
     playLevelUp();
-    const timer = setTimeout(onDismiss, 3000);
+    const timer = setTimeout(onDismiss, 2000);
     return () => clearTimeout(timer);
   }, [levelUp, onDismiss]);
 
@@ -26,102 +26,57 @@ export function LevelUpOverlay({ levelUp, onDismiss }: LevelUpOverlayProps) {
       {levelUp && (
         <motion.div
           key={levelUp.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          initial={{ y: -80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           onClick={onDismiss}
-          className="fixed inset-0 z-[100] pointer-events-auto cursor-pointer flex items-center justify-center"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto cursor-pointer"
         >
-          {/* Gold flash overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.3, 0.08] }}
-            transition={{ duration: 0.6 }}
-            className="absolute inset-0 bg-gradient-to-b from-amber-400/20 via-transparent to-amber-400/10"
-          />
+          <div className="relative flex items-center gap-4 px-8 py-4 bg-[#0D0B09]/95 backdrop-blur-xl border-2 border-[#D4A943]/50 rounded-2xl shadow-[0_0_30px_rgba(212,169,67,0.3)]">
+            {/* Shimmer overlay */}
+            <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none notif-shimmer" />
 
-          {/* Particle burst — radiating lines */}
-          {Array.from({ length: 12 }).map((_, i) => (
+            {/* Level number with glow */}
             <motion.div
-              key={i}
-              initial={{ scale: 0, opacity: 0.8 }}
-              animate={{ scale: [0, 3], opacity: [0.8, 0] }}
-              transition={{ duration: 1.2, delay: 0.1 + i * 0.03, ease: 'easeOut' }}
-              className="absolute w-1 h-16 bg-gradient-to-t from-amber-400 to-transparent rounded-full"
-              style={{
-                transform: `rotate(${i * 30}deg)`,
-                transformOrigin: 'center bottom',
-              }}
-            />
-          ))}
-
-          {/* Center content */}
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: [0.5, 1.1, 1], opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 22 }}
-            className="relative flex flex-col items-center gap-3"
-          >
-            {/* Glow ring */}
-            <motion.div
-              animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -inset-16 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(212, 169, 67, 0.4), transparent 70%)',
-              }}
-            />
-
-            {/* LEVEL UP text */}
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.15 }}
-              className="text-[11px] uppercase tracking-[0.4em] font-bold text-amber-400"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              Level Up
-            </motion.div>
-
-            {/* Skill name */}
-            <motion.h2
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-              className="text-5xl font-bold tracking-tight bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-lg"
-              style={{ fontFamily: "'Cinzel', serif" }}
-            >
-              {levelUp.skillName}
-            </motion.h2>
-
-            {/* Level number */}
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: [0, 1.2, 1], opacity: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 400 }}
-              className="flex items-baseline gap-2"
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.3, 1] }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 500 }}
+              className="relative"
             >
               <span
-                className="text-8xl font-bold text-white drop-shadow-[0_0_20px_rgba(212,169,67,0.5)]"
-                style={{ fontFamily: "'Cinzel', serif" }}
+                className="text-5xl font-bold text-white"
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  textShadow: '0 0 20px rgba(212, 169, 67, 0.6), 0 0 40px rgba(212, 169, 67, 0.3)',
+                }}
               >
                 {levelUp.newLevel}
               </span>
             </motion.div>
 
-            {/* Click hint */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.4, 0] }}
-              transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
-              className="text-[9px] text-[#7A6E60] uppercase tracking-widest mt-4"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              click to dismiss
-            </motion.div>
-          </motion.div>
+            {/* Text content */}
+            <div className="relative">
+              <motion.div
+                initial={{ x: -10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-[10px] uppercase tracking-[0.3em] font-bold text-[#D4A943]"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                Level Up
+              </motion.div>
+              <motion.div
+                initial={{ x: -10, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="text-xl font-bold tracking-tight bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-500 bg-clip-text text-transparent"
+                style={{ fontFamily: "'Cinzel', serif" }}
+              >
+                {levelUp.skillName}
+              </motion.div>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

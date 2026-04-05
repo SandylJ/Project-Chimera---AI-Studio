@@ -24,7 +24,7 @@ const RARITY_CONFIG = {
     beamColor: 'rgba(43, 95, 179, 0.25)',
     borderColor: 'border-blue-400/50',
     playSound: playRareDrop,
-    duration: 2500,
+    duration: 1800,
   },
   epic: {
     label: 'EPIC DROP',
@@ -34,7 +34,7 @@ const RARITY_CONFIG = {
     beamColor: 'rgba(123, 63, 160, 0.2)',
     borderColor: 'border-purple-400/50',
     playSound: playEpicDrop,
-    duration: 3000,
+    duration: 2200,
   },
   legendary: {
     label: 'LEGENDARY DROP',
@@ -44,7 +44,7 @@ const RARITY_CONFIG = {
     beamColor: 'rgba(212, 169, 67, 0.2)',
     borderColor: 'border-amber-400/50',
     playSound: playLegendaryDrop,
-    duration: 3500,
+    duration: 2500,
   },
   celestial: {
     label: 'CELESTIAL DROP',
@@ -54,7 +54,7 @@ const RARITY_CONFIG = {
     beamColor: 'rgba(34, 211, 238, 0.15)',
     borderColor: 'border-cyan-300/50',
     playSound: playCelestialDrop,
-    duration: 4000,
+    duration: 3000,
   },
 };
 

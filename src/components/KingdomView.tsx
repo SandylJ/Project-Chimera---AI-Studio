@@ -34,12 +34,22 @@ export function KingdomView({ state, hireWorker }: KingdomViewProps) {
           const missingReqs = worker.requirements.filter(req => state.skills[req.skillId].level < req.level); const meetsLevel = missingReqs.length === 0;
           const maxWorkers = 1 + Math.floor(state.skills[worker.primarySkillId].level / 20) * 2; const isAtMax = count >= maxWorkers;
           return (
-            <div key={worker.id} className={`group relative card p-6 transition-all duration-300 ${meetsLevel ? 'hover:border-[#D4A943]/30 hover:-translate-y-1' : 'opacity-40 grayscale'}`}>
+            <div key={worker.id} className={`group relative card p-6 transition-all duration-300 ${meetsLevel ? 'hover:border-[#D4A943]/30 hover:-translate-y-1' : 'border-[#3D3328]'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-xl font-bold tracking-tight" style={{ fontFamily: "'Cinzel', serif" }}>{worker.name}</h3>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {worker.requirements.map(req => (<span key={req.skillId} className={`text-[9px] px-1.5 py-0.5 rounded border ${state.skills[req.skillId].level >= req.level ? 'border-[#3D3328] text-[#7A6E60]' : 'border-red-700 text-red-400 font-bold'} uppercase tracking-tighter`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>{req.skillId} {req.level}</span>))}
+                  <h3 className={`text-xl font-bold tracking-tight ${meetsLevel ? '' : 'text-[#7A6E60]'}`} style={{ fontFamily: "'Cinzel', serif" }}>{worker.name}</h3>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {worker.requirements.map(req => {
+                      const met = state.skills[req.skillId].level >= req.level;
+                      const currentLevel = state.skills[req.skillId].level;
+                      return (
+                        <span key={req.skillId} className={`text-[10px] px-2 py-1 rounded-lg border font-bold uppercase tracking-wider ${
+                          met ? 'border-emerald-800 bg-emerald-950/30 text-emerald-400' : 'border-red-800 bg-red-950/30 text-red-400'
+                        }`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          {req.skillId} {currentLevel}/{req.level} {met ? '✓' : '✗'}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
@@ -47,14 +57,12 @@ export function KingdomView({ state, hireWorker }: KingdomViewProps) {
                   <div className="text-[10px] text-[#7A6E60] mt-1 uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Max: {maxWorkers}</div>
                 </div>
               </div>
-              <p className="text-sm text-[#B8A890] mb-6 min-h-[40px]">{worker.description}</p>
+              <p className={`text-sm mb-6 min-h-[40px] ${meetsLevel ? 'text-[#B8A890]' : 'text-[#7A6E60]'}`}>{worker.description}</p>
               <div className="flex items-center gap-2 mb-6 p-2 bg-[#0D0B09] rounded-lg">{getBonusIcon(worker.bonusType)}<span className="text-xs font-bold uppercase tracking-wider" style={{ fontFamily: "'JetBrains Mono', monospace" }}>+{worker.bonusValue} {worker.bonusType.replace('_', ' ')} /s</span></div>
               <button onClick={() => { if (canAfford && meetsLevel && !isAtMax) { playSuccess(); hireWorker(worker.id); } }} disabled={!canAfford || !meetsLevel || isAtMax}
                 className={`w-full py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${canAfford && meetsLevel && !isAtMax ? 'keycap keycap-gold' : 'bg-[#0D0B09] text-[#7A6E60] cursor-not-allowed'}`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {!meetsLevel ? 'Requirements Not Met' : isAtMax ? `Max Reached (${maxWorkers})` : `Hire for ${cost.toLocaleString()} GP`}
               </button>
-              {!meetsLevel && (<div className="absolute inset-0 flex items-center justify-center bg-[#151210]/70 backdrop-blur-[1px] pointer-events-none rounded-[10px]">
-                <div className="px-4 py-2 bg-[#0D0B09] border border-[#3D3328] text-[#7A6E60] text-[10px] uppercase tracking-widest rotate-[-5deg] rounded-lg" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Missing Requirements</div></div>)}
             </div>
           );
         })}

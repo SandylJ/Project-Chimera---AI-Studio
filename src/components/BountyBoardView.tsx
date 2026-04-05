@@ -230,14 +230,14 @@ export function BountyBoardView({ state, requestBounty, abandonBounty, startActi
             return (
               <div
                 key={tier}
-                className={`relative border-2 ${cfg.borderColor} p-5 transition-all ${isLocked ? 'opacity-40' : ''}`}
+                className={`relative border-2 ${cfg.borderColor} p-5 transition-all`}
               >
-                {/* Lock Overlay */}
+                {/* Lock badge */}
                 {isLocked && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#E4E3E0]/70 backdrop-blur-[1px] z-10">
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] -rotate-12 border border-[#141414] px-3 py-1.5 bg-[#E4E3E0]">
-                      LOCKED — LVL {cfg.levelReq}
-                    </div>
+                  <div className="absolute top-3 right-3 z-10 px-2.5 py-1.5 bg-[#0D0B09] border border-red-900/50 rounded-lg">
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-red-400">
+                      LVL {cfg.levelReq} SLAYER
+                    </span>
                   </div>
                 )}
 

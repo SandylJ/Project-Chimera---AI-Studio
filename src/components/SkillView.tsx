@@ -136,15 +136,15 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
           return (
             <div key={action.id}
               className={`group relative card p-4 transition-all overflow-hidden ${
-                isLocked ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#2A2520] hover:border-[#D4A943]/30 cursor-pointer'
+                isLocked ? 'cursor-not-allowed' : 'hover:bg-[#2A2520] hover:border-[#D4A943]/30 cursor-pointer'
               } ${isActive ? 'ring-2 ring-[#D4A943] ring-offset-2 ring-offset-[#151210]' : ''}`}
               onClick={() => { if (!isLocked) { playButtonPress(); startAction(action.id); } }}>
               {isLocked && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#151210]/80 backdrop-blur-[1px] z-10">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] -rotate-12 border border-[#3D3328] px-2 py-1 bg-[#1E1A16] rounded-md" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    LOCKED — LVL {action.levelRequired} {action.skill}
-                    {action.secondarySkillRequired && <><br/>LVL {action.secondarySkillRequired.level} {action.secondarySkillRequired.skill}</>}
-                  </div>
+                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0D0B09] border border-red-900/50 rounded-lg">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-red-400" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    LVL {action.levelRequired}
+                    {action.secondarySkillRequired && <> + LVL {action.secondarySkillRequired.level} {action.secondarySkillRequired.skill}</>}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between items-start mb-3">
