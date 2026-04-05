@@ -8,6 +8,7 @@ import {
 import { SkillId } from '../types';
 import { LEVEL_XP, ITEMS, SKILL_PETS } from '../constants';
 import { playButtonPress } from '../sounds';
+import { AnimatedCounter } from './AnimatedCounter';
 
 interface DashboardViewProps {
   state: any;
@@ -204,7 +205,7 @@ export function DashboardView({ state, events, setActiveTab, prestige }: Dashboa
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-8 border-t border-[#3D3328]">
         <div className="card p-5 space-y-2">
           <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>TREASURY</div>
-          <div className="text-4xl font-bold text-[#D4A943]" style={{ fontFamily: "'Cinzel', serif" }}>{state.gp.toLocaleString()} GP</div>
+          <AnimatedCounter value={state.gp} className="text-4xl font-bold text-[#D4A943]" suffix=" GP" style={{ fontFamily: "'Cinzel', serif" }} />
           <p className="text-xs text-[#7A6E60]">Your wealth continues to grow.</p>
         </div>
         <div className="card p-5 space-y-2">

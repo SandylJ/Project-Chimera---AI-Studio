@@ -37,6 +37,7 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
   const selectedItem = selectedItemId ? ITEMS[selectedItemId] : null;
   const selectedInventoryItem = inventory.find(i => i.itemId === selectedItemId);
   const isEquipped = selectedItemId ? Object.values(state.equipment).includes(selectedItemId) : false;
+  const [soldFeedback, setSoldFeedback] = useState<{ amount: number } | null>(null);
 
   const handleUsePotion = (item: Item) => { if (!item || item.type !== 'potion') return; playSuccess(); usePotion(item.id); };
   const handleSalvage = (item: Item, quantity: number) => {
@@ -73,7 +74,10 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
     if (!item || item.value === undefined) return;
     if (isEquipped && quantity >= (selectedInventoryItem?.quantity || 0)) { const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === item.id); if (slot) unequipItem(slot); }
     if (item.type === 'edict' && (state.activeEdicts || []).includes(item.id) && quantity >= (selectedInventoryItem?.quantity || 0)) toggleEdict(item.id);
-    playSellItem(); removeFromInventory(item.id, quantity); addGp(item.value * quantity);
+    const gpGained = item.value * quantity;
+    playSellItem(); removeFromInventory(item.id, quantity); addGp(gpGained);
+    setSoldFeedback({ amount: gpGained });
+    setTimeout(() => setSoldFeedback(null), 800);
     if (quantity >= (selectedInventoryItem?.quantity || 0)) setSelectedItemId(null);
   };
 
@@ -179,7 +183,23 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                     'rarity-bg-uncommon'
                   }`} style={{ background: undefined }} />
                 )}
-                <div className="text-7xl drop-shadow-lg relative">{selectedItem.icon}</div>
+                <div className="text-7xl drop-shadow-lg relative">
+                  {selectedItem.icon}
+                  <AnimatePresence>
+                    {soldFeedback && (
+                      <motion.div
+                        initial={{ opacity: 1, y: 0, scale: 1 }}
+                        animate={{ opacity: 0, y: -40, scale: 1.2 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        className="absolute -top-2 left-1/2 -translate-x-1/2 text-[#D4A943] font-bold text-lg whitespace-nowrap pointer-events-none"
+                        style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 10px rgba(212, 169, 67, 0.6)' }}
+                      >
+                        +{soldFeedback.amount.toLocaleString()} GP
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <div className="relative">
                   <h4 className={`text-3xl font-bold tracking-tight ${
                     selectedItem.rarity === 'celestial' ? 'rarity-celestial' :

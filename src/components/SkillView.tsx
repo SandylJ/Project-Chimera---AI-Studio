@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { ACTIONS, ITEMS, LEVEL_XP } from '../constants';
 import { PlayerState, SkillId, SkillAction } from '../types';
@@ -23,6 +23,30 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
     .map(i => ITEMS[i.itemId])
     .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === skillId)
     .sort((a, b) => (b.toolBonus?.speedMultiplier || 1) - (a.toolBonus?.speedMultiplier || 1))[0];
+
+  // Action completion detection — flash when progress resets
+  const [completionFlash, setCompletionFlash] = useState(false);
+  const [xpFloat, setXpFloat] = useState<number | null>(null);
+  const prevProgressRef = useRef(0);
+  const prevXpRef = useRef(skill.xp);
+
+  useEffect(() => {
+    const currentProgress = state.activeAction?.progress || 0;
+    // Detect completion: progress was >80% and now dropped below 20% (reset)
+    if (prevProgressRef.current > 80 && currentProgress < 20) {
+      setCompletionFlash(true);
+      setTimeout(() => setCompletionFlash(false), 400);
+
+      // Show XP gained
+      const xpDiff = skill.xp - prevXpRef.current;
+      if (xpDiff > 0) {
+        setXpFloat(xpDiff);
+        setTimeout(() => setXpFloat(null), 700);
+      }
+    }
+    prevProgressRef.current = currentProgress;
+    prevXpRef.current = skill.xp;
+  }, [state.activeAction?.progress, skill.xp]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -60,9 +84,22 @@ export function SkillView({ skillId, state, startAction, stopAction, ascendSkill
       </div>
 
       {state.activeAction && ACTIONS.find(a => a.id === state.activeAction?.actionId)?.skill === skillId && (
-        <div className={`bg-[#0D0B09] border text-[#E8E0D4] p-6 rounded-xl shadow-xl transition-all ${
+        <div className={`bg-[#0D0B09] border text-[#E8E0D4] p-6 rounded-xl shadow-xl transition-all relative overflow-visible ${
+          completionFlash ? 'border-[#D4A943] ring-2 ring-[#D4A943]/40' :
           state.activeAction.progress > 85 ? 'border-[#D4A943]/60' : 'border-[#D4A943]/30'
         }`}>
+          {/* XP float on completion */}
+          {xpFloat !== null && (
+            <motion.div
+              initial={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="absolute -top-2 right-6 text-emerald-400 font-bold text-sm pointer-events-none"
+              style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 8px rgba(52, 211, 153, 0.5)' }}
+            >
+              +{xpFloat.toLocaleString()} XP
+            </motion.div>
+          )}
           <div className="flex justify-between items-center mb-4">
             <div>
               <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>CURRENTLY PERFORMING</div>

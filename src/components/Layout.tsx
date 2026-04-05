@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { SkillId } from '../types';
 import { playTabClick, isAudioEnabled, setAudioEnabled } from '../sounds';
+import { AnimatedCounter } from './AnimatedCounter';
 
 interface LayoutProps {
   children: ReactNode;
@@ -174,7 +175,7 @@ export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, sho
         <div className="p-4 border-t border-[#3D3328] bg-[#0D0B09]">
           <div className="flex items-center justify-between text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             <span className="text-[#7A6E60]">CURRENCY</span>
-            <span className="font-bold text-[#D4A943]">{gp.toLocaleString()} GP</span>
+            <AnimatedCounter value={gp} className="font-bold text-[#D4A943]" suffix=" GP" />
           </div>
         </div>
       </aside>
@@ -221,7 +222,7 @@ export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, sho
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[#7A6E60]">GP</span>
-              <span className="font-bold text-[#D4A943]">{gp.toLocaleString()}</span>
+              <AnimatedCounter value={gp} className="font-bold text-[#D4A943]" />
             </div>
             {bountyMarks > 0 && (
               <div className="flex items-center gap-2">

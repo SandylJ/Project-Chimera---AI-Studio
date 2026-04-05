@@ -242,23 +242,37 @@ export function playLevelUp() {
   } catch {}
 }
 
-/** Sell/coin sound — metallic clink */
+/** Sell/coin sound — weighty coin drop with metallic ring */
 export function playSellItem() {
   try {
     const ctx = getCtx();
     const now = ctx.currentTime;
-    [2200, 1800].forEach((freq, i) => {
+
+    // Thud — weight of the coin hitting
+    const thud = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(200, now);
+    thud.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+    thudGain.gain.setValueAtTime(0.1, now);
+    thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    thud.connect(thudGain).connect(ctx.destination);
+    thud.start(now);
+    thud.stop(now + 0.1);
+
+    // Metallic ring — satisfying high clink
+    [2400, 1900, 2800].forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      const t = now + i * 0.06;
+      const t = now + 0.02 + i * 0.04;
       osc.frequency.setValueAtTime(freq, t);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.6, t + 0.08);
-      gain.gain.setValueAtTime(0.06, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.12);
+      gain.gain.setValueAtTime(0.05, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
       osc.connect(gain).connect(ctx.destination);
       osc.start(t);
-      osc.stop(t + 0.1);
+      osc.stop(t + 0.15);
     });
   } catch {}
 }
