@@ -335,7 +335,7 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                     </div>
                   )}
                   {isEquipped && (
-                    <button onClick={() => { playButtonPress(); const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === selectedItem.id); if (slot) unequipItem(slot); setSelectedItemId(null); }}
+                    <button onClick={() => { playEquip(); const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === selectedItem.id); if (slot) unequipItem(slot); setSelectedItemId(null); }}
                       className="keycap w-full py-4 text-xs uppercase tracking-widest text-red-400" style={{ fontFamily: "'JetBrains Mono', monospace", boxShadow: '0 4px 0 0 #7f1d1d' }}>Unequip Item</button>
                   )}
                 </div>

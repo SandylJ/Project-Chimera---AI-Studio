@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ITEMS } from '../constants';
 import { PlayerState } from '../types';
-import { playButtonPress, playSuccess } from '../sounds';
+import { playButtonPress, playSuccess, playSellItem } from '../sounds';
 
 interface ShopViewProps { state: PlayerState; addToInventory: (itemId: string, quantity: number) => void; removeFromInventory: (itemId: string, quantity: number) => void; addGp: (amount: number) => void; }
 
@@ -19,6 +19,14 @@ const GRACEFUL_ITEMS = [
   { itemId: 'graceful_top', price: 55, currency: 'mark_of_grace' }, { itemId: 'graceful_legs', price: 60, currency: 'mark_of_grace' },
   { itemId: 'graceful_gloves', price: 30, currency: 'mark_of_grace' }, { itemId: 'graceful_boots', price: 40, currency: 'mark_of_grace' },
 ];
+const CONSUMABLES = [
+  { itemId: 'cooked_trout', price: 100, currency: 'gp' }, { itemId: 'cooked_lobster', price: 500, currency: 'gp' },
+  { itemId: 'cooked_swordfish', price: 1500, currency: 'gp' }, { itemId: 'cooked_shark', price: 5000, currency: 'gp' },
+  { itemId: 'cooked_mantaray', price: 15000, currency: 'gp' },
+  { itemId: 'prayer_potion', price: 8000, currency: 'gp' }, { itemId: 'antipoison', price: 3000, currency: 'gp' },
+  { itemId: 'bones', price: 25, currency: 'gp' }, { itemId: 'big_bones', price: 100, currency: 'gp' },
+  { itemId: 'dragon_bones', price: 2500, currency: 'gp' },
+];
 const SPECIAL_ITEMS = [
   { itemId: 'dragon_slayer_blade', price: 500000, currency: 'gp' }, { itemId: 'imperial_crown', price: 100, currency: 'imperial_seal' },
   { itemId: 'raid_master_cape', price: 50, currency: 'raid_relic' }, { itemId: 'edict_efficiency', price: 50000, currency: 'gp' },
@@ -31,7 +39,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
     if (currency === 'gp') { if (state.gp >= price) { playSuccess(); addGp(-price); addToInventory(itemId, 1); } }
     else { const inv = state.inventory.find(i => i.itemId === currency); if (inv && inv.quantity >= price) { playSuccess(); removeFromInventory(currency, price); addToInventory(itemId, 1); } }
   };
-  const sellItem = (itemId: string, quantity: number) => { const itemData = ITEMS[itemId]; if (!itemData) return; playButtonPress(); removeFromInventory(itemId, quantity); addGp(Math.floor(itemData.value * 0.5) * quantity); };
+  const sellItem = (itemId: string, quantity: number) => { const itemData = ITEMS[itemId]; if (!itemData) return; playSellItem(); removeFromInventory(itemId, quantity); addGp(Math.floor(itemData.value * 0.5) * quantity); };
 
   const renderShopSection = (title: string, items: typeof SHOP_ITEMS, accentBorder?: string) => (
     <div className="space-y-6">
@@ -71,6 +79,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div className="space-y-12">
           {renderShopSection('Supplies', SHOP_ITEMS)}
+          {renderShopSection('Consumables & Bones', CONSUMABLES, 'border-green-800 text-green-400')}
           {renderShopSection('Graceful Gear', GRACEFUL_ITEMS, 'border-blue-800 text-blue-400')}
           {renderShopSection('Imperial Relics', SPECIAL_ITEMS, 'border-red-800 text-red-400')}
         </div>

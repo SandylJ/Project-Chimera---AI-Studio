@@ -70,7 +70,7 @@ export interface GameEvent {
   icon?: string;
 }
 
-const calculateLuck = (equipment: Equipment, socketedGems?: Record<string, string[]>) => {
+const calculateLuck = (equipment: Equipment, socketedGems?: Record<string, string[]>, activeEdicts?: string[]) => {
   let luck = 0;
   Object.values(equipment).forEach(itemId => {
     if (itemId) {
@@ -81,6 +81,10 @@ const calculateLuck = (equipment: Equipment, socketedGems?: Record<string, strin
   if (socketedGems) {
     const gemBonuses = calculateGemBonuses(socketedGems);
     luck += gemBonuses.luck || 0;
+  }
+  // Relic: Fortune Star — +50% luck
+  if (activeEdicts?.includes('relic_fortune_star')) {
+    luck = Math.floor(luck * 1.5);
   }
   return luck;
 };
@@ -166,9 +170,21 @@ const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, eq
     actualDuration *= 0.5;
   }
 
+  // Relic: Iron Will — combat 25% faster
+  if (action.isMonster && activeEdicts.includes('relic_iron_will')) {
+    actualDuration *= 0.75;
+  }
+
+  // Relic: Gatherer's Grace — gathering 30% faster
+  const gatheringSkills: SkillId[] = ['mining', 'woodcutting', 'fishing', 'hunting', 'farming'];
+  if (gatheringSkills.includes(action.skill) && activeEdicts.includes('relic_gatherers_grace')) {
+    actualDuration *= 0.7;
+  }
+
   // Ascension Bonus
   const ascensionCount = ascensions[action.skill] || 0;
-  actualDuration *= (1 - ascensionCount * 0.05);
+  const ascensionMultiplier = activeEdicts.includes('relic_timeless_mastery') ? 0.10 : 0.05;
+  actualDuration *= (1 - ascensionCount * ascensionMultiplier);
 
   if (action.isMonster) {
     // Relic: Void Blade (10% chance to execute)
@@ -534,8 +550,15 @@ export function useGame() {
   }, []);
 
   const addGp = useCallback((amount: number) => {
-    if (amount > 0) addEvent(`Gained ${amount} GP`, 'loot', '💰');
-    setState(prev => ({ ...prev, gp: prev.gp + amount }));
+    setState(prev => {
+      // Relic: Golden Touch — double positive GP gains
+      let finalAmount = amount;
+      if (amount > 0 && prev.activeEdicts.includes('relic_golden_touch')) {
+        finalAmount = amount * 2;
+      }
+      if (finalAmount > 0) addEvent(`Gained ${finalAmount} GP`, 'loot', '💰');
+      return { ...prev, gp: prev.gp + finalAmount };
+    });
   }, [addEvent]);
 
   // Update quest progress based on game events
@@ -654,7 +677,7 @@ export function useGame() {
     }
 
     // Add outputs
-    const luck = calculateLuck(stateRef.current.equipment, stateRef.current.socketedGems);
+    const luck = calculateLuck(stateRef.current.equipment, stateRef.current.socketedGems, stateRef.current.activeEdicts);
     const luckMultiplier = 1 + (luck / 100);
 
     action.outputs.forEach(output => {
@@ -838,9 +861,10 @@ export function useGame() {
         xpReward = Math.floor(xpReward * 1.25);
       }
 
-      // Ascension Bonus
+      // Ascension Bonus (Timeless Mastery doubles it)
       const ascensionCount = prev.ascensions[action.skill] || 0;
-      xpReward = Math.floor(xpReward * (1 + ascensionCount * 0.05));
+      const ascXpMult = prev.activeEdicts.includes('relic_timeless_mastery') ? 0.10 : 0.05;
+      xpReward = Math.floor(xpReward * (1 + ascensionCount * ascXpMult));
 
       // Tool XP Bonus
       const bestTool = prev.inventory

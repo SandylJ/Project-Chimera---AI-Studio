@@ -5,7 +5,10 @@ import { PlayerState } from '../types';
 import { playButtonPress, playSuccess } from '../sounds';
 
 interface CelestialForgeViewProps { state: PlayerState; buyRelic: (relicId: string) => void; toggleEdict: (relicId: string) => void; }
-const RELICS = ['relic_storm_eye', 'relic_empire_heart', 'relic_void_blade', 'relic_eternal_wisdom'];
+const RELICS = [
+  'relic_storm_eye', 'relic_empire_heart', 'relic_void_blade', 'relic_eternal_wisdom',
+  'relic_gatherers_grace', 'relic_iron_will', 'relic_fortune_star', 'relic_golden_touch', 'relic_timeless_mastery',
+];
 
 export function CelestialForgeView({ state, buyRelic, toggleEdict }: CelestialForgeViewProps) {
   return (

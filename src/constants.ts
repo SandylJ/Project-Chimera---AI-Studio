@@ -483,6 +483,11 @@ export const ITEMS: Record<string, Item> = {
   'relic_empire_heart': { id: 'relic_empire_heart', name: 'Heart of the Empire', description: 'Empire actions are 50% faster.', icon: '❤️', value: 15, type: 'edict' },
   'relic_void_blade': { id: 'relic_void_blade', name: 'Void Blade', description: '10% chance to instantly execute monsters.', icon: '🗡️', value: 25, type: 'edict' },
   'relic_eternal_wisdom': { id: 'relic_eternal_wisdom', name: 'Eternal Wisdom', description: 'All skills gain 25% more XP.', icon: '📜', value: 20, type: 'edict' },
+  'relic_fortune_star': { id: 'relic_fortune_star', name: 'Fortune Star', description: '+50% luck from all sources. Find rarer drops.', icon: '⭐', value: 50, type: 'edict' },
+  'relic_iron_will': { id: 'relic_iron_will', name: 'Iron Will', description: 'All combat actions 25% faster. Relentless offensive.', icon: '🛡️', value: 40, type: 'edict' },
+  'relic_gatherers_grace': { id: 'relic_gatherers_grace', name: "Gatherer's Grace", description: 'All gathering actions 30% faster. Nature bends to your will.', icon: '🌿', value: 35, type: 'edict' },
+  'relic_golden_touch': { id: 'relic_golden_touch', name: 'Golden Touch', description: 'All GP gains doubled. Everything you touch turns to gold.', icon: '👑', value: 75, type: 'edict' },
+  'relic_timeless_mastery': { id: 'relic_timeless_mastery', name: 'Timeless Mastery', description: 'Ascension bonuses doubled. Transcend further each cycle.', icon: '♾️', value: 100, type: 'edict' },
   'relic_dragon_soul': { id: 'relic_dragon_soul', name: 'Relic: Dragon Soul', description: 'Increases damage against dragons by 50%.', icon: '🐉', value: 50, type: 'edict' },
   'relic_void_mastery': { id: 'relic_void_mastery', name: 'Relic: Void Mastery', description: 'Increases damage in raids by 30%.', icon: '🌑', value: 100, type: 'edict' },
 
@@ -915,9 +920,14 @@ export const ACTIONS: SkillAction[] = [
   // Prayer
   { id: 'bury_bones', name: 'Bury Bones', skill: 'prayer', levelRequired: 1, xpReward: 15, duration: 1000, inputs: [{ itemId: 'bones', quantity: 1 }], outputs: [] },
   { id: 'bury_wolf_bones', name: 'Bury Wolf Bones', skill: 'prayer', levelRequired: 10, xpReward: 30, duration: 1000, inputs: [{ itemId: 'wolf_bone', quantity: 1 }], outputs: [] },
+  { id: 'bury_big_bones', name: 'Bury Big Bones', skill: 'prayer', levelRequired: 15, xpReward: 45, duration: 1000, inputs: [{ itemId: 'big_bones', quantity: 1 }], outputs: [] },
   { id: 'bury_giant_bones', name: 'Bury Giant Bones', skill: 'prayer', levelRequired: 25, xpReward: 60, duration: 1000, inputs: [{ itemId: 'giant_bone', quantity: 1 }], outputs: [] },
+  { id: 'offer_at_altar', name: 'Offer at Altar', skill: 'prayer', levelRequired: 35, xpReward: 100, duration: 3000, description: 'Offer bones at a holy altar for amplified prayer XP.', inputs: [{ itemId: 'giant_bone', quantity: 3 }], outputs: [{ itemId: 'celestial_essence', quantity: 1, chance: 0.05 }] },
   { id: 'bury_demon_bones', name: 'Bury Demon Bones', skill: 'prayer', levelRequired: 50, xpReward: 150, duration: 1000, inputs: [{ itemId: 'demon_bone', quantity: 1 }], outputs: [] },
+  { id: 'bury_dragon_bones', name: 'Bury Dragon Bones', skill: 'prayer', levelRequired: 60, xpReward: 250, duration: 1500, inputs: [{ itemId: 'dragon_bones', quantity: 1 }], outputs: [] },
   { id: 'bury_ancient_bones', name: 'Bury Ancient Bones', skill: 'prayer', levelRequired: 70, xpReward: 300, duration: 1000, inputs: [{ itemId: 'ancient_bone', quantity: 1 }], outputs: [] },
+  { id: 'sacred_offering', name: 'Sacred Offering', skill: 'prayer', levelRequired: 80, xpReward: 500, duration: 5000, description: 'A powerful ritual combining rare bones with prayer.', inputs: [{ itemId: 'ancient_bone', quantity: 2 }, { itemId: 'dragon_bones', quantity: 1 }], outputs: [{ itemId: 'celestial_essence', quantity: 3, chance: 0.15 }] },
+  { id: 'divine_communion', name: 'Divine Communion', skill: 'prayer', levelRequired: 90, xpReward: 1000, duration: 8000, description: 'Channel the gods themselves. Immense spiritual power.', inputs: [{ itemId: 'ancient_bone', quantity: 5 }, { itemId: 'spirit_herb', quantity: 3 }], outputs: [{ itemId: 'celestial_essence', quantity: 10, chance: 0.25 }] },
 
   // Mining Progression
   { id: 'mine_copper', name: 'Mine Copper', skill: 'mining', levelRequired: 1, xpReward: 10, duration: 3000, description: 'Extract copper ore from the earth.', toolRequired: 'bronze_pickaxe', outputs: [
