@@ -2,54 +2,77 @@
 *Updated: 2026-04-04*
 
 ## Current State
-- Branch `sandil-expansion` has all new features (quest system, collection log, unique monster drops, bank upgrade)
+- Branch `main` has all features
 - Branch `backup-original-state` has the untouched original code
 - Build: passing, zero TS errors
 - Tech: React 19 + TypeScript + Tailwind 4 + Vite 6 + Framer Motion
 
 ---
 
-## Priority 1: Visual Overhaul (UI/UX)
-The game is currently black-and-white. Patrick wants the loot/dopamine experience to be the star since it's a browser game competing with 3D MMOs on feel, not graphics.
+## Completed
 
-- [ ] **Rarity color system** — consistent color theming for all rarity tiers across ALL views (not just bank). Items, drops, notifications, skill views should all respect rarity colors
-- [ ] **Loot drop animations** — when rare+ items drop, show a satisfying animated popup (glow, scale, particle-like effects via CSS/Framer Motion). Think Diablo loot beam
-- [ ] **Level-up celebration** — full-screen flash or banner animation on level up
-- [ ] **Skill action progress** — make the progress bar more satisfying (pulse, glow on near-completion)
-- [ ] **Dark mode** — the game is light theme only. Add dark mode toggle (many gamers prefer dark)
-- [ ] **Item tooltips on hover** — OSRS-style tooltip showing stats/description without needing to click
-- [ ] **Dashboard visual upgrade** — skill grid with color-coded progress, animated XP bars
-- [ ] **Quest completion fanfare** — special animation when quest completes
-- [ ] **Bank visual polish** — rarity glow borders, stacking animations, drag-and-drop reordering
+### Priority 1: Visual Overhaul ✅
+- [x] Rarity color system across all views (bank, skills, dashboard, notifications)
+- [x] Loot drop animations — Diablo-style loot beam overlay with rarity-specific effects
+- [x] Level-up celebration — full-screen gold flash + particle burst
+- [x] Skill action progress bar pulse/glow at 85%+
+- [x] OSRS-style item tooltips on hover (bank, skill view, equipment slots)
+- [x] Dashboard visual upgrade — color-coded skill cards by category (gathering/combat/artisan/support)
+- [x] Quest completion fanfare overlay
+- [x] Bank visual polish — rarity glow borders, shimmer on legendary/celestial, stack glow scaling
+- [x] Rarity-specific sound effects (rare/epic/legendary/celestial drops, level-up)
 
-## Priority 2: Gameplay Depth
-- [ ] **Gem socketing UI + logic** — types support sockets but no implementation. Let players socket gems into equipment
-- [ ] **Slayer task system** — NPC assigns specific monsters with bonus XP/loot for task completion
-- [ ] **More actions for thin skills** — Hunting, Farming, Agility, Empire need more content
-- [ ] **Kingdom buildings** — passive global buffs (Blacksmith: -10% smithing time, Library: +5% XP, etc.)
-- [ ] **Achievement/milestone system** — "First 99", "1000 kills", "100k GP earned" etc. with rewards
-- [ ] **Dry streak protection** — if you go 2x the expected rate without a rare drop, increase chance gradually
-- [ ] **Item sets completion tracker** — show which pieces you have/need for each set
-- [ ] **More set bonuses** — expand equipment sets so there are meaningful gear choices at every tier
+### Priority 2: Gameplay Depth ✅
+- [x] Gem socketing UI + logic (5 gems, 12 socketable items, full UI in bank modal)
+- [x] Achievement/milestone system (35 achievements, 6 categories, 4 tiers, dedicated view + sidebar tab)
+- [x] Dry streak protection (2x expected rate → scaling boost, capped at 50%)
+- [x] Item sets completion tracker (4 sets visualized in collection log)
+- [x] Empire skill expanded (6 → 11 actions, every 10 levels now has content)
+- [x] Prayer skill expanded (5 → 10 actions, altar/sacred/divine rituals at higher levels)
 
-## Priority 3: Content Expansion
-- [ ] **More bosses** — each with unique mechanics (food consumption, rune costs, etc.) and signature loot tables
-- [ ] **Clue scroll expansion** — full treasure trail system with tiered rewards
-- [ ] **Fletching as proper skill** — currently mixed into crafting/woodcutting
+### Priority 3: Content Expansion ✅
+- [x] Pet system — 21 skill pets, ~1/3000 chance, auto-equip, dashboard display
+- [x] Clue scroll treasure trail system — 4 tiers, 7 exclusive rewards, reward chains
+- [x] 3 new mid-game bosses (Stoneguard Titan L50, Shadowfang Alpha L70, Tidecaller Leviathan L80)
+
+### Priority 4: Technical ✅
+- [x] Save file export/import (JSON download/upload in admin panel)
+- [x] Offline progress calculation + "Welcome Back" overlay
+- [x] Performance — memoized VaultItem component (React.memo)
+- [x] Audio toggle (master SFX on/off in header, persisted)
+- [x] New SFX: sell (coin clink), equip (metallic clank), quest start (horn)
+
+### Celestial Forge Expansion ✅
+- [x] 5 new relics: Fortune Star (+50% luck), Iron Will (combat speed), Gatherer's Grace (gathering speed), Golden Touch (2x GP), Timeless Mastery (2x ascension bonuses)
+- [x] All relic effects fully implemented in game logic
+
+### Bug Fixes ✅
+- [x] Gems returned to inventory on unequip (was losing permanently)
+- [x] UNIQUE DROP + PET DROP events now trigger loot beam overlay
+- [x] Offline progress no longer has localStorage race condition
+- [x] Shop consumables section added (was useless after early game)
+
+---
+
+## Remaining / Future Ideas
+
+### Gameplay
 - [ ] **Construction skill** — build kingdom structures for passive bonuses
+- [ ] **Fletching as proper skill** — currently mixed into crafting/woodcutting
 - [ ] **More crafting recipes** — fill gaps in intermediate tiers
-- [ ] **Pet system** — rare chance from any skill activity, cosmetic collectible
-
-## Priority 4: Technical
-- [ ] **Performance** — memoize item components in bank (could lag with 200+ items)
-- [ ] **Code splitting** — constants.ts is 2000+ lines, consider splitting by category
-- [ ] **Save file export/import** — let players backup their save
-- [ ] **Offline progress** — calculate gains since last visit
-- [ ] **Audio** — SFX for drops, level-ups, quest completion (optional toggle)
-- [ ] **Mobile polish** — ensure touch targets are good, swipe navigation
-
-## Priority 5: Future
-- [ ] **Multiplayer** — leaderboards, trading, guilds (big scope)
-- [ ] **Story/lore** — named NPCs, kingdom narrative
-- [ ] **Seasonal events** — limited-time content with exclusive rewards
+- [ ] **More set bonuses** — expand equipment sets so there are meaningful gear choices
 - [ ] **Prestige system** — beyond ascension, whole-account prestige for massive bonuses
+- [ ] **Seasonal events** — limited-time content with exclusive rewards
+
+### Quality of Life
+- [ ] **XP curve rework** — current cubic formula isn't OSRS-style back-loaded enough (L80 should = halfway to 100)
+- [ ] **Mobile polish** — ensure touch targets are good, swipe navigation
+- [ ] **Code splitting** — constants.ts is 2200+ lines, consider splitting by category
+- [ ] **Keyboard shortcuts** — quick-switch between skills, cancel action
+- [ ] **Auto-sell** — configure items to auto-sell on pickup
+
+### Social / Multiplayer
+- [ ] **Leaderboards** — total level, GP, collection log completion
+- [ ] **Trading** — player-to-player item exchange
+- [ ] **Guilds** — shared progression bonuses
+- [ ] **Story/lore** — named NPCs, kingdom narrative
