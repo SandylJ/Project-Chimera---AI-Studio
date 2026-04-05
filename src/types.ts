@@ -2,7 +2,7 @@ export type SkillId =
   | 'mining' | 'woodcutting' | 'fishing' | 'hunting' | 'farming'
   | 'smithing' | 'cooking' | 'herblore' | 'crafting' | 'runecrafting'
   | 'thieving' | 'agility' | 'attack' | 'strength' | 'defense' | 'magic' | 'ranged'
-  | 'prayer' | 'empire' | 'raids' | 'slayer';
+  | 'prayer' | 'empire' | 'raids' | 'slayer' | 'construction';
 
 export interface Item {
   id: string;
@@ -226,6 +226,11 @@ export interface PlayerState {
   // Pets
   activePet?: string; // itemId of active pet
   petsUnlocked: string[]; // itemIds of all pets ever obtained
+  // Auto-sell
+  autoSellItems: string[]; // itemIds to auto-sell on pickup
+  // Prestige
+  prestigeLevel: number; // number of times prestiged
+  prestigeTokens: number; // earned on prestige, spent on permanent upgrades
 }
 
 export interface QuestProgress {

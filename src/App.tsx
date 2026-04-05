@@ -52,6 +52,8 @@ export default function App() {
     unsocketGem,
     setActivePet,
     openClueScroll,
+    toggleAutoSell,
+    prestige,
     offlineGains,
     dismissOfflineGains,
   } = useGame();
@@ -152,7 +154,7 @@ export default function App() {
 
   const renderContent = () => {
     if (activeTab === 'dashboard') {
-      return <DashboardView state={state} events={events} setActiveTab={setActiveTab} />;
+      return <DashboardView state={state} events={events} setActiveTab={setActiveTab} prestige={prestige} />;
     }
     if (activeTab === 'bank') {
       return (
@@ -168,6 +170,7 @@ export default function App() {
           socketGem={socketGem}
           unsocketGem={unsocketGem}
           openClueScroll={openClueScroll}
+          toggleAutoSell={toggleAutoSell}
         />
       );
     }
@@ -217,7 +220,7 @@ export default function App() {
       'mining', 'woodcutting', 'fishing', 'hunting', 'farming',
       'smithing', 'cooking', 'herblore', 'crafting', 'runecrafting',
       'thieving', 'agility', 'attack', 'strength', 'defense', 'magic', 'ranged',
-      'prayer', 'empire', 'raids'
+      'prayer', 'empire', 'raids', 'construction'
     ];
 
     if (skillIds.includes(activeTab as SkillId)) {

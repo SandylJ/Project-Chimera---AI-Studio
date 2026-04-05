@@ -16,6 +16,7 @@ interface BankViewProps {
   socketGem: (equipmentSlot: string, gemItemId: string) => void;
   unsocketGem: (equipmentSlot: string, gemIndex: number) => void;
   openClueScroll: (clueItemId: string) => void;
+  toggleAutoSell: (itemId: string) => void;
 }
 
 const BANK_TABS = [
@@ -27,7 +28,7 @@ const BANK_TABS = [
   { id: 'quest', name: 'Quest Items', icon: '📜' },
 ];
 
-export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp, salvageItem, usePotion, socketGem, unsocketGem, openClueScroll }: BankViewProps) {
+export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFromInventory, addGp, salvageItem, usePotion, socketGem, unsocketGem, openClueScroll, toggleAutoSell }: BankViewProps) {
   const inventory = state.inventory;
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
@@ -333,6 +334,14 @@ export function BankView({ state, equipItem, unequipItem, toggleEdict, removeFro
                       <button onClick={() => handleSell(selectedItem, 1)} className="keycap keycap-sm py-3 text-[10px] uppercase tracking-widest w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sell 1 ({selectedItem?.value || 0} GP)</button>
                       <button onClick={() => handleSell(selectedItem, selectedInventoryItem.quantity)} className="keycap keycap-sm py-3 text-[10px] uppercase tracking-widest w-full" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sell All ({(selectedItem?.value || 0) * selectedInventoryItem.quantity} GP)</button>
                     </div>
+                  )}
+                  {selectedItem.value > 0 && selectedItem.type === 'resource' && (!selectedItem.rarity || selectedItem.rarity === 'common' || selectedItem.rarity === 'uncommon') && (
+                    <button onClick={() => { playButtonPress(); toggleAutoSell(selectedItem.id); }}
+                      className={`keycap keycap-sm w-full py-3 text-[10px] uppercase tracking-widest ${
+                        state.autoSellItems.includes(selectedItem.id) ? 'text-amber-400' : 'text-[#7A6E60]'
+                      }`} style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {state.autoSellItems.includes(selectedItem.id) ? 'Auto-Sell: ON' : 'Auto-Sell: OFF'}
+                    </button>
                   )}
                   {isEquipped && (
                     <button onClick={() => { playEquip(); const slot = Object.keys(state.equipment).find(key => state.equipment[key as keyof typeof state.equipment] === selectedItem.id); if (slot) unequipItem(slot); setSelectedItemId(null); }}

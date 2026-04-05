@@ -70,6 +70,7 @@ const SKILLS: { id: SkillId; name: string; icon: any }[] = [
   { id: 'empire', name: 'Empire', icon: Castle },
   { id: 'raids', name: 'Raids', icon: Skull },
   { id: 'slayer', name: 'Bounty Hunter', icon: Ghost },
+  { id: 'construction', name: 'Construction', icon: Castle },
 ];
 
 export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, showNotifications, toggleNotifications, adminPanel }: LayoutProps) {

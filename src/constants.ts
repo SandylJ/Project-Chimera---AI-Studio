@@ -615,6 +615,13 @@ export const ITEMS: Record<string, Item> = {
   'ashen_plate': { id: 'ashen_plate', name: 'Ashen Plate', description: 'Body armor forged from the Elder Wyrm\'s scales. Nearly indestructible.', icon: '🔥', value: 2500000, type: 'equipment', rarity: 'celestial', equipmentSlot: 'body', stats: { defense: 80, strength: 20, attack: 15, health: 25 }, socketable: true, sockets: 2 },
   'wyrm_spine_bow': { id: 'wyrm_spine_bow', name: 'Wyrmspine Bow', description: 'A recurve bow carved from the Elder Wyrm\'s vertebrae.', icon: '🏹', value: 1800000, type: 'equipment', rarity: 'legendary', equipmentSlot: 'weapon', stats: { ranged: 100, speed: 0.3, luck: 5 }, socketable: true, sockets: 2 },
 
+  // ===== CONSTRUCTION MATERIALS & BUILDINGS =====
+  'planks': { id: 'planks', name: 'Planks', description: 'Standard wooden planks for basic construction.', icon: '🪵', value: 50, type: 'resource' },
+  'oak_planks': { id: 'oak_planks', name: 'Oak Planks', description: 'Sturdy oak planks for mid-tier building.', icon: '🪵', value: 200, type: 'resource', rarity: 'uncommon' },
+  'teak_planks': { id: 'teak_planks', name: 'Teak Planks', description: 'High-quality teak for fine construction.', icon: '🪵', value: 500, type: 'resource', rarity: 'rare' },
+  'stone_block': { id: 'stone_block', name: 'Stone Block', description: 'Carved stone for building foundations.', icon: '🧱', value: 100, type: 'resource' },
+  'nails': { id: 'nails', name: 'Nails', description: 'Iron nails for holding things together.', icon: '📌', value: 10, type: 'resource' },
+
   // ===== BOUNTY MARK SHOP ITEMS =====
   'huntsmans_vizor': { id: 'huntsmans_vizor', name: "Huntsman's Vizor", description: 'A helm forged from bounty marks. Increases slayer XP and damage.', icon: '🎭', value: 500, type: 'equipment', rarity: 'epic', equipmentSlot: 'head', stats: { attack: 25, strength: 15, defense: 20, luck: 10 } },
   'bounty_ring': { id: 'bounty_ring', name: 'Contract Ring', description: 'A ring that marks you as a seasoned hunter. Boosts bounty mark gains.', icon: '💍', value: 300, type: 'equipment', rarity: 'rare', equipmentSlot: 'ring', stats: { luck: 20, attack: 10 } },
@@ -642,6 +649,7 @@ export const ITEMS: Record<string, Item> = {
   'pet_crown_prince': { id: 'pet_crown_prince', name: 'Crown Prince', description: 'A tiny royal who insists on being carried everywhere.', icon: '👶', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Empire' },
   'pet_shadow_drake': { id: 'pet_shadow_drake', name: 'Shadow Drake', description: 'A dragon whelpling born from darkness. Burns cold fire.', icon: '🐉', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Raids' },
   'pet_reaper': { id: 'pet_reaper', name: 'Lil Reaper', description: 'Death incarnate. Except tiny and kind of cute.', icon: '💀', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Slayer' },
+  'pet_builder_golem': { id: 'pet_builder_golem', name: 'Builder Golem', description: 'A tiny clay golem that carries bricks twice its size.', icon: '🏗️', value: 0, type: 'resource', rarity: 'celestial', skillHint: 'Construction' },
 
   // ===== CLUE SCROLL ITEMS =====
   'clue_scroll_easy': { id: 'clue_scroll_easy', name: 'Clue Scroll (Easy)', description: 'A mysterious scroll with simple instructions. Open to receive a reward.', icon: '📜', value: 500, type: 'resource', rarity: 'uncommon' },
@@ -2064,6 +2072,19 @@ export const ACTIONS: SkillAction[] = [
     { itemId: 'dragon_bones', quantity: 30, chance: 1 },
     { itemId: 'void_essence', quantity: 10, chance: 0.5 },
   ] },
+
+  // ===== CONSTRUCTION =====
+  { id: 'saw_planks', name: 'Saw Planks', skill: 'construction', levelRequired: 1, xpReward: 30, duration: 5000, description: 'Saw logs into basic planks.', inputs: [{ itemId: 'logs', quantity: 3 }], outputs: [{ itemId: 'planks', quantity: 2, chance: 1 }, { itemId: 'nails', quantity: 5, chance: 0.5 }] },
+  { id: 'carve_stone', name: 'Carve Stone Blocks', skill: 'construction', levelRequired: 10, xpReward: 60, duration: 8000, description: 'Carve raw stone into building blocks.', inputs: [{ itemId: 'copper_ore', quantity: 5 }], outputs: [{ itemId: 'stone_block', quantity: 3, chance: 1 }] },
+  { id: 'saw_oak_planks', name: 'Saw Oak Planks', skill: 'construction', levelRequired: 20, xpReward: 120, duration: 8000, description: 'Process oak logs into sturdy planks.', inputs: [{ itemId: 'oak_logs', quantity: 3 }], outputs: [{ itemId: 'oak_planks', quantity: 2, chance: 1 }, { itemId: 'nails', quantity: 10, chance: 0.5 }] },
+  { id: 'build_workshop', name: 'Build Workshop', skill: 'construction', levelRequired: 15, xpReward: 200, duration: 30000, description: 'A basic workshop for crafting. Produces components over time.', inputs: [{ itemId: 'planks', quantity: 10 }, { itemId: 'nails', quantity: 20 }, { itemId: 'stone_block', quantity: 5 }], outputs: [{ itemId: 'gp', quantity: 500, chance: 1 }] },
+  { id: 'build_watchtower', name: 'Build Watchtower', skill: 'construction', levelRequired: 30, xpReward: 500, duration: 45000, description: 'A tower overlooking your domain. Increases security and trade.', inputs: [{ itemId: 'oak_planks', quantity: 15 }, { itemId: 'stone_block', quantity: 20 }, { itemId: 'nails', quantity: 30 }], outputs: [{ itemId: 'gp', quantity: 2500, chance: 1 }, { itemId: 'imperial_seal', quantity: 1, chance: 0.1 }] },
+  { id: 'saw_teak_planks', name: 'Saw Teak Planks', skill: 'construction', levelRequired: 40, xpReward: 250, duration: 10000, description: 'Process teak logs into premium planks.', inputs: [{ itemId: 'teak_logs', quantity: 3 }], outputs: [{ itemId: 'teak_planks', quantity: 2, chance: 1 }] },
+  { id: 'build_chapel', name: 'Build Chapel', skill: 'construction', levelRequired: 50, xpReward: 1000, duration: 60000, description: 'A holy place of worship. Amplifies prayer training.', inputs: [{ itemId: 'teak_planks', quantity: 20 }, { itemId: 'stone_block', quantity: 30 }, { itemId: 'gold_bar', quantity: 5 }], outputs: [{ itemId: 'gp', quantity: 10000, chance: 1 }, { itemId: 'celestial_essence', quantity: 5, chance: 0.3 }] },
+  { id: 'quarry_marble', name: 'Quarry Marble', skill: 'construction', levelRequired: 60, xpReward: 400, duration: 15000, description: 'Extract and polish marble blocks.', inputs: [{ itemId: 'stone_block', quantity: 5 }], outputs: [{ itemId: 'marble_block', quantity: 1, chance: 1 }] },
+  { id: 'build_grand_hall', name: 'Build Grand Hall', skill: 'construction', levelRequired: 70, xpReward: 2500, duration: 90000, description: 'A magnificent hall for hosting feasts and councils.', inputs: [{ itemId: 'teak_planks', quantity: 30 }, { itemId: 'marble_block', quantity: 10 }, { itemId: 'gold_bar', quantity: 10 }], outputs: [{ itemId: 'gp', quantity: 50000, chance: 1 }, { itemId: 'imperial_seal', quantity: 2, chance: 0.3 }] },
+  { id: 'build_treasury_vault', name: 'Build Treasury Vault', skill: 'construction', levelRequired: 80, xpReward: 5000, duration: 120000, description: 'A fortified vault to protect your wealth. Generates passive income.', inputs: [{ itemId: 'marble_block', quantity: 20 }, { itemId: 'mithril_bar', quantity: 10 }, { itemId: 'gold_bar', quantity: 20 }], outputs: [{ itemId: 'gp', quantity: 100000, chance: 1 }, { itemId: 'celestial_essence', quantity: 10, chance: 0.2 }] },
+  { id: 'build_throne_room', name: 'Build Throne Room', skill: 'construction', levelRequired: 90, xpReward: 10000, duration: 180000, description: 'The ultimate symbol of power. A throne worthy of an emperor.', inputs: [{ itemId: 'marble_block', quantity: 40 }, { itemId: 'adamantite_bar', quantity: 10 }, { itemId: 'gold_bar', quantity: 50 }], outputs: [{ itemId: 'gp', quantity: 250000, chance: 1 }, { itemId: 'celestial_essence', quantity: 25, chance: 0.5 }] },
 ];
 
 export const KINGDOM_WORKERS: KingdomWorker[] = [
@@ -2227,15 +2248,28 @@ export const KINGDOM_WORKERS: KingdomWorker[] = [
 
 export const LEVEL_XP = (level: number) => {
   if (level <= 1) return 0;
-  return Math.floor(Math.pow(level, 3) * 10); // Simple XP curve
+  // OSRS-inspired exponential curve: L80 ≈ 30%, L88 ≈ 50%, L95 ≈ 74% of max
+  // Early levels feel fast, 80-100 is the real endgame grind
+  let total = 0;
+  for (let x = 1; x < level; x++) {
+    total += Math.floor(x * x * 2 + 100 * Math.pow(2, x / 9.5));
+  }
+  return Math.floor(total / 2);
 };
 
+// Pre-compute XP thresholds for fast lookup
+const _XP_TABLE: number[] = [];
+for (let i = 0; i <= 100; i++) _XP_TABLE[i] = LEVEL_XP(i);
+
 export const XP_TO_LEVEL = (xp: number) => {
-  let level = 1;
-  while (LEVEL_XP(level + 1) <= xp) {
-    level++;
+  // Binary search for performance with exponential curve
+  let low = 1, high = 100;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (_XP_TABLE[mid] <= xp) low = mid;
+    else high = mid - 1;
   }
-  return level;
+  return low;
 };
 
 // ===== PET SYSTEM =====
@@ -2262,6 +2296,7 @@ export const SKILL_PETS: Record<SkillId, string> = {
   empire: 'pet_crown_prince',
   raids: 'pet_shadow_drake',
   slayer: 'pet_reaper',
+  construction: 'pet_builder_golem',
 };
 
 export const PET_BASE_CHANCE = 1 / 3000; // ~1 in 3000 actions

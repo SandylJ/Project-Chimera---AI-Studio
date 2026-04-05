@@ -13,6 +13,7 @@ interface DashboardViewProps {
   state: any;
   events: any[];
   setActiveTab: (tab: string) => void;
+  prestige?: () => void;
 }
 
 const calculateLuck = (equipment: any, socketedGems?: Record<string, string[]>) => {
@@ -65,12 +66,13 @@ const SKILLS: { id: SkillId; name: string; icon: any; category: SkillCategory }[
   { id: 'empire', name: 'Empire', icon: Castle, category: 'support' },
   { id: 'raids', name: 'Raids', icon: Skull, category: 'combat' },
   { id: 'slayer', name: 'Slayer', icon: Ghost, category: 'combat' },
+  { id: 'construction', name: 'Construction', icon: Castle, category: 'artisan' },
 ];
 
-export function DashboardView({ state, events, setActiveTab }: DashboardViewProps) {
-  const totalLevel = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.level || 0), 0);
-  const totalXp = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.xp || 0), 0);
-  const totalAscensions = Object.values((state.ascensions || {}) as Record<string, number>).reduce((acc: number, count: number) => acc + (count || 0), 0);
+export function DashboardView({ state, events, setActiveTab, prestige }: DashboardViewProps) {
+  const totalLevel: number = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.level || 0), 0) as number;
+  const totalXp: number = Object.values(state.skills || {}).reduce((acc: number, skill: any) => acc + (skill?.xp || 0), 0) as number;
+  const totalAscensions: number = Object.values((state.ascensions || {}) as Record<string, number>).reduce((acc: number, count: number) => acc + (count || 0), 0) as number;
   const luck = calculateLuck(state.equipment, state.socketedGems);
   const recentLoot = events.filter(e => e.type === 'loot').slice(0, 10);
 
@@ -84,6 +86,11 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
             Your empire stands at the precipice of greatness. Master the arts of gathering, crafting, and warfare to expand your reach across the realm.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            {state.prestigeLevel > 0 && (
+              <div className="keycap keycap-sm" style={{ background: 'linear-gradient(180deg, #9333ea 0%, #6b21a8 100%)', color: '#fff', borderColor: '#581c87', boxShadow: '0 1px 0 0 rgba(200,160,255,0.3) inset, 0 4px 0 0 #3b0764, 0 5px 4px 0 rgba(0,0,0,0.3)' }}>
+                PRESTIGE {state.prestigeLevel}
+              </div>
+            )}
             {totalAscensions > 0 && <div className="keycap keycap-sm keycap-gold">TIER {totalAscensions} ASCENDANT</div>}
             <div className="px-3 py-1.5 rounded-lg border border-emerald-800 bg-emerald-950/50 text-emerald-400 text-[10px] uppercase tracking-widest flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               <Sparkles className="w-3 h-3" /> LUCK: {luck}
@@ -218,6 +225,37 @@ export function DashboardView({ state, events, setActiveTab }: DashboardViewProp
           <p className="text-xs text-[#7A6E60]">{state.activeAction ? 'Workers busy.' : 'Awaiting command.'}</p>
         </div>
       </div>
+
+      {/* Prestige Section */}
+      {totalLevel >= 1000 && prestige && (
+        <div className="card p-6 border-purple-800/30 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>Prestige</h3>
+              <p className="text-xs text-[#7A6E60] mt-1">Reset your skills for permanent bonuses. Keeps pets, collection log, and achievements.</p>
+            </div>
+            {state.prestigeLevel > 0 && (
+              <div className="text-right">
+                <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Tokens</div>
+                <div className="text-2xl font-bold text-purple-400" style={{ fontFamily: "'Cinzel', serif" }}>{state.prestigeTokens}</div>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              Bonuses: +{state.prestigeLevel * 5}% XP · Tokens earned: ~{Math.floor(totalLevel / 100)}
+            </div>
+            <button
+              onClick={() => { if (totalLevel >= 1500) { playButtonPress(); prestige(); } }}
+              disabled={totalLevel < 1500}
+              className={`keycap text-[10px] uppercase tracking-widest ${totalLevel >= 1500 ? 'animate-pulse' : 'opacity-40 cursor-not-allowed'}`}
+              style={{ fontFamily: "'JetBrains Mono', monospace", background: totalLevel >= 1500 ? 'linear-gradient(180deg, #9333ea 0%, #6b21a8 100%)' : undefined, color: totalLevel >= 1500 ? '#fff' : undefined }}
+            >
+              {totalLevel >= 1500 ? 'Prestige Now' : `Need ${1500 - totalLevel} more levels`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

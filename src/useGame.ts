@@ -27,6 +27,7 @@ const INITIAL_STATE: PlayerState = {
     empire: { id: 'empire', level: 1, xp: 0 },
     raids: { id: 'raids', level: 1, xp: 0 },
     slayer: { id: 'slayer', level: 1, xp: 0 },
+    construction: { id: 'construction', level: 1, xp: 0 },
   },
   inventory: [],
   equipment: {},
@@ -35,7 +36,7 @@ const INITIAL_STATE: PlayerState = {
     mining: 0, woodcutting: 0, fishing: 0, hunting: 0, farming: 0,
     smithing: 0, cooking: 0, herblore: 0, crafting: 0, runecrafting: 0, thieving: 0,
     agility: 0, attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0, prayer: 0,
-    empire: 0, raids: 0, slayer: 0
+    empire: 0, raids: 0, slayer: 0, construction: 0
   },
   buffs: [],
   kingdom: {},
@@ -59,6 +60,11 @@ const INITIAL_STATE: PlayerState = {
   // Pets
   activePet: undefined,
   petsUnlocked: [],
+  // Auto-sell
+  autoSellItems: [],
+  // Prestige
+  prestigeLevel: 0,
+  prestigeTokens: 0,
 };
 
 export interface GameEvent {
@@ -310,6 +316,9 @@ export function useGame() {
         dryStreak: parsed.dryStreak || 0,
         activePet: parsed.activePet || undefined,
         petsUnlocked: parsed.petsUnlocked || [],
+        autoSellItems: parsed.autoSellItems || [],
+        prestigeLevel: parsed.prestigeLevel || 0,
+        prestigeTokens: parsed.prestigeTokens || 0,
       };
     } catch (e) {
       return INITIAL_STATE;
@@ -400,21 +409,30 @@ export function useGame() {
 
   const addToInventory = useCallback((itemId: string, quantity: number) => {
     const item = ITEMS[itemId];
-    if (item) {
-      if (item.rarity === 'celestial') {
-        addEvent(`CELESTIAL DROP: ${quantity}x ${item.name}`, 'loot', '🌌', 'celestial');
-      } else if (item.rarity === 'legendary') {
-        addEvent(`LEGENDARY DROP: ${quantity}x ${item.name}`, 'loot', '🔥', 'legendary');
-      } else if (item.rarity === 'epic') {
-        addEvent(`EPIC DROP: ${quantity}x ${item.name}`, 'loot', '🟣', 'epic');
-      } else if (item.rarity === 'rare') {
-        addEvent(`Rare drop: ${quantity}x ${item.name}`, 'loot', '🔷', 'rare');
-      } else {
-        addEvent(`Gained ${quantity}x ${item.name}`, 'loot', item.icon, item.rarity);
-      }
-      // Track in collection log
+    if (!item) return;
+
+    // Auto-sell check: if item is in auto-sell list and not rare+, sell immediately
+    if (stateRef.current.autoSellItems.includes(itemId) && (!item.rarity || item.rarity === 'common' || item.rarity === 'uncommon')) {
+      const gpValue = item.value * quantity;
+      addEvent(`Auto-sold ${quantity}x ${item.name} for ${gpValue} GP`, 'loot', '💰');
+      setState(prev => ({ ...prev, gp: prev.gp + gpValue, totalItemsGained: { ...prev.totalItemsGained, [itemId]: (prev.totalItemsGained[itemId] || 0) + quantity } }));
       trackCollectionLog(itemId);
+      return;
     }
+
+    if (item.rarity === 'celestial') {
+      addEvent(`CELESTIAL DROP: ${quantity}x ${item.name}`, 'loot', '🌌', 'celestial');
+    } else if (item.rarity === 'legendary') {
+      addEvent(`LEGENDARY DROP: ${quantity}x ${item.name}`, 'loot', '🔥', 'legendary');
+    } else if (item.rarity === 'epic') {
+      addEvent(`EPIC DROP: ${quantity}x ${item.name}`, 'loot', '🟣', 'epic');
+    } else if (item.rarity === 'rare') {
+      addEvent(`Rare drop: ${quantity}x ${item.name}`, 'loot', '🔷', 'rare');
+    } else {
+      addEvent(`Gained ${quantity}x ${item.name}`, 'loot', item.icon, item.rarity);
+    }
+    // Track in collection log
+    trackCollectionLog(itemId);
 
     setState(prev => {
       const existing = prev.inventory.find(i => i.itemId === itemId);
@@ -859,6 +877,11 @@ export function useGame() {
       // Relic: Eternal Wisdom
       if (prev.activeEdicts.includes('relic_eternal_wisdom')) {
         xpReward = Math.floor(xpReward * 1.25);
+      }
+
+      // Prestige bonus: +5% XP per prestige level
+      if (prev.prestigeLevel > 0) {
+        xpReward = Math.floor(xpReward * (1 + prev.prestigeLevel * 0.05));
       }
 
       // Ascension Bonus (Timeless Mastery doubles it)
@@ -1595,6 +1618,68 @@ export function useGame() {
     unsocketGem,
     // Pets
     setActivePet,
+    // Prestige
+    prestige: useCallback(() => {
+      setState(prev => {
+        let totalLevel = 0;
+        (Object.values(prev.skills) as { level: number }[]).forEach(s => { totalLevel += s.level; });
+        if (totalLevel < 1500) return prev; // minimum requirement
+
+        // Tokens earned = total level / 100, bonus for ascensions
+        let totalAsc = 0;
+        (Object.values(prev.ascensions) as number[]).forEach(a => { totalAsc += a; });
+        const tokensEarned = Math.floor(totalLevel / 100) + totalAsc * 2;
+
+        // Reset skills to level 1
+        const resetSkills: any = {};
+        Object.keys(prev.skills).forEach(id => {
+          resetSkills[id] = { id, level: 1, xp: 0 };
+        });
+
+        // Reset ascensions
+        const resetAscensions: any = {};
+        Object.keys(prev.ascensions).forEach(id => {
+          resetAscensions[id] = 0;
+        });
+
+        addEvent(`PRESTIGE ${prev.prestigeLevel + 1}! Earned ${tokensEarned} Prestige Tokens!`, 'level');
+
+        return {
+          ...prev,
+          skills: resetSkills,
+          gp: 0,
+          celestialEssence: 0,
+          inventory: [],
+          equipment: {},
+          activeEdicts: [],
+          ascensions: resetAscensions,
+          buffs: [],
+          kingdom: {},
+          activeAction: undefined,
+          socketedGems: {},
+          dryStreak: 0,
+          bountyContract: undefined,
+          bountyStreak: 0,
+          bountyMarks: 0,
+          autoSellItems: [],
+          // KEEP: collectionLog, petsUnlocked, activePet, quests, killCount, totalActions, totalItemsGained, achievements
+          prestigeLevel: prev.prestigeLevel + 1,
+          prestigeTokens: prev.prestigeTokens + tokensEarned,
+        };
+      });
+    }, [addEvent]),
+    // Auto-sell
+    toggleAutoSell: useCallback((itemId: string) => {
+      setState(prev => {
+        const isAutoSell = prev.autoSellItems.includes(itemId);
+        return {
+          ...prev,
+          autoSellItems: isAutoSell
+            ? prev.autoSellItems.filter(id => id !== itemId)
+            : [...prev.autoSellItems, itemId],
+        };
+      });
+    }, []),
     // Clue Scrolls
     openClueScroll,
     // Offline progress
