@@ -27,6 +27,22 @@ const CONSUMABLES = [
   { itemId: 'bones', price: 25, currency: 'gp' }, { itemId: 'big_bones', price: 100, currency: 'gp' },
   { itemId: 'dragon_bones', price: 2500, currency: 'gp' },
 ];
+const TOOLS = [
+  // Axes
+  { itemId: 'bronze_axe', price: 100, currency: 'gp' }, { itemId: 'iron_axe', price: 500, currency: 'gp' },
+  { itemId: 'steel_axe', price: 2000, currency: 'gp' }, { itemId: 'mithril_axe', price: 8000, currency: 'gp' },
+  { itemId: 'adamant_axe', price: 25000, currency: 'gp' }, { itemId: 'rune_axe', price: 100000, currency: 'gp' },
+  // Pickaxes
+  { itemId: 'bronze_pickaxe', price: 100, currency: 'gp' }, { itemId: 'iron_pickaxe', price: 500, currency: 'gp' },
+  { itemId: 'steel_pickaxe', price: 2000, currency: 'gp' }, { itemId: 'mithril_pickaxe', price: 8000, currency: 'gp' },
+  { itemId: 'adamant_pickaxe', price: 25000, currency: 'gp' }, { itemId: 'rune_pickaxe', price: 100000, currency: 'gp' },
+  // Fishing
+  { itemId: 'small_fishing_net', price: 50, currency: 'gp' }, { itemId: 'fishing_rod', price: 150, currency: 'gp' },
+  { itemId: 'harpoon', price: 500, currency: 'gp' },
+  // Utility
+  { itemId: 'tinderbox', price: 50, currency: 'gp' }, { itemId: 'hammer', price: 50, currency: 'gp' },
+  { itemId: 'chisel', price: 50, currency: 'gp' }, { itemId: 'needle', price: 10, currency: 'gp' },
+];
 const SPECIAL_ITEMS = [
   { itemId: 'dragon_slayer_blade', price: 500000, currency: 'gp' }, { itemId: 'imperial_crown', price: 100, currency: 'imperial_seal' },
   { itemId: 'raid_master_cape', price: 50, currency: 'raid_relic' }, { itemId: 'edict_efficiency', price: 50000, currency: 'gp' },
@@ -79,6 +95,7 @@ export function ShopView({ state, addToInventory, removeFromInventory, addGp }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div className="space-y-12">
           {renderShopSection('Supplies', SHOP_ITEMS)}
+          {renderShopSection('Tools & Equipment', TOOLS, 'border-amber-800 text-amber-400')}
           {renderShopSection('Consumables & Bones', CONSUMABLES, 'border-green-800 text-green-400')}
           {renderShopSection('Graceful Gear', GRACEFUL_ITEMS, 'border-blue-800 text-blue-400')}
           {renderShopSection('Imperial Relics', SPECIAL_ITEMS, 'border-red-800 text-red-400')}
