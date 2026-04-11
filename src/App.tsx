@@ -15,6 +15,7 @@ import { LootDropOverlay, LootDropEvent } from './components/LootDropOverlay';
 import { LevelUpOverlay, LevelUpEvent } from './components/LevelUpOverlay';
 import { QuestCompleteOverlay, QuestCompleteEvent } from './components/QuestCompleteOverlay';
 import AdminPanel from './components/AdminPanel';
+import { PixelWorldView } from './components/PixelWorldView';
 import { SkillId } from './types';
 import { ITEMS, QUESTS } from './constants';
 
@@ -269,6 +270,7 @@ export default function App() {
         />
       }
     >
+      <PixelWorldView state={state} events={events} activeTab={activeTab} />
       {renderContent()}
       <EventLog events={events} showNotifications={state.showNotifications} />
       <LootDropOverlay drop={activeLootDrop} onDismiss={dismissLootDrop} />
