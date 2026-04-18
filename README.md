@@ -1,62 +1,65 @@
-# Imperial Idle: Design & Development Guide
+# Party Idle — Clickpocalypse-Style Auto-Explorer
 
-## 🏰 Project Vision
-Imperial Idle is a high-fidelity incremental RPG inspired by the depth and "hoarding" satisfaction of Old School RuneScape (OSRS). The goal is to create a game where every item has a purpose, the "Bank" (Treasury) is a source of pride, and the progression loop is driven by a complex web of skill interdependencies.
+*Branch: `clickpocalypse-pivot` — pivoted from the earlier solo-skill Imperial Idle on 2026-04-18.*
 
-## 🛠️ Architecture & Workflow
+Inspired by **Clickpocalypse II**. The player assembles a party of 4 heroes who auto-explore tile-based dungeons, fight, loot, and level on their own. You make the decisions that matter: equipment, ability picks, which dungeon to tackle, and the occasional dungeon-event choice.
 
-### Core State Management (`src/useGame.ts`)
-- **Single Source of Truth:** The `PlayerState` object in `useGame.ts` manages everything: GP, Essence, Skills, Inventory, Equipment, Active Edicts, Buffs, and Kingdom workers.
-- **Action Loop:** A `useInterval` hook (or `setInterval` in `useEffect`) handles the "ticking" of active actions. It calculates success based on level, processes inputs/outputs, and rolls for rare drops.
-- **Luck System:** A global `luck` stat (derived from equipment and potions) scales the probability of hitting the `RARE_DROP_TABLE`. Items like `Ring of Wealth` and `Luck Potion` are key for rare hunting.
-- **Salvage System:** Players can "Salvage" equipment in the Treasury. This destroys the item but grants `Essence` and potentially other materials (like `Iron` or `Steel` from junk items).
-- **Set Bonuses:** Certain equipment sets (e.g., `Void`, `Justiciar`, `Ancestral`) provide massive global buffs when all pieces are equipped.
+## Core Loop
+1. Pick a dungeon from the **Dungeon Board**.
+2. Watch your party move tile-to-tile, auto-fighting monsters and auto-looting.
+3. Respond to **Decision Events** (fountains, forks, suspicious chests) within 60s.
+4. Boss dies → dungeon unlocked → back to Town. Party wipes → carried back, gold hit.
+5. In **Town**: equip loot from the Stash, learn new abilities, recruit heroes at the Tavern, revive the dead at the Temple, rest at the Inn, stock potions at the Shop.
+6. Repeat at higher floors or harder dungeons.
 
-### Data Definitions (`src/constants.ts`)
-- **ITEMS:** Every item is defined here with metadata: `rarity`, `type`, `value`, `stats`, and `setBonus`.
-- **ACTIONS:** Defines the skill activities. Crucially, actions can have multiple `inputs` and `outputs` with varying `chance` values.
-- **RARE_DROP_TABLE:** A global table rolled on *every* successful action, providing that "lottery" feel.
+## Architecture
 
-### Treasury (Bank) & Hoarding
-- **OSRS Vibe:** The Treasury is designed to hold hundreds of unique items. Players are encouraged to "hoard" resources for later use in complex crafting chains (e.g., `Bones` -> `Bone Meal` -> `Prayer Potions`).
-- **Collection Log:** Rare trophies and unique drops (like `Dragon Lord Trophy`) serve as long-term goals for completionists.
-- **Organization:** Items are sorted by rarity and type, making a "beefy" bank feel rewarding to look at.
+```
+src/cc/
+  types.ts                 — Hero, Dungeon, Tile, Ability, Item, GameState
+  data/
+    classes.ts             — 6 hero classes (Knight, Priest, Mage, Rogue, Ranger, Barbarian)
+    abilities.ts           — per-class ability trees
+    monsters.ts             — 25+ monsters across 9 dungeon tiers
+    dungeons.ts            — 9 dungeons with infinite-scaling floors
+    items.ts               — weapons, armor, trinkets, potions, materials
+    names.ts               — randomized hero names
+  engine/
+    tick.ts                — master game loop (10Hz, speed 1× / 2× / 4×)
+    combat.ts              — real-time combat with cooldowns and abilities
+    exploration.ts         — tile-by-tile auto-movement
+    dungeonGen.ts          — procedural dungeon + encounter generator
+    loot.ts                — loot rolls, tiered drop pools, auto-sell
+    decisions.ts           — decision events
+    progression.ts         — XP curve, level-up, ability points
+    offline.ts             — up to 8h offline catch-up
+    util.ts                — stats, HP/MP formulas, rarity colors
+  useGame.ts               — React hook wrapping state, tick, persistence
+  App.tsx                  — main shell (Sidebar + HUD + Tabs)
+  components/
+    Sidebar, HUDBar, DungeonView, PartyView, StashView,
+    TownView, CombatLog, DecisionModal
+```
 
-## 🎨 Stylistic Choices
-- **Typography:** Inter for UI, JetBrains Mono for data/stats.
-- **Color Palette:** Deep emeralds, rich golds, and obsidian blacks to evoke a "Royal/Imperial" theme.
-- **Rarity Colors:**
-  - `common`: Gray
-  - `uncommon`: Green
-  - `rare`: Blue
-  - `epic`: Purple
-  - `legendary`: Orange
-  - `celestial`: Cyan/Glow
+## Game Design Notes
+- **Party size 4** (bench for extras). Starts with Knight + Priest, 100 gp, 3 healing potions.
+- **9 dungeons** from *Sewer Warrens* (L1) to *Abyss Gate* (L70, infinite scaling).
+- **Tile kinds:** entrance, monster, chest, trap, shrine, fountain, fork, merchant, boss, exit.
+- **Combat:** each combatant has its own attack timer; abilities have cooldowns and MP cost.
+- **Decisions:** fountain / fork / chest / merchant modals with 60s auto-pick fallback.
+- **Persistence:** localStorage save every 5s + on unload. Offline catch-up computes batched rewards on reload.
+- **No active skill-clicking** — everything is observed and decided at town or on modal pop-ups.
 
-## 🚀 Roadmap for the Next Agent
+## Running
+```
+npm install
+npm run dev       # http://localhost:3000 (or 3001 if 3000 is busy)
+npm run build
+npm run lint      # tsc --noEmit
+```
 
-### 1. 🧪 Advanced Alchemy & Herblore
-- Implement a "Brewing" action that requires multiple herbs and secondary ingredients (e.g., "Dragon Scale Dust").
-- Add more complex buffs: "Double XP", "Auto-Salvage", "Instant Tick".
+## Design Doc
+See `CLICKPOCALYPSE_DESIGN.md` for the full pivot design and what was kept from the original Imperial Idle.
 
-### 2. ⚔️ Slayer & Bossing
-- Create a "Slayer" skill where players are assigned tasks to kill specific monsters.
-- Implement "Boss" actions that are high-duration, high-risk, but drop "Uniques" (1/5000 rarity items).
-
-### 3. 📦 Bank Organization
-- Add "Tabs" to the Treasury (BankView) to allow players to categorize their loot (Resources, Gear, Potions, Junk).
-- Implement a "Search" bar for the inventory.
-
-### 4. 🔨 Socketing & Augmentation
-- Allow players to "Socket" the Gems (Ruby, Diamond, etc.) into equipment with empty slots to customize stats.
-
-### 5. 🏰 Kingdom Expansion
-- Expand the `KingdomView` to include "Buildings" that provide passive global buffs (e.g., "Blacksmith" reduces Smithing duration).
-
-## 📝 Tips for Implementation
-- **Item Repurposing:** When adding new items, always ask: "What skill can use this as an input?" (e.g., monster bones -> Prayer XP, flax -> Bowstrings).
-- **The "OSRS Vibe":** Keep drop rates low for the best items. The satisfaction comes from the grind and the eventual "big drop."
-- **Performance:** As the inventory grows, ensure `BankView` remains performant (memoize item components).
-
----
-*Developed with ❤️ for the Imperial Empire.*
+## Previous Branch
+The original solo-skill OSRS-clone implementation is preserved on `main` and `backup-original-state`.
