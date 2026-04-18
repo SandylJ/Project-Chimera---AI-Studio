@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GameState, Hero, MonsterInstance, Tile, Rarity } from '../types';
+import { GameState, Hero, MonsterInstance, Tile, Rarity, AttackVisual } from '../types';
 import { CLASSES } from '../data/classes';
 import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
@@ -80,6 +80,7 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
   // ---- HP diffing for floats/flashes/loot pops ----
   const prevHpRef = useRef<Record<string, { hp: number; maxHp: number }>>({});
   const prevTileKey = useRef<string>('');
+  const tileChangedAtRef = useRef<number>(0);
   const [floats, setFloats] = useState<Float[]>([]);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [floorLoot, setFloorLoot] = useState<DroppedLoot[]>([]);
@@ -156,7 +157,7 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
       const now = Date.now();
       setFloats(f => f.filter(x => now - x.bornAt < 1100));
       setFlashes(f => f.filter(x => x.until > now));
-      setFloorLoot(l => l.filter(x => now - x.bornAt < 15_000)); // loot stays 15s
+      setFloorLoot(l => l.filter(x => now - x.bornAt < 2800)); // rest 1.5s + fly 1.0s + fade
     }, 300);
     return () => window.clearInterval(id);
   }, []);
@@ -166,6 +167,7 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
     const key = `${dungeon.partyPos.x},${dungeon.partyPos.y}`;
     if (key === prevTileKey.current) return;
     prevTileKey.current = key;
+    tileChangedAtRef.current = Date.now();
     // reset floor loot when the party moves rooms
     setFloorLoot([]);
     const now = Date.now();
@@ -302,27 +304,36 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
               <BackWall side="top" theme={theme} doorway={pathHasDoorway(dungeon, 'forward')} />
               <BackWall side="right" theme={theme} doorway={pathHasDoorway(dungeon, 'right')} />
 
-              {/* Loot on floor (lays flat on the tilted floor) */}
+              {/* Loot on floor (lays flat on the tilted floor, then flies to stash) */}
               {floorLoot.map(l => (
-                <FloorLoot key={l.id} loot={l} />
+                <FloorLoot key={l.id} loot={l} nowTick={nowTick} />
               ))}
 
               {/* Sprites — positioned on the tilted plane, counter-rotated to face camera */}
               {spriteOrder.map(s => {
+                // Tile-change walk-in: heroes slide in from the left, enemies from the right
+                const entryAge = nowTick - tileChangedAtRef.current;
+                const entryT = entryAge < 500 ? entryAge / 500 : 1;
+                const walkInX = entryT < 1
+                  ? (1 - entryT) * (s.kind === 'hero' ? -40 : 40)
+                  : 0;
+                const entryOpacity = Math.min(1, entryT * 2);
                 const commonStyle: React.CSSProperties = {
                   position: 'absolute',
                   left: `${s.x}%`, top: `${s.y}%`,
-                  transform: 'translate(-50%, -100%) rotateX(-58deg)',
+                  transform: `translate(calc(-50% + ${walkInX}px), -100%) rotateX(-58deg)`,
                   transformOrigin: '50% 100%',
                   transformStyle: 'preserve-3d',
                   pointerEvents: 'auto',
+                  opacity: entryOpacity,
+                  transition: entryT < 1 ? 'transform 120ms linear' : undefined,
                 };
                 if (s.kind === 'hero') {
                   const h = heroes.find(x => x.id === s.id)!;
                   const flash = flashes.find(f => f.targetId === s.id);
                   return (
                     <div key={s.id} style={commonStyle}>
-                      <HeroSpriteBody hero={h} flash={flash} nowTick={nowTick} />
+                      <HeroSpriteBody hero={h} flash={flash} nowTick={nowTick} walkingIn={entryT < 1} />
                     </div>
                   );
                 } else {
@@ -337,6 +348,46 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
                     </div>
                   );
                 }
+              })}
+
+              {/* Projectiles / attack effects: hero actions */}
+              {heroes.map(h => {
+                if (!h.lastAction) return null;
+                const age = nowTick - h.lastAction.at;
+                if (age < 0 || age > 600) return null;
+                const src = heroSlots.find(s => s.heroId === h.id);
+                // target can be hero (for heal/buff) or enemy
+                const tgtHero = heroSlots.find(s => s.heroId === h.lastAction!.targetId);
+                const tgtEnemy = enemySlots.find(s => s.heroId === h.lastAction!.targetId);
+                const tgt = tgtHero ?? tgtEnemy;
+                if (!src || !tgt) return null;
+                return (
+                  <Projectile
+                    key={'p_' + h.id + '_' + h.lastAction.at}
+                    src={src} tgt={tgt}
+                    kind={h.lastAction.kind}
+                    age={age}
+                  />
+                );
+              })}
+
+              {/* Projectiles: monster basic attacks */}
+              {enemies.map(m => {
+                if (!m.lastAttack) return null;
+                const age = nowTick - m.lastAttack.at;
+                if (age < 0 || age > 450) return null;
+                const src = enemySlots.find(s => s.heroId === m.id);
+                const tgt = heroSlots.find(s => s.heroId === m.lastAttack!.targetHeroId);
+                if (!src || !tgt) return null;
+                return (
+                  <Projectile
+                    key={'mp_' + m.id + '_' + m.lastAttack.at}
+                    src={src} tgt={tgt}
+                    kind="melee"
+                    age={age}
+                    hostile
+                  />
+                );
               })}
 
               {/* Floating damage numbers — positioned on floor, counter-rotated */}
@@ -592,22 +643,34 @@ const BackWall: React.FC<{
 // ============ Hero sprite body ============
 
 const HeroSpriteBody: React.FC<{
-  hero: Hero; flash?: Flash; nowTick: number;
-}> = ({ hero, flash, nowTick }) => {
+  hero: Hero; flash?: Flash; nowTick: number; walkingIn?: boolean;
+}> = ({ hero, flash, nowTick, walkingIn }) => {
   const cls = CLASSES[hero.classId];
   const hpPct = Math.max(0, (hero.hp / hero.maxHp) * 100);
   const mpPct = hero.maxMp > 0 ? Math.max(0, (hero.mp / hero.maxMp) * 100) : 0;
   const downed = hero.state !== 'alive';
-  const bob = Math.sin((nowTick / 450) + hashHue(hero.id)) * 2;
-  const casting = hero.attackTimer < 120 && !downed;
+  // Stronger bob during walk-in to simulate footsteps
+  const bobPeriod = walkingIn ? 150 : 450;
+  const bob = Math.sin((nowTick / bobPeriod) + hashHue(hero.id)) * (walkingIn ? 3.5 : 2);
+  // Attack lunge driven by recent action
+  const actionAge = hero.lastAction ? nowTick - hero.lastAction.at : Infinity;
+  const actionKind = hero.lastAction?.kind;
+  const lungeT = actionAge < 260 ? 1 - actionAge / 260 : 0;
+  const lungeX = lungeT > 0 && (actionKind === 'melee')
+    ? Math.sin(lungeT * Math.PI) * 22
+    : lungeT > 0 && actionKind === 'ranged'
+    ? -Math.sin(lungeT * Math.PI) * 4
+    : lungeT > 0 && actionKind?.startsWith('spell_')
+    ? -Math.sin(lungeT * Math.PI) * 6
+    : 0;
   const flashColor = flash?.kind === 'heal' ? '#7FE2A0' : flash?.kind === 'crit' ? '#ff4040' : '#ffffff';
 
   return (
     <div className="flex flex-col items-center"
            style={{
              filter: downed ? 'grayscale(100%) opacity(0.45)' : flash ? `drop-shadow(0 0 10px ${flashColor})` : undefined,
-             transform: `translateY(${bob}px) ${casting ? 'translateX(8px)' : ''}`,
-             transition: 'transform 180ms ease-out',
+             transform: `translate(${lungeX}px, ${bob}px) ${lungeT > 0 && actionKind === 'melee' ? `scale(${1 + lungeT * 0.08})` : ''}`,
+             transition: lungeT > 0 ? 'transform 100ms ease-out' : 'transform 180ms ease-out',
            }}>
       {/* Name + HP bars (tiny, CC2-style) */}
       <div style={{ minWidth: 70, marginBottom: 2 }}>
@@ -681,19 +744,24 @@ const MonsterSpriteBody: React.FC<{
   if (!def) return null;
   const hpPct = Math.max(0, (monster.hp / monster.maxHp) * 100);
   const bob = Math.sin((nowTick / 380) + hashHue(monster.id)) * 2;
-  const attacking = monster.attackTimer < 150;
+  const attackAge = monster.lastAttack ? nowTick - monster.lastAttack.at : Infinity;
+  const lungeT = attackAge < 260 ? 1 - attackAge / 260 : 0;
+  const lungeX = -Math.sin(lungeT * Math.PI) * 18; // monster lunges LEFT toward heroes
   const flashColor = flash?.kind === 'crit' ? '#ff4040' : '#ffffff';
   const stunned = monster.stunRemaining > 0;
   const isBoss = def.boss;
   const size = isBoss ? 58 : 40;
+  const wounded = monster.hp / monster.maxHp < 0.3;
+  // Wounded sway: the monster visibly stumbles when near death
+  const woundSway = wounded ? Math.sin(nowTick / 140) * 6 : 0;
 
   return (
     <div className={`flex flex-col items-center ${onClick ? 'cursor-crosshair' : ''}`}
          onClick={onClick}
          style={{
-           filter: flash ? `drop-shadow(0 0 10px ${flashColor})` : undefined,
-           transform: `translateY(${bob}px) ${attacking ? 'translateX(-10px)' : ''}`,
-           transition: 'transform 140ms ease-out',
+           filter: flash ? `drop-shadow(0 0 10px ${flashColor})` : wounded ? 'drop-shadow(0 0 6px #ff4040aa)' : undefined,
+           transform: `translate(${lungeX}px, ${bob}px) rotate(${woundSway * 0.4}deg) ${lungeT > 0 ? `scale(${1 + lungeT * 0.08})` : ''}`,
+           transition: lungeT > 0 ? 'transform 100ms ease-out' : 'transform 140ms ease-out',
            animation: monster.hp <= 0 ? 'fadeOut 0.5s forwards' : 'popIn 0.5s ease-out',
          }}>
       {/* Name + HP */}
@@ -750,6 +818,202 @@ const MonsterSpriteBody: React.FC<{
   );
 };
 
+// ============ Projectile / attack effect ============
+
+interface SlotRef { heroId: string; x: number; y: number; depth: number }
+
+const Projectile: React.FC<{
+  src: SlotRef; tgt: SlotRef; kind: AttackVisual; age: number; hostile?: boolean;
+}> = ({ src, tgt, kind, age, hostile }) => {
+  // Some abilities target self / caster — show on-the-spot burst
+  const selfTarget = src.heroId === tgt.heroId;
+
+  // Total animation length varies per kind
+  const dur =
+    kind === 'spell_aoe' ? 500 :
+    kind === 'buff_self' ? 500 :
+    kind === 'spell_heal' ? 550 :
+    kind === 'spell_light' ? 380 :
+    kind === 'melee' ? 260 : 400;
+  const t = Math.min(1, age / dur);
+
+  // Screen-travel arc for projectiles that fly
+  const flies = !selfTarget && (kind === 'ranged' || kind === 'spell_fire' || kind === 'spell_frost' || kind === 'spell_shadow' || kind === 'spell_heal');
+  const x = flies ? src.x + (tgt.x - src.x) * t : tgt.x;
+  const y = flies ? src.y + (tgt.y - src.y) * t - 6 : tgt.y - 4;
+  // Slight parabolic arc
+  const arc = flies ? -Math.sin(t * Math.PI) * 20 : 0;
+
+  const baseStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: `${x}%`,
+    top: `${y}%`,
+    transform: `translate(-50%, -100%) rotateX(-58deg) translateY(${arc}px)`,
+    transformOrigin: '50% 100%',
+    transformStyle: 'preserve-3d',
+    pointerEvents: 'none',
+    zIndex: 20,
+  };
+
+  // Choose visual per kind
+  switch (kind) {
+    case 'melee': {
+      // Slash burst at the target on impact
+      const opacity = Math.sin(t * Math.PI);
+      return (
+        <div style={baseStyle}>
+          <div className="relative" style={{ width: 42, height: 42, opacity }}>
+            <span className="absolute inset-0 flex items-center justify-center text-4xl font-black"
+                  style={{
+                    color: hostile ? '#ff6060' : '#fff',
+                    textShadow: hostile
+                      ? '0 0 12px #ff2020, 2px 2px 0 #000'
+                      : '0 0 12px #ffe080, 2px 2px 0 #000',
+                    transform: `rotate(${hostile ? -25 : 25}deg) scale(${0.7 + t * 0.6})`,
+                  }}>✦</span>
+          </div>
+        </div>
+      );
+    }
+    case 'ranged': {
+      // A flying arrow
+      const angle = Math.atan2(tgt.y - src.y, tgt.x - src.x) * 180 / Math.PI;
+      return (
+        <div style={baseStyle}>
+          <div style={{
+            width: 30, height: 3, borderRadius: 2,
+            background: 'linear-gradient(90deg, #9a7a40 0%, #f2d080 80%, #fff 100%)',
+            boxShadow: '0 0 5px #f2d080',
+            transform: `rotate(${angle}deg) translate(-50%, 0)`,
+          }} />
+        </div>
+      );
+    }
+    case 'spell_fire': {
+      const opacity = 1 - t * 0.3;
+      return (
+        <div style={baseStyle}>
+          <div className="relative" style={{ width: 24, height: 24 }}>
+            <div className="absolute inset-0 rounded-full"
+                 style={{
+                   background: 'radial-gradient(circle, #ffe080 0%, #ff6030 40%, #ff2020 70%, transparent 100%)',
+                   boxShadow: '0 0 16px #ff6030, 0 0 28px #ff8030',
+                   opacity,
+                 }} />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl"
+                 style={{ filter: 'drop-shadow(0 0 6px #ff6030)' }}>🔥</div>
+          </div>
+        </div>
+      );
+    }
+    case 'spell_frost': {
+      return (
+        <div style={baseStyle}>
+          <div className="relative" style={{ width: 22, height: 22 }}>
+            <div className="absolute inset-0"
+                 style={{
+                   background: 'radial-gradient(circle, #e4f4ff 0%, #6ec4f0 50%, #2a6a9a 100%)',
+                   boxShadow: '0 0 14px #6ec4f0',
+                   borderRadius: '30%',
+                   transform: `rotate(${t * 720}deg)`,
+                 }} />
+          </div>
+        </div>
+      );
+    }
+    case 'spell_heal': {
+      const opacity = 1 - t * 0.2;
+      return (
+        <div style={baseStyle}>
+          <div className="relative" style={{ width: 24, height: 24, opacity }}>
+            <div className="absolute inset-0 rounded-full"
+                 style={{
+                   background: 'radial-gradient(circle, #d8ffd8 0%, #7FE2A0 50%, #2a8040 100%)',
+                   boxShadow: '0 0 12px #7FE2A0, 0 0 24px #7FE2A080',
+                 }} />
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-xl">✚</div>
+          </div>
+        </div>
+      );
+    }
+    case 'spell_light': {
+      const scale = 0.4 + Math.sin(t * Math.PI) * 1.4;
+      const opacity = Math.sin(t * Math.PI);
+      return (
+        <div style={baseStyle}>
+          <div style={{
+            width: 48, height: 48,
+            background: 'radial-gradient(circle, #fff 0%, #ffe080 50%, transparent 70%)',
+            borderRadius: '50%',
+            transform: `scale(${scale})`,
+            opacity,
+            boxShadow: '0 0 40px #ffe080',
+          }} />
+        </div>
+      );
+    }
+    case 'spell_shadow': {
+      const opacity = 1 - t * 0.2;
+      return (
+        <div style={baseStyle}>
+          <div style={{
+            width: 28, height: 28,
+            background: 'radial-gradient(circle, #c090ff 0%, #6020a0 50%, #200040 100%)',
+            borderRadius: '50%',
+            boxShadow: '0 0 16px #c090ff',
+            opacity,
+            transform: `scale(${0.6 + t * 0.8}) rotate(${t * 300}deg)`,
+          }} />
+        </div>
+      );
+    }
+    case 'spell_aoe': {
+      // Expanding ring at the source caster
+      const scale = 0.2 + t * 2.5;
+      const opacity = 1 - t;
+      return (
+        <div style={{
+          position: 'absolute',
+          left: `${src.x}%`, top: `${src.y}%`,
+          transform: `translate(-50%, -60%) rotateX(-58deg) scale(${scale})`,
+          transformOrigin: '50% 100%',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }}>
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%',
+            border: '3px solid #c58bff',
+            boxShadow: '0 0 28px #c58bff, inset 0 0 16px #c58bff',
+            opacity,
+          }} />
+        </div>
+      );
+    }
+    case 'buff_self': {
+      const opacity = Math.sin(t * Math.PI);
+      return (
+        <div style={{
+          position: 'absolute',
+          left: `${src.x}%`, top: `${src.y}%`,
+          transform: 'translate(-50%, -90%) rotateX(-58deg)',
+          transformOrigin: '50% 100%',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: 'radial-gradient(circle, #ffe08080 0%, transparent 70%)',
+            boxShadow: '0 0 24px #ffe080',
+            opacity,
+          }} />
+        </div>
+      );
+    }
+    default:
+      return null;
+  }
+};
+
 // ============ Floating number body ============
 
 const FloatingNumberBody: React.FC<{ float: Float; nowTick: number }> = ({ float, nowTick }) => {
@@ -776,27 +1040,56 @@ const FloatingNumberBody: React.FC<{ float: Float; nowTick: number }> = ({ float
 
 // ============ Loot on floor ============
 
-const FloorLoot: React.FC<{ loot: DroppedLoot }> = ({ loot }) => {
+const FloorLoot: React.FC<{ loot: DroppedLoot; nowTick: number }> = ({ loot, nowTick }) => {
   const it = ITEMS[loot.itemId];
   const icon = it?.icon || '🪙';
   const rarity = it?.rarity || 'common';
   const glow = rarityGlow(rarity);
+  const age = nowTick - loot.bornAt;
+  // Two-phase: rest on floor for 1.5s, then fly up and right to the stash corner.
+  const flying = age > 1500;
+  // Resting phase: slight bob + subtle sparkle
+  if (!flying) {
+    const sparkle = 0.7 + Math.sin(age / 180) * 0.3;
+    const riseT = Math.min(1, age / 300);
+    return (
+      <div className="absolute"
+           style={{
+             left: `${loot.x}%`, top: `${loot.y}%`,
+             transform: `translate(-50%, -50%) translateY(${-riseT * 4}px) rotateX(-58deg) translateZ(${4 * sparkle}px)`,
+             transformOrigin: '50% 100%',
+             pointerEvents: 'none',
+             opacity: riseT,
+           }}>
+        <div style={{
+          fontSize: 28,
+          filter: `drop-shadow(0 0 ${6 + sparkle * 6}px ${glow}) drop-shadow(0 3px 3px rgba(0,0,0,0.85))`,
+        }}>{icon}</div>
+      </div>
+    );
+  }
+  // Flying phase: 1000ms flight toward the stash UI (up and to the right).
+  const t = Math.min(1, (age - 1500) / 1000);
+  // ease-in cubic
+  const te = t * t * (3 - 2 * t);
+  const dx = te * 120;   // move rightward 120px
+  const dy = -te * 140 - Math.sin(t * Math.PI) * 20; // rise with arc
+  const scale = 1 - te * 0.55;
+  const opacity = t < 0.8 ? 1 : Math.max(0, (1 - t) * 5);
   return (
     <div className="absolute"
          style={{
            left: `${loot.x}%`, top: `${loot.y}%`,
-           transform: 'translate(-50%, -50%)',
-           animation: 'fadeIn 0.4s',
+           transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${scale})`,
+           transformOrigin: 'center',
            pointerEvents: 'none',
+           opacity,
+           zIndex: 25,
          }}>
-      <div className="relative">
-        <div className="text-2xl"
-             style={{
-               filter: `drop-shadow(0 0 6px ${glow}) drop-shadow(0 2px 2px rgba(0,0,0,0.8))`,
-             }}>
-          {icon}
-        </div>
-      </div>
+      <div style={{
+        fontSize: 28,
+        filter: `drop-shadow(0 0 10px ${glow}) drop-shadow(0 4px 6px rgba(0,0,0,0.9))`,
+      }}>{icon}</div>
     </div>
   );
 };

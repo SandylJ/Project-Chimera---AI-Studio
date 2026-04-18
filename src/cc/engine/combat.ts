@@ -1,4 +1,4 @@
-import { Hero, MonsterInstance, GameState, Ability, AbilityEffect, Tile, Stats, StatKey } from '../types';
+import { Hero, MonsterInstance, GameState, Ability, AbilityEffect, Tile, Stats, StatKey, AttackVisual, ClassId } from '../types';
 import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
 import {
@@ -64,6 +64,7 @@ export function tickCombat(state: GameState, dt: number): void {
       // Basic attack
       const target = pickLowestHpEnemy(tile);
       if (target) {
+        hero.lastAction = { targetId: target.id, kind: classAttackVisual(hero.classId), at: Date.now() };
         const dmg = heroBasicAttackDamage(hero);
         applyDamageToMonster(state, target, dmg, hero.name);
       }
@@ -90,6 +91,7 @@ export function tickCombat(state: GameState, dt: number): void {
     const armor = totalArmor(target);
     const reduction = armor * 0.4 + defStats.con * 0.3;
     let dmg = Math.max(1, Math.floor(rawDmg - reduction));
+    m.lastAttack = { targetHeroId: target.id, at: Date.now() };
     applyDamageToHero(state, target, dmg);
     m.attackTimer = monsterAttackIntervalMs(def);
   }
@@ -131,6 +133,42 @@ function castAbility(state: GameState, hero: Hero, ab: Ability, tile: Tile): boo
   const stats = effectiveStats(hero);
   hero.mp -= ab.manaCost;
   hero.cooldowns[ab.id] = ab.cooldown;
+
+  // Pick the first target for visual purposes (projectile source→dest).
+  let visualTargetId: string | undefined;
+  switch (ab.targeting) {
+    case 'highest_hp_enemy':
+      visualTargetId = enemies.length ? enemies.reduce((a, b) => a.hp > b.hp ? a : b).id : undefined;
+      break;
+    case 'lowest_hp_enemy':
+      visualTargetId = enemies.length ? enemies.reduce((a, b) => a.hp < b.hp ? a : b).id : undefined;
+      break;
+    case 'random_enemy':
+      visualTargetId = enemies.length ? enemies[Math.floor(Math.random() * enemies.length)].id : undefined;
+      break;
+    case 'all_enemies':
+      visualTargetId = enemies[0]?.id;
+      break;
+    case 'lowest_hp_ally': {
+      const pool = aliveActiveHeroes(state).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+      visualTargetId = pool[0]?.id;
+      break;
+    }
+    case 'all_allies':
+      visualTargetId = aliveActiveHeroes(state)[0]?.id;
+      break;
+    case 'self':
+      visualTargetId = hero.id;
+      break;
+  }
+  if (visualTargetId) {
+    hero.lastAction = {
+      targetId: visualTargetId,
+      kind: abilityVisual(ab),
+      abilityId: ab.id,
+      at: Date.now(),
+    };
+  }
 
   // Resolve target(s) per targeting
   let targets: MonsterInstance[] = [];
@@ -262,6 +300,35 @@ export function heroBasicAttackDamage(hero: Hero): number {
   let dmg = Math.floor(base);
   if (rollChance(0.05 + stats.luck * 0.008)) dmg = Math.floor(dmg * 1.7);
   return Math.max(1, dmg);
+}
+
+export function classAttackVisual(classId: ClassId): AttackVisual {
+  switch (classId) {
+    case 'knight':
+    case 'barbarian':
+    case 'rogue':
+      return 'melee';
+    case 'ranger':
+      return 'ranged';
+    case 'mage':
+      return 'spell_fire';
+    case 'priest':
+      return 'spell_light';
+  }
+}
+
+export function abilityVisual(ab: Ability): AttackVisual {
+  const id = ab.id;
+  if (id.includes('fire') || id.includes('meteor')) return 'spell_fire';
+  if (id.includes('frost') || id.includes('ice') || id.includes('nova')) return 'spell_frost';
+  if (id.includes('heal') || id.includes('blessing') || id.includes('mass_heal')) return 'spell_heal';
+  if (id.includes('smite') || id.includes('holy') || id === 'taunt' || id === 'bulwark') return 'spell_light';
+  if (id.includes('shadow') || id.includes('poison') || id === 'backstab') return 'spell_shadow';
+  if (id.includes('volley') || id.includes('precise') || id.includes('piercing')) return 'ranged';
+  if (id.includes('cleave') || id.includes('fan_of') || id.includes('arcane')) return 'spell_aoe';
+  if (id === 'rage' || id === 'shadow_step') return 'buff_self';
+  if (id.includes('bash') || id.includes('execute')) return 'melee';
+  return 'melee';
 }
 
 function scalingStatFor(hero: Hero): StatKey {

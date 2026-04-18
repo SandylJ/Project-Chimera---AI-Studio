@@ -91,6 +91,11 @@ export interface HeroClass {
 
 export type HeroState = 'alive' | 'downed' | 'dead';
 
+export type AttackVisual =
+  | 'melee' | 'ranged'
+  | 'spell_fire' | 'spell_frost' | 'spell_heal' | 'spell_light' | 'spell_shadow'
+  | 'spell_aoe' | 'buff_self';
+
 export interface Hero {
   id: string;
   classId: ClassId;
@@ -111,6 +116,8 @@ export interface Hero {
   abilityPoints: number;
   shield: number; // temp absorb
   buffs: Array<{ id: string; stat: StatKey; power: number; remaining: number; }>;
+  // Transient: visual hint of the most-recent action (drives projectile / attack fx)
+  lastAction?: { targetId: string; kind: AttackVisual; abilityId?: string; at: number };
 }
 
 export interface Monster {
@@ -138,6 +145,8 @@ export interface MonsterInstance {
   attackTimer: number;
   dots: Array<{ id: string; remaining: number; tick: number; nextTick: number; dmg: number }>;
   stunRemaining: number;
+  // Transient: visual hint of the most-recent attack (drives attack fx)
+  lastAttack?: { targetHeroId: string; at: number };
 }
 
 export type TileKind =
