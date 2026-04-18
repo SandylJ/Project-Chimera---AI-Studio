@@ -89,12 +89,79 @@ function loadFromStorage(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as GameState;
+    const parsed = JSON.parse(raw) as Partial<GameState>;
     if (parsed.version !== STATE_VERSION) return null;
-    return parsed;
-  } catch {
+    return migrate(parsed);
+  } catch (e) {
+    console.error('Failed to load save, starting fresh:', e);
     return null;
   }
+}
+
+// Fill in any fields missing from older save shapes so we never crash on
+// `undefined.toLocaleString()` etc. Non-destructive.
+function migrate(s: Partial<GameState>): GameState {
+  const filled: GameState = {
+    version: STATE_VERSION,
+    heroes: (s.heroes ?? []).map(migrateHero),
+    stash: {
+      items: s.stash?.items ?? {},
+      gold: s.stash?.gold ?? 0,
+      essence: s.stash?.essence ?? 0,
+      bountyMarks: s.stash?.bountyMarks ?? 0,
+    },
+    activeDungeon: s.activeDungeon,
+    currentLog: s.currentLog ?? [],
+    unlockedDungeons: s.unlockedDungeons?.length ? s.unlockedDungeons : ['sewer_warrens'],
+    unlockedClasses: s.unlockedClasses?.length ? s.unlockedClasses : ['knight', 'priest'],
+    activeDecision: s.activeDecision,
+    speed: (s.speed === 1 || s.speed === 2 || s.speed === 4) ? s.speed : 1,
+    paused: s.paused ?? false,
+    lastTick: s.lastTick ?? Date.now(),
+    totalPlaytime: s.totalPlaytime ?? 0,
+    dungeonsCompleted: s.dungeonsCompleted ?? {},
+    totalMonstersKilled: s.totalMonstersKilled ?? 0,
+    totalGoldEarned: s.totalGoldEarned ?? 0,
+    achievements: s.achievements ?? [],
+    autoSellRarities: s.autoSellRarities ?? [],
+    collectionLog: s.collectionLog ?? [],
+    pendingOfflineReport: s.pendingOfflineReport,
+    tutorialStep: s.tutorialStep ?? 0,
+  };
+  // Validate activeDungeon shape — if it's malformed, drop it to send the
+  // player back to the town picker rather than crashing BattleView.
+  if (filled.activeDungeon) {
+    const d = filled.activeDungeon;
+    if (!Array.isArray(d.tiles) || d.tiles.length === 0 || !d.partyPos || !d.path) {
+      console.warn('Save had malformed activeDungeon, dropping it.');
+      filled.activeDungeon = undefined;
+    }
+  }
+  return filled;
+}
+
+function migrateHero(h: Partial<Hero> & { id: string }): Hero {
+  return {
+    id: h.id,
+    classId: h.classId ?? 'knight',
+    name: h.name ?? 'Unknown',
+    level: h.level ?? 1,
+    xp: h.xp ?? 0,
+    hp: h.hp ?? 1,
+    maxHp: h.maxHp ?? 1,
+    mp: h.mp ?? 0,
+    maxMp: h.maxMp ?? 0,
+    baseStats: h.baseStats ?? { str: 1, dex: 1, int: 1, con: 1, spd: 1, luck: 1 },
+    equipment: h.equipment ?? {},
+    abilities: h.abilities ?? [],
+    cooldowns: h.cooldowns ?? {},
+    attackTimer: h.attackTimer ?? 1000,
+    state: h.state ?? 'alive',
+    bench: h.bench ?? false,
+    abilityPoints: h.abilityPoints ?? 0,
+    shield: h.shield ?? 0,
+    buffs: h.buffs ?? [],
+  };
 }
 
 function saveToStorage(state: GameState): void {

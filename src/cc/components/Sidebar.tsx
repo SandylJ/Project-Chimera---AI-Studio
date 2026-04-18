@@ -59,6 +59,21 @@ export const Sidebar: React.FC<Props> = ({ tab, setTab, state }) => {
           <span className="text-[#E8E0D4]">{state.totalMonstersKilled.toLocaleString()}</span>
         </div>
       </div>
+      <button
+        onClick={() => {
+          if (!confirm('Hard reset: wipe save, clear cache, reload?')) return;
+          try { localStorage.removeItem('cc_save_v1'); } catch {}
+          try {
+            if ('caches' in window) caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+          } catch {}
+          window.location.href = window.location.pathname + '?nuked=' + Date.now();
+        }}
+        className="mt-2 text-[9px] text-[#7A6E60] hover:text-[#E86E6E] border border-[#3D3328] hover:border-[#E86E6E]/50 rounded py-1 uppercase tracking-widest"
+        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+        title="If the game is stuck, click this to wipe save + cache and reload"
+      >
+        ⚠ Hard Reset
+      </button>
     </nav>
   );
 };
