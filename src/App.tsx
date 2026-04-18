@@ -16,6 +16,7 @@ import { LevelUpOverlay, LevelUpEvent } from './components/LevelUpOverlay';
 import { QuestCompleteOverlay, QuestCompleteEvent } from './components/QuestCompleteOverlay';
 import AdminPanel from './components/AdminPanel';
 import { PixelWorldView } from './components/PixelWorldView';
+import { VisualDashboard } from './components/VisualDashboard';
 import { SkillId } from './types';
 import { ITEMS, QUESTS } from './constants';
 
@@ -199,6 +200,10 @@ export default function App() {
     }
     if (activeTab === 'achievements') {
       return <AchievementView state={state} />;
+    }
+
+    if (activeTab === 'world-v2') {
+      return <VisualDashboard state={state} events={events} />;
     }
 
     // Bounty Hunting (replaces generic slayer skill view)
