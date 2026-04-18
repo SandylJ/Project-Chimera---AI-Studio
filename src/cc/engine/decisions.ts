@@ -166,4 +166,10 @@ export function resolveDecision(state: GameState, optionId: string): void {
     }
   }
   state.activeDecision = undefined;
+  // mark the tile cleared so the tick loop doesn't re-trigger this decision.
+  const d = state.activeDungeon;
+  if (d) {
+    const tile = d.tiles.find(t => t.x === d.partyPos.x && t.y === d.partyPos.y);
+    if (tile) tile.cleared = true;
+  }
 }

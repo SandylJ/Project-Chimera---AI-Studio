@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { GameState, Tile } from '../types';
 import { DUNGEON_DEFS } from '../data/dungeons';
 import { CLASSES } from '../data/classes';
+import { MONSTERS } from '../data/monsters';
 
 interface Props {
   state: GameState;
@@ -115,7 +116,54 @@ const DungeonGrid: React.FC<{ state: GameState }> = ({ state }) => {
         </div>
       </div>
 
-      <PartyStatus state={state} />
+      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <PartyStatus state={state} />
+        <EncounterPanel state={state} />
+      </div>
+    </div>
+  );
+};
+
+const EncounterPanel: React.FC<{ state: GameState }> = ({ state }) => {
+  const d = state.activeDungeon;
+  if (!d) return null;
+  const tile = d.tiles.find(t => t.x === d.partyPos.x && t.y === d.partyPos.y);
+  const encounter = tile?.encounter;
+  if (!encounter || encounter.monsters.length === 0) {
+    return (
+      <div className="bg-[#14100C] rounded border border-[#3D3328] p-2 text-xs text-[#7A6E60] italic flex items-center justify-center min-h-[72px]">
+        {tile?.cleared ? 'Searching for next path...' : 'All quiet.'}
+      </div>
+    );
+  }
+  return (
+    <div className="bg-[#14100C] rounded border border-[#E86E6E]/40 p-2">
+      <div className="text-[10px] uppercase tracking-widest text-[#E86E6E] mb-1 font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        ⚔ In Combat
+      </div>
+      <div className="space-y-1">
+        {encounter.monsters.map(m => {
+          const def = MONSTERS[m.monsterId];
+          if (!def) return null;
+          const pct = (m.hp / m.maxHp) * 100;
+          return (
+            <div key={m.id} className="flex items-center gap-2 text-xs">
+              <span>{def.icon}</span>
+              <span className="font-bold text-[#F2E6A8] w-28 truncate">{def.name}</span>
+              <div className="flex-1 h-2 bg-black rounded overflow-hidden relative">
+                <div className="h-full bg-gradient-to-r from-[#8a2a2a] to-[#E86E6E] transition-all"
+                     style={{ width: pct + '%' }} />
+                <div className="absolute inset-0 text-[8px] flex items-center justify-center font-bold"
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {Math.ceil(m.hp)}/{m.maxHp}
+                </div>
+              </div>
+              {m.stunRemaining > 0 && <span className="text-[10px] text-[#F2B84B]" title="Stunned">💫</span>}
+              {m.dots.length > 0 && <span className="text-[10px] text-[#7FE2A0]" title="Poisoned/Burning">🟢</span>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

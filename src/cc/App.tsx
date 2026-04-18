@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCcGame } from './useGame';
 import { Sidebar } from './components/Sidebar';
 import { HUDBar } from './components/HUDBar';
@@ -8,11 +8,48 @@ import { StashView } from './components/StashView';
 import { TownView } from './components/TownView';
 import { CombatLog } from './components/CombatLog';
 import { DecisionModal } from './components/DecisionModal';
+import {
+  playLevelUp, playRareDrop, playEpicDrop, playLegendaryDrop, playCelestialDrop,
+  playTabClick,
+} from '../sounds';
 
 export default function CcApp() {
   const g = useCcGame();
-  const [tab, setTab] = useState<string>('dungeon');
+  const [tab, setTabRaw] = useState<string>('dungeon');
+  const setTab = (t: string) => { playTabClick(); setTabRaw(t); };
   const { state } = g;
+
+  // Play sounds for new log entries
+  const lastLogIdRef = useRef<string>('');
+  useEffect(() => {
+    const latest = state.currentLog[0];
+    if (!latest || latest.id === lastLogIdRef.current) return;
+    lastLogIdRef.current = latest.id;
+    if (latest.kind === 'level') playLevelUp();
+    else if (latest.kind === 'victory') playLegendaryDrop();
+    else if (latest.kind === 'loot' && latest.rarity) {
+      switch (latest.rarity) {
+        case 'rare': playRareDrop(); break;
+        case 'epic': playEpicDrop(); break;
+        case 'legendary': playLegendaryDrop(); break;
+        case 'celestial': playCelestialDrop(); break;
+        default: break;
+      }
+    }
+  }, [state.currentLog]);
+
+  // Keyboard shortcuts: space=pause, 1/2/4=speed
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      if (e.code === 'Space') { e.preventDefault(); g.togglePause(); }
+      else if (e.key === '1') g.setSpeed(1);
+      else if (e.key === '2') g.setSpeed(2);
+      else if (e.key === '4') g.setSpeed(4);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [g]);
 
   return (
     <div className="w-screen h-screen flex bg-[#0D0B09] text-[#E8E0D4] overflow-hidden"
