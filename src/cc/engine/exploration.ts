@@ -41,16 +41,10 @@ export function tickExploration(state: GameState, dt: number): void {
     onPartyWipe(state);
     return;
   }
-
-  // Low HP auto-retreat (no healer, party avg HP < 25%)
-  const avgRatio = alive.reduce((a, h) => a + h.hp / h.maxHp, 0) / alive.length;
-  const hasHealer = alive.some(h => h.classId === 'priest' && h.mp >= 8);
-  if (avgRatio < 0.25 && !hasHealer) {
-    dungeon.status = 'retreat';
-    pushLog(state, 'retreat', '🚪 Party retreats to town to recover!');
-    onReturnToTown(state);
-    return;
-  }
+  // (Removed auto-retreat on low HP — it was kicking players straight back
+  //  to town when re-entering after a wipe with the party still wounded.
+  //  Now the player decides when to retreat with the ← TOWN button, and
+  //  a real wipe is the only auto-exit.)
 
   // Advance move timer
   dungeon.moveTimer -= dt;
@@ -195,13 +189,18 @@ export function onPartyWipe(state: GameState): void {
 
 export function onReturnToTown(state: GameState): void {
   state.activeDungeon = undefined;
-  // revive lightly — downed heroes come back at 20% HP (dead stay dead, need temple)
+  // Back in town the party patches itself up: downed heroes stand again,
+  // and any wounded alive hero gets a full heal (the town fountain at work).
+  // This prevents the re-entry loop where low HP caused an instant retreat.
   for (const h of state.heroes) {
-    if (h.state === 'downed') {
-      h.state = 'alive';
-      h.hp = Math.max(1, Math.floor(h.maxHp * 0.2));
-      h.mp = Math.max(0, Math.floor(h.maxMp * 0.2));
+    if (h.state === 'downed') h.state = 'alive';
+    if (h.state === 'alive') {
+      h.hp = h.maxHp;
+      h.mp = h.maxMp;
     }
+    h.buffs = [];
+    h.shield = 0;
+    h.cooldowns = {};
   }
 }
 
