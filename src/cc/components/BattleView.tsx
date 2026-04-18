@@ -1208,11 +1208,11 @@ const RosterPanel: React.FC<{ heroes: Hero[] }> = ({ heroes }) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-1 py-1 text-[10px] text-[#ff6060] font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <td className="px-1 py-1 text-[10px] text-[#7fe890] font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     <div>{dmg}DMG</div>
                     <div>{arm}ARM</div>
                   </td>
-                  <td className="px-1 py-1 text-[10px] text-[#ff6060] font-bold pr-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <td className="px-1 py-1 text-[10px] text-[#7fe890] font-bold pr-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                     <div>{Math.floor(stats.str + stats.dex)}ATK</div>
                     <div>{Math.floor(stats.con + arm * 0.5)}DEF</div>
                   </td>
