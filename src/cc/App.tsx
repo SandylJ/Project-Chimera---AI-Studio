@@ -62,7 +62,7 @@ export default function CcApp() {
                 retreatToTown={g.retreatToTown} />
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-hidden">
-            {tab === 'dungeon' && <DungeonView state={state} enterDungeon={g.enterDungeon} />}
+            {tab === 'dungeon' && <DungeonView state={state} enterDungeon={g.enterDungeon} clickMonster={g.clickMonster} />}
             {tab === 'party' && (
               <PartyView state={state}
                          unequipItem={g.unequipItem}

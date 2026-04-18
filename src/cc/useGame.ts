@@ -9,6 +9,7 @@ import { tickGame } from './engine/tick';
 import {
   mkId, pushLog, recomputeHeroMaxHPMP, effectiveStats, canEquip,
 } from './engine/util';
+import { applyDamageToMonster } from './engine/combat';
 import { generateDungeon } from './engine/dungeonGen';
 import { resolveDecision as engineResolveDecision } from './engine/decisions';
 import { addToStash, removeFromStash, sellValue } from './engine/loot';
@@ -370,6 +371,31 @@ export function useCcGame() {
     mutate(s => { s.tutorialStep = s.tutorialStep + 1; });
   }, [mutate]);
 
+  // Click monster → bonus damage (classic CC2 interaction)
+  const clickMonster = useCallback((monsterId: string) => {
+    mutate(s => {
+      const d = s.activeDungeon;
+      if (!d) return;
+      const tile = d.tiles.find(t => t.x === d.partyPos.x && t.y === d.partyPos.y);
+      if (!tile?.encounter) return;
+      const m = tile.encounter.monsters.find(x => x.id === monsterId);
+      if (!m || m.hp <= 0) return;
+      // Base click damage scales with total party STR/DEX/INT
+      const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+      if (active.length === 0) return;
+      const totalPower = active.reduce((a, h) => {
+        const st = effectiveStats(h);
+        return a + Math.max(st.str, st.dex, st.int);
+      }, 0);
+      const base = 4 + Math.floor(totalPower * 0.08);
+      // small crit chance
+      const isCrit = Math.random() < 0.1;
+      const dmg = isCrit ? base * 2 : base;
+      applyDamageToMonster(s, m, dmg, 'YOU');
+      if (isCrit) pushLog(s, 'combat', `🎯 Critical click! ${dmg} dmg`, 'rare');
+    });
+  }, [mutate]);
+
   return {
     state,
     enterDungeon,
@@ -391,5 +417,6 @@ export function useCcGame() {
     dismissOfflineReport,
     resetGame,
     advanceTutorial,
+    clickMonster,
   };
 }

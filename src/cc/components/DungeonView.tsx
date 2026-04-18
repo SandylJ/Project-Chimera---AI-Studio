@@ -1,271 +1,136 @@
 import React from 'react';
-import { GameState, Tile } from '../types';
-import { DUNGEON_DEFS } from '../data/dungeons';
-import { CLASSES } from '../data/classes';
+import { GameState } from '../types';
+import { DUNGEON_DEFS, DUNGEON_ORDER } from '../data/dungeons';
 import { MONSTERS } from '../data/monsters';
+import { themeFor } from '../visuals/dungeonTheme';
+import { BattleView } from './BattleView';
 
 interface Props {
   state: GameState;
   enterDungeon: (id: string) => void;
+  clickMonster?: (id: string) => void;
 }
 
-export const DungeonView: React.FC<Props> = ({ state, enterDungeon }) => {
-  const dungeon = state.activeDungeon;
-  if (!dungeon) {
+export const DungeonView: React.FC<Props> = ({ state, enterDungeon, clickMonster }) => {
+  if (!state.activeDungeon) {
     return <DungeonPicker state={state} enterDungeon={enterDungeon} />;
   }
-  return <DungeonGrid state={state} />;
+  return <BattleView state={state} clickMonster={clickMonster} />;
 };
 
 const DungeonPicker: React.FC<Props> = ({ state, enterDungeon }) => {
+  const active = state.heroes.filter(h => !h.bench && h.state === 'alive');
+  const avgLevel = active.length > 0 ? Math.round(active.reduce((a, h) => a + h.level, 0) / active.length) : 1;
   return (
-    <div className="p-6 flex flex-col h-full overflow-y-auto">
-      <h2 className="text-2xl font-bold text-[#F2E6A8] mb-1" style={{ fontFamily: "'Cinzel', serif" }}>
-        Dungeon Board
-      </h2>
-      <p className="text-sm text-[#B8A890] mb-4">
-        Choose where the party goes next. Your heroes will explore autonomously — you'll make the calls that matter.
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {Object.values(DUNGEON_DEFS).map(def => {
-          const unlocked = state.unlockedDungeons.includes(def.id);
-          const floor = (state.dungeonsCompleted[def.id] ?? 0) + 1;
+    <div className="flex flex-col h-full overflow-y-auto bg-gradient-to-br from-[#1a140f] to-[#0D0B09]">
+      <div className="p-6 border-b border-[#3D3328] bg-gradient-to-r from-[#2B231B] via-[#1E1A16] to-[#2B231B]">
+        <h2 className="text-3xl font-bold text-[#F2E6A8] mb-1" style={{ fontFamily: "'Cinzel', serif" }}>
+          ⚔ Dungeon Board
+        </h2>
+        <p className="text-sm text-[#B8A890]">
+          Choose where the party goes next. Your heroes fight autonomously — you make the calls that matter.
+        </p>
+        <div className="mt-2 text-[11px] text-[#D4A943] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          Party avg level: <span className="font-bold">{avgLevel}</span> • Active: {active.length}
+        </div>
+      </div>
+
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {DUNGEON_ORDER.map(id => {
+          const def = DUNGEON_DEFS[id];
+          const unlocked = state.unlockedDungeons.includes(id);
+          const floor = (state.dungeonsCompleted[id] ?? 0) + 1;
+          const theme = themeFor(id);
+          const cleared = (state.dungeonsCompleted[id] ?? 0);
+          const danger = def.minLevel > avgLevel + 2 ? 'hard' : def.minLevel > avgLevel - 3 ? 'balanced' : 'easy';
           return (
             <button
-              key={def.id}
-              onClick={() => unlocked && enterDungeon(def.id)}
+              key={id}
+              onClick={() => unlocked && enterDungeon(id)}
               disabled={!unlocked}
-              className={`text-left p-4 rounded-lg border transition-all
+              className={`group relative text-left rounded-xl overflow-hidden border transition-all min-h-[220px]
                 ${unlocked
-                  ? 'bg-[#1E1A16] border-[#3D3328] hover:border-[#D4A943] hover:bg-[#2B231B] cursor-pointer'
-                  : 'bg-[#0D0B09] border-[#1E1A16] opacity-40 cursor-not-allowed'}`}
+                  ? 'border-[#3D3328] hover:border-[#D4A943] hover:scale-[1.02] hover:shadow-2xl cursor-pointer'
+                  : 'border-[#1E1A16] opacity-40 cursor-not-allowed grayscale'}`}
+              style={{ background: theme.skyGradient }}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-3xl">{def.icon}</span>
-                <div>
-                  <div className="text-lg font-bold text-[#F2E6A8]" style={{ fontFamily: "'Cinzel', serif" }}>
-                    {def.name}
-                  </div>
-                  <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Min Level {def.minLevel} • Floor {floor}
-                  </div>
-                </div>
+              {/* Decorative bg layer */}
+              <div className="absolute inset-0 pointer-events-none">
+                {theme.bgEmoji.map((e, i) => (
+                  <span key={i} className="absolute text-4xl"
+                        style={{
+                          left: `${15 + (i * 23) % 70}%`,
+                          top: `${20 + (i * 17) % 50}%`,
+                          opacity: 0.2,
+                          filter: 'blur(0.3px)',
+                        }}>{e}</span>
+                ))}
               </div>
-              <p className="text-xs text-[#B8A890] leading-relaxed">{def.description}</p>
-              {unlocked ? (
-                <div className="mt-2 text-[10px] text-[#7FE2A0] font-bold">
-                  ENTER →
+              {/* Vignette */}
+              <div className="absolute inset-0" style={{ boxShadow: `inset 0 0 120px ${theme.vignetteColor}` }} />
+
+              {/* Content */}
+              <div className="relative p-4 h-full flex flex-col">
+                <div className="flex items-start gap-3 mb-2">
+                  <div className="text-5xl drop-shadow-lg">{def.icon}</div>
+                  <div className="flex-1">
+                    <div className="text-xl font-bold" style={{ color: theme.accentColor, fontFamily: "'Cinzel', serif", textShadow: '0 1px 4px #000' }}>
+                      {def.name}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-widest text-[#F2E6A8]/80 font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      MIN LVL {def.minLevel} • FLOOR {floor}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="mt-2 text-[10px] text-[#E86E6E]">
-                  LOCKED — clear previous dungeon
+                <p className="text-xs text-[#E8E0D4]/90 leading-relaxed flex-1" style={{ textShadow: '0 1px 2px #000' }}>
+                  {def.description}
+                </p>
+                <div className="mt-3 flex items-center gap-2 text-[10px]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <span className={`px-2 py-0.5 rounded-full font-bold ${
+                    danger === 'hard' ? 'bg-[#e8404060] text-[#ff9090] border border-[#ff4040]' :
+                    danger === 'balanced' ? 'bg-[#e8b84060] text-[#ffe090] border border-[#e8b840]' :
+                    'bg-[#7FE2A060] text-[#c0ffc0] border border-[#7FE2A0]'
+                  }`}>
+                    {danger.toUpperCase()}
+                  </span>
+                  {cleared > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-black/50 border border-[#D4A943] text-[#D4A943]">
+                      ✓ {cleared} cleared
+                    </span>
+                  )}
+                  <div className="ml-auto flex -space-x-1">
+                    {def.monsterPool.slice(0, 3).map(mid => (
+                      <span key={mid} className="text-lg drop-shadow" title={MONSTERS[mid]?.name}>{MONSTERS[mid]?.icon}</span>
+                    ))}
+                    <span className="text-lg drop-shadow" title="Boss">👑</span>
+                  </div>
                 </div>
-              )}
+                {unlocked && (
+                  <div className="mt-3 text-center text-xs font-bold rounded-lg py-2 group-hover:py-3 transition-all"
+                       style={{
+                         background: `linear-gradient(90deg, ${theme.accentColor}30, ${theme.accentColor}60, ${theme.accentColor}30)`,
+                         border: `1px solid ${theme.accentColor}`,
+                         color: theme.accentColor,
+                         backgroundSize: '200% 100%',
+                         animation: 'shimmer 3s infinite linear',
+                         textShadow: '0 1px 2px #000',
+                         fontFamily: "'JetBrains Mono', monospace",
+                         letterSpacing: '0.2em',
+                       }}>
+                    ENTER →
+                  </div>
+                )}
+                {!unlocked && (
+                  <div className="mt-3 text-center text-xs font-bold text-[#E86E6E] bg-black/60 rounded-lg py-2 border border-[#E86E6E]/40"
+                       style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.2em' }}>
+                    🔒 LOCKED
+                  </div>
+                )}
+              </div>
             </button>
           );
         })}
       </div>
-    </div>
-  );
-};
-
-const DungeonGrid: React.FC<{ state: GameState }> = ({ state }) => {
-  const d = state.activeDungeon!;
-  const cellSize = Math.min(52, Math.floor(700 / Math.max(d.width, d.height)));
-  const w = d.width * cellSize;
-  const h = d.height * cellSize;
-
-  const tileAt = (x: number, y: number) => d.tiles[y * d.width + x];
-
-  return (
-    <div className="flex-1 flex flex-col p-4 overflow-hidden">
-      <div className="mb-3 flex items-end gap-3">
-        <div>
-          <div className="text-xl font-bold text-[#F2E6A8]" style={{ fontFamily: "'Cinzel', serif" }}>
-            {d.icon} {d.name}
-          </div>
-          <div className="text-[11px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            Floor {d.floor} • Tile [{d.partyPos.x},{d.partyPos.y}] of [{d.width - 1},{d.height - 1}]
-          </div>
-        </div>
-        <div className="ml-auto text-[10px] text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          Next move in {Math.max(0, Math.ceil(d.moveTimer / 1000))}s
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center overflow-auto">
-        <div
-          className="relative bg-[#0A0806] border border-[#3D3328] rounded-lg p-2"
-          style={{ width: w + 16, height: h + 16 }}
-        >
-          <div
-            className="relative"
-            style={{
-              width: w,
-              height: h,
-              display: 'grid',
-              gridTemplateColumns: `repeat(${d.width}, ${cellSize}px)`,
-              gridTemplateRows: `repeat(${d.height}, ${cellSize}px)`,
-            }}
-          >
-            {d.tiles.map(t => (
-              <TileCell key={`${t.x},${t.y}`} tile={t} size={cellSize}
-                isParty={t.x === d.partyPos.x && t.y === d.partyPos.y} />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-        <PartyStatus state={state} />
-        <EncounterPanel state={state} />
-      </div>
-    </div>
-  );
-};
-
-const EncounterPanel: React.FC<{ state: GameState }> = ({ state }) => {
-  const d = state.activeDungeon;
-  if (!d) return null;
-  const tile = d.tiles.find(t => t.x === d.partyPos.x && t.y === d.partyPos.y);
-  const encounter = tile?.encounter;
-  if (!encounter || encounter.monsters.length === 0) {
-    return (
-      <div className="bg-[#14100C] rounded border border-[#3D3328] p-2 text-xs text-[#7A6E60] italic flex items-center justify-center min-h-[72px]">
-        {tile?.cleared ? 'Searching for next path...' : 'All quiet.'}
-      </div>
-    );
-  }
-  return (
-    <div className="bg-[#14100C] rounded border border-[#E86E6E]/40 p-2">
-      <div className="text-[10px] uppercase tracking-widest text-[#E86E6E] mb-1 font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        ⚔ In Combat
-      </div>
-      <div className="space-y-1">
-        {encounter.monsters.map(m => {
-          const def = MONSTERS[m.monsterId];
-          if (!def) return null;
-          const pct = (m.hp / m.maxHp) * 100;
-          return (
-            <div key={m.id} className="flex items-center gap-2 text-xs">
-              <span>{def.icon}</span>
-              <span className="font-bold text-[#F2E6A8] w-28 truncate">{def.name}</span>
-              <div className="flex-1 h-2 bg-black rounded overflow-hidden relative">
-                <div className="h-full bg-gradient-to-r from-[#8a2a2a] to-[#E86E6E] transition-all"
-                     style={{ width: pct + '%' }} />
-                <div className="absolute inset-0 text-[8px] flex items-center justify-center font-bold"
-                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {Math.ceil(m.hp)}/{m.maxHp}
-                </div>
-              </div>
-              {m.stunRemaining > 0 && <span className="text-[10px] text-[#F2B84B]" title="Stunned">💫</span>}
-              {m.dots.length > 0 && <span className="text-[10px] text-[#7FE2A0]" title="Poisoned/Burning">🟢</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const TileCell: React.FC<{ tile: Tile; size: number; isParty: boolean }> = ({ tile, size, isParty }) => {
-  const bg = tileBg(tile);
-  const fg = tileFg(tile);
-  const icon = tile.revealed ? tileIcon(tile) : '';
-  return (
-    <div
-      className="relative flex items-center justify-center border border-[#0A0806] transition-all"
-      style={{
-        width: size, height: size,
-        background: bg,
-        color: fg,
-        fontSize: Math.floor(size * 0.45),
-      }}
-    >
-      <span>{icon}</span>
-      {isParty && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse">
-          <div
-            className="rounded-full border-2 border-[#F2E6A8] bg-[#D4A943]/30"
-            style={{ width: size * 0.7, height: size * 0.7 }}
-          />
-        </div>
-      )}
-      {tile.encounter && tile.encounter.monsters.length > 0 && tile.revealed && (
-        <div className="absolute bottom-0 right-0 text-[8px] bg-black/70 px-1 rounded-tl text-[#E86E6E] font-bold"
-             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          {tile.encounter.monsters.length}
-        </div>
-      )}
-    </div>
-  );
-};
-
-function tileBg(t: Tile): string {
-  if (!t.revealed) return '#0A0806';
-  if (t.cleared) return '#1A140E';
-  switch (t.kind) {
-    case 'entrance': return '#2B4024';
-    case 'boss': return '#401A1A';
-    case 'chest': return '#3D2E14';
-    case 'trap': return '#401A2A';
-    case 'shrine': return '#1A3D3D';
-    case 'fountain': return '#1A2D40';
-    case 'fork': return '#2E2D1A';
-    case 'merchant': return '#402D1A';
-    case 'monster': return '#2B1A1A';
-    default: return '#14100C';
-  }
-}
-
-function tileFg(t: Tile): string {
-  return t.cleared ? '#7A6E60' : '#E8E0D4';
-}
-
-function tileIcon(t: Tile): string {
-  switch (t.kind) {
-    case 'entrance': return '🚪';
-    case 'boss': return '👑';
-    case 'chest': return t.cleared ? '' : '📦';
-    case 'trap': return t.cleared ? '' : '⚠';
-    case 'shrine': return t.cleared ? '' : '⛩';
-    case 'fountain': return t.cleared ? '' : '⛲';
-    case 'fork': return t.cleared ? '' : '🛤';
-    case 'merchant': return t.cleared ? '' : '🧳';
-    case 'monster': return t.cleared ? '' : '⚔';
-    default: return '';
-  }
-}
-
-const PartyStatus: React.FC<{ state: GameState }> = ({ state }) => {
-  const active = state.heroes.filter(h => !h.bench);
-  return (
-    <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-      {active.map(h => {
-        const cls = CLASSES[h.classId];
-        return (
-          <div key={h.id} className={`bg-[#14100C] rounded border border-[#3D3328] p-2 ${h.state !== 'alive' ? 'opacity-50 grayscale' : ''}`}>
-            <div className="flex items-center gap-2 text-xs">
-              <span>{cls.icon}</span>
-              <span style={{ color: cls.color }} className="font-bold truncate">{h.name}</span>
-              <span className="ml-auto text-[9px] text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>L{h.level}</span>
-            </div>
-            <div className="h-2 bg-black mt-1 rounded relative overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-green-700 to-green-400"
-                   style={{ width: `${(h.hp / h.maxHp) * 100}%` }} />
-              <div className="absolute inset-0 text-[8px] flex items-center justify-center font-bold"
-                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {Math.ceil(h.hp)}/{h.maxHp}
-              </div>
-            </div>
-            {h.shield > 0 && (
-              <div className="text-[9px] text-[#6EA9E4] mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                🛡 {h.shield}
-              </div>
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 };
