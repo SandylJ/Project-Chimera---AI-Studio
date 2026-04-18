@@ -252,8 +252,8 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
         {/* Progress tile ribbon top-right */}
         <DungeonProgress state={state} theme={theme} />
 
-        {/* Tile entry tag */}
-        {tileTag && (
+        {/* Tile entry tag (empty corridors / shrines etc.) */}
+        {tileTag && tile.kind !== 'monster' && tile.kind !== 'boss' && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-1 rounded-full border"
                style={{
                  background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.7), transparent)',
@@ -265,6 +265,11 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
               {tileTag}
             </span>
           </div>
+        )}
+
+        {/* CC2-style "An Encounter!" banner at the bottom while fighting */}
+        {enemies.length > 0 && tile.kind !== 'boss' && (
+          <EncounterBanner enemies={enemies} />
         )}
 
         {/* The tilted isometric room */}
@@ -288,9 +293,9 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
             >
               {/* Floor */}
               <RoomFloor theme={theme} />
-              {/* Back walls */}
-              <BackWall side="left" theme={theme} />
-              <BackWall side="right" theme={theme} />
+              {/* Back walls (the two visible in iso view) */}
+              <BackWall side="top" theme={theme} doorway={pathHasDoorway(dungeon, 'forward')} />
+              <BackWall side="right" theme={theme} doorway={pathHasDoorway(dungeon, 'right')} />
 
               {/* Loot on floor (lays flat on the tilted floor) */}
               {floorLoot.map(l => (
@@ -407,100 +412,166 @@ const RoomFloor: React.FC<{ theme: DungeonTheme }> = ({ theme }) => {
       className="absolute inset-0"
       style={{
         background: `
-          linear-gradient(90deg,
-            rgba(0,0,0,0.35) 0 2px,
-            transparent 2px 80px),
-          linear-gradient(0deg,
-            rgba(0,0,0,0.35) 0 2px,
-            transparent 2px 80px),
-          linear-gradient(90deg,
-            rgba(255,255,255,0.04) 0 1px,
-            transparent 1px 80px),
-          linear-gradient(0deg,
-            rgba(255,255,255,0.04) 0 1px,
-            transparent 1px 80px),
-          radial-gradient(circle at 40% 60%, rgba(255,255,255,0.04), transparent 50%),
-          ${theme.floorGradient}
+          radial-gradient(ellipse at 50% 35%, ${theme.floorLight} 0%, ${theme.floorMid} 55%, ${theme.floorDark} 100%)
         `,
-        backgroundSize: '80px 80px, 80px 80px, 80px 80px, 80px 80px, auto, auto',
-        border: `4px solid ${theme.floorBand}`,
         boxShadow: `
-          inset 0 0 120px rgba(0,0,0,0.75),
-          inset 0 0 50px ${theme.vignetteColor}
+          inset 0 0 140px rgba(0,0,0,0.65),
+          inset 0 0 40px ${theme.vignetteColor}
         `,
-        borderRadius: 3,
       }}
     >
-      {/* Floor debris — laid flat (child of tilted plane) */}
-      <div className="absolute inset-0" style={{ opacity: 0.22 }}>
-        {Array.from({ length: 10 }).map((_, i) => (
+      {/* Stone tile pattern — textured paving with darker grout */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(circle at 15% 20%, rgba(0,0,0,0.08) 0%, transparent 25%),
+            radial-gradient(circle at 80% 60%, rgba(0,0,0,0.1) 0%, transparent 30%),
+            radial-gradient(circle at 45% 85%, rgba(0,0,0,0.06) 0%, transparent 20%),
+            repeating-linear-gradient(45deg,
+              transparent 0 36px,
+              rgba(0,0,0,0.18) 36px 38px,
+              transparent 38px 74px),
+            repeating-linear-gradient(-45deg,
+              transparent 0 36px,
+              rgba(0,0,0,0.18) 36px 38px,
+              transparent 38px 74px)
+          `,
+          opacity: 0.7,
+        }}
+      />
+      {/* Speckled stone dots */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.25 }}>
+        <defs>
+          <pattern id="speckle" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="4" cy="6" r="1" fill="rgba(0,0,0,0.4)" />
+            <circle cx="14" cy="3" r="0.6" fill="rgba(0,0,0,0.35)" />
+            <circle cx="19" cy="16" r="1" fill="rgba(0,0,0,0.35)" />
+            <circle cx="9" cy="20" r="0.8" fill="rgba(0,0,0,0.4)" />
+            <circle cx="2" cy="18" r="0.5" fill="rgba(255,255,255,0.08)" />
+            <circle cx="21" cy="8" r="0.4" fill="rgba(255,255,255,0.08)" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#speckle)" />
+      </svg>
+      {/* Floor debris */}
+      <div className="absolute inset-0" style={{ opacity: 0.28 }}>
+        {Array.from({ length: 8 }).map((_, i) => (
           <span key={i} className="absolute"
                 style={{
-                  left: `${(i * 9.7 + 7) % 90 + 5}%`,
-                  top: `${(i * 13.3 + 4) % 80 + 10}%`,
-                  fontSize: 20 + (i % 3) * 8,
-                  filter: 'grayscale(70%) contrast(0.7)',
+                  left: `${(i * 11.7 + 6) % 85 + 8}%`,
+                  top: `${(i * 15.3 + 9) % 75 + 12}%`,
+                  fontSize: 16 + (i % 3) * 6,
+                  filter: 'grayscale(70%) contrast(0.75) brightness(0.7)',
                 }}>
             {theme.bgEmoji[i % theme.bgEmoji.length]}
           </span>
         ))}
       </div>
-      {/* Stone cracks — subtle diagonal lines */}
-      <svg className="absolute inset-0 w-full h-full opacity-40 pointer-events-none">
-        <defs>
-          <pattern id="cracks" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
-            <path d="M 0 60 Q 30 50 60 60 T 120 58 T 200 62"
-                  stroke="#00000040" strokeWidth="1" fill="none" />
-            <path d="M 40 0 Q 35 40 50 80 T 55 160 T 60 200"
-                  stroke="#00000040" strokeWidth="1" fill="none" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#cracks)" />
-      </svg>
     </div>
   );
 };
 
 // ============ Back Walls ============
 
-const BackWall: React.FC<{ side: 'left' | 'right'; theme: DungeonTheme }> = ({ side, theme }) => {
-  const wallHeight = 140; // px tall in pre-tilt space
-  const style: React.CSSProperties = side === 'left'
+const BackWall: React.FC<{
+  side: 'top' | 'right';
+  theme: DungeonTheme;
+  doorway?: boolean;
+}> = ({ side, theme, doorway }) => {
+  const WALL_H = 160;
+
+  // Build an SVG that represents the wall face with a crenelated top edge,
+  // brick seams, and an optional doorway cut out.
+  // The SVG stretches to 100%/100% so rotation math is independent.
+  const brickRows = 8;
+  const brickCols = 14;
+  const crenelTeeth = 24;
+
+  // Build crenelation outline: toothed top edge
+  const crenelHeight = 18; // px in SVG coords
+  const toothW = 1000 / crenelTeeth;
+  const crenelPath: string[] = [];
+  for (let i = 0; i < crenelTeeth; i++) {
+    const x = i * toothW;
+    if (i === 0) crenelPath.push(`M ${x} ${crenelHeight}`);
+    // tooth up
+    crenelPath.push(`L ${x} 0`);
+    crenelPath.push(`L ${x + toothW * 0.5} 0`);
+    // back down into notch
+    crenelPath.push(`L ${x + toothW * 0.5} ${crenelHeight}`);
+    crenelPath.push(`L ${x + toothW} ${crenelHeight}`);
+  }
+  // close bottom rectangle
+  crenelPath.push(`L 1000 400 L 0 400 Z`);
+
+  const doorwayCut = doorway ? (
+    <path d={`M 420 400 L 420 260 Q 420 180 500 180 Q 580 180 580 260 L 580 400 Z`} fill="black" />
+  ) : null;
+
+  const outerStyle: React.CSSProperties = side === 'top'
     ? {
         position: 'absolute',
-        top: 0, left: 0,
-        width: '100%', height: wallHeight,
-        transform: `rotateX(-90deg) translateY(${-wallHeight}px)`,
+        top: 0, left: 0, width: '100%', height: WALL_H,
+        transform: `rotateX(-90deg) translateY(${-WALL_H}px)`,
         transformOrigin: 'top',
       }
     : {
         position: 'absolute',
-        top: 0, right: 0,
-        width: wallHeight, height: '100%',
-        transform: `rotateY(90deg) translateX(${wallHeight}px)`,
+        top: 0, right: 0, width: WALL_H, height: '100%',
+        transform: `rotateY(-90deg) translateX(${WALL_H}px)`,
         transformOrigin: 'right',
       };
+
   return (
-    <div style={style}>
-      <div className="absolute inset-0"
-           style={{
-             background: `
-               repeating-linear-gradient(
-                 90deg,
-                 rgba(0,0,0,0.25) 0 1px,
-                 transparent 1px 48px
-               ),
-               repeating-linear-gradient(
-                 0deg,
-                 rgba(0,0,0,0.15) 0 1px,
-                 transparent 1px 24px
-               ),
-               linear-gradient(180deg, #4a4440 0%, #2a2622 100%)
-             `,
-             boxShadow: 'inset 0 -20px 40px rgba(0,0,0,0.8)',
-             borderBottom: `3px solid ${theme.floorBand}`,
-             filter: `saturate(0.7)`,
-           }} />
+    <div style={outerStyle}>
+      <svg viewBox="0 0 1000 400" preserveAspectRatio="none" className="w-full h-full">
+        <defs>
+          <linearGradient id={`wg_${side}_${theme.wallTop.replace('#','')}`} x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={theme.wallTop} />
+            <stop offset="25%" stopColor={theme.wallLight} />
+            <stop offset="80%" stopColor={theme.wallMid} />
+            <stop offset="100%" stopColor={theme.wallDark} />
+          </linearGradient>
+        </defs>
+        {/* Wall body with crenelated top */}
+        <path d={crenelPath.join(' ')} fill={`url(#wg_${side}_${theme.wallTop.replace('#','')})`} />
+        {/* Brick vertical mortar lines */}
+        {Array.from({ length: brickRows }).map((_, r) => {
+          const y1 = crenelHeight + (400 - crenelHeight) * (r / brickRows);
+          const y2 = crenelHeight + (400 - crenelHeight) * ((r + 1) / brickRows);
+          const offset = (r % 2) * (1000 / brickCols / 2);
+          return (
+            <g key={r}>
+              {/* horizontal seam */}
+              <line x1="0" y1={y1} x2="1000" y2={y1} stroke={theme.wallMortar} strokeWidth="1.2" opacity="0.6" />
+              {/* vertical seams with offset */}
+              {Array.from({ length: brickCols }).map((_, c) => {
+                const x = offset + c * (1000 / brickCols);
+                return <line key={c} x1={x} y1={y1} x2={x} y2={y2} stroke={theme.wallMortar} strokeWidth="1.2" opacity="0.55" />;
+              })}
+              {/* subtle highlight on top of each row */}
+              <line x1="0" y1={y1 + 1.5} x2="1000" y2={y1 + 1.5} stroke={theme.wallTop} strokeWidth="0.6" opacity="0.25" />
+            </g>
+          );
+        })}
+        {/* Shadow at bottom where wall meets floor */}
+        <rect x="0" y="360" width="1000" height="40" fill="url(#wallShadow)" opacity="0.5" />
+        {/* Doorway cutout (overlays wall face with black) */}
+        {doorwayCut}
+        {/* Crenelation detail — darker outline on tooth tops */}
+        {Array.from({ length: crenelTeeth }).map((_, i) => (
+          <line key={i}
+                x1={i * toothW} y1="0" x2={i * toothW + toothW * 0.5} y2="0"
+                stroke={theme.wallDark} strokeWidth="1.5" />
+        ))}
+        <defs>
+          <linearGradient id="wallShadow" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.8)" />
+          </linearGradient>
+        </defs>
+      </svg>
     </div>
   );
 };
@@ -769,6 +840,42 @@ const DungeonProgress: React.FC<{ state: GameState; theme: DungeonTheme }> = ({ 
   );
 };
 
+// ============ Encounter banner ============
+
+const EncounterBanner: React.FC<{ enemies: MonsterInstance[] }> = ({ enemies }) => {
+  // Group enemies by monster type to show "N/M Type (Lvl. X)"
+  const counts = new Map<string, { alive: number; total: number; level: number; name: string }>();
+  for (const e of enemies) {
+    const def = MONSTERS[e.monsterId];
+    if (!def) continue;
+    const cur = counts.get(def.id) ?? { alive: 0, total: 0, level: def.level, name: def.name };
+    cur.total++;
+    if (e.hp > 0) cur.alive++;
+    counts.set(def.id, cur);
+  }
+  const groups = Array.from(counts.values());
+  return (
+    <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-20 px-4 py-1.5 rounded-md"
+         style={{
+           background: 'rgba(0, 80, 160, 0.8)',
+           border: '1px solid rgba(180,220,255,0.8)',
+           boxShadow: '0 2px 10px rgba(0,0,0,0.7)',
+           minWidth: 320,
+           textAlign: 'center',
+         }}>
+      <div className="text-[11px] font-bold uppercase tracking-widest text-white leading-tight"
+           style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
+        An Encounter!
+      </div>
+      {groups.map(g => (
+        <div key={g.name} className="text-xs text-white leading-tight" style={{ fontFamily: "'Nunito', sans-serif" }}>
+          <span className="font-bold">{g.alive}/{g.total}</span> {g.name}{g.total > 1 ? 's' : ''} <span className="text-[10px] opacity-80">(Lvl. {g.level})</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // ============ Ambient particle layer ============
 
 const AmbientLayer: React.FC<{ theme: DungeonTheme }> = ({ theme }) => {
@@ -957,66 +1064,84 @@ const RosterPanel: React.FC<{ heroes: Hero[] }> = ({ heroes }) => {
 // ---- Buffs + Inventory slice ----
 
 const BuffInventoryPanel: React.FC<{ state: GameState }> = ({ state }) => {
-  const activeBuffs: Array<{ heroId: string; label: string; remainingMs: number; icon: string }> = [];
+  // Gather active effects as "potion cards"
+  const potionCards: Array<{
+    id: string; title: string; sub: string; icon: string; color: string; remainingMs?: number;
+  }> = [];
+
   for (const h of state.heroes) {
     for (const b of h.buffs) {
-      activeBuffs.push({
-        heroId: h.id,
-        label: b.stat ? `${h.name} +${Math.round(b.power * 100)}% ${b.stat.toUpperCase()}` : `${h.name} buff`,
+      const stat = b.stat ? b.stat.toUpperCase() : '';
+      potionCards.push({
+        id: `${h.id}_${b.id}`,
+        title: `+${Math.round(b.power * 100)}% ${stat}`,
+        sub: h.name,
+        icon: b.stat === 'str' ? '🧪' : b.stat === 'int' ? '🔮' : '✨',
+        color: '#D4A943',
         remainingMs: b.remaining,
-        icon: '✨',
+      });
+    }
+    if (h.shield > 0) {
+      potionCards.push({
+        id: `${h.id}_shield`,
+        title: `Shield ${Math.floor(h.shield)}`,
+        sub: h.name,
+        icon: '🛡',
+        color: '#6EA9E4',
       });
     }
   }
-
-  const stashEntries = Object.entries(state.stash.items)
-    .map(([id, qty]) => ({ id, qty, it: ITEMS[id] }))
-    .filter(e => e.it)
-    .sort((a, b) => rarityRank(b.it.rarity) - rarityRank(a.it.rarity))
-    .slice(0, 18);
+  // Speed "potion" showing current game speed
+  if (state.speed !== 1) {
+    potionCards.push({
+      id: 'game_speed',
+      title: `${state.speed}× Speed`,
+      sub: 'Time flows faster',
+      icon: '⏩',
+      color: '#B485E8',
+    });
+  }
+  // Auto-sell rarities shown as a potion-style indicator
+  if (state.autoSellRarities.length > 0) {
+    potionCards.push({
+      id: 'autosell',
+      title: `Auto-Sell`,
+      sub: state.autoSellRarities.join(', '),
+      icon: '🪙',
+      color: '#D4A943',
+    });
+  }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 overflow-hidden">
       <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest font-bold px-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        Active · Stash
+        Active Effects
       </div>
-      <div className="flex-1 flex flex-col gap-1 overflow-hidden">
-        {/* Active buffs */}
-        <div className="bg-[#0a0807] border border-[#3D3328] rounded px-2 py-1 min-h-8">
-          {activeBuffs.length === 0 ? (
-            <div className="text-[10px] text-[#5a5040] italic">No active effects</div>
-          ) : (
-            <div className="flex flex-wrap gap-1">
-              {activeBuffs.slice(0, 6).map((b, i) => (
-                <div key={i} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1E1A16] border border-[#D4A943]/40 text-[10px]"
-                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  <span>{b.icon}</span>
-                  <span className="text-[#F2E6A8]">{(b.remainingMs / 1000).toFixed(0)}s</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Mini stash */}
-        <div className="flex-1 bg-[#0a0807] border border-[#3D3328] rounded p-1 overflow-hidden">
-          <div className="grid grid-cols-6 gap-0.5">
-            {stashEntries.map(e => (
-              <div key={e.id} className="relative aspect-square rounded border flex items-center justify-center"
-                   style={{ background: '#14100C', borderColor: rarityGlow(e.it.rarity) + '80' }}
-                   title={`${e.it.name} ×${e.qty}\n${e.it.description ?? ''}`}>
-                <span className="text-base" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{e.it.icon}</span>
-                {e.qty > 1 && (
-                  <div className="absolute bottom-0 right-0.5 text-[8px] font-bold text-white leading-none"
-                       style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000' }}>
-                    {e.qty > 99 ? '99+' : e.qty}
-                  </div>
-                )}
+      <div className="flex-1 overflow-y-auto">
+        {potionCards.length === 0 && (
+          <div className="text-[10px] text-[#5a5040] italic px-2 py-2">No active effects</div>
+        )}
+        <div className="grid grid-cols-1 gap-1">
+          {potionCards.map(c => (
+            <div key={c.id}
+                 className="flex items-center gap-2 px-2 py-1 rounded border"
+                 style={{
+                   background: 'linear-gradient(90deg, #2a1d10 0%, #1a130a 100%)',
+                   borderColor: c.color + '60',
+                 }}>
+              <span className="text-xl shrink-0" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{c.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold truncate" style={{ color: c.color }}>{c.title}</div>
+                <div className="text-[10px] text-[#B8A890] truncate">{c.sub}</div>
               </div>
-            ))}
-            {Array.from({ length: Math.max(0, 18 - stashEntries.length) }).map((_, i) => (
-              <div key={`_${i}`} className="aspect-square rounded border border-[#1E1A16] bg-black/30" />
-            ))}
-          </div>
+              {c.remainingMs !== undefined && (
+                <div className="text-[10px] text-[#7A6E60] font-bold shrink-0"
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {(c.remainingMs / 1000).toFixed(0)}s
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -1024,6 +1149,17 @@ const BuffInventoryPanel: React.FC<{ state: GameState }> = ({ state }) => {
 };
 
 // ============ helpers ============
+
+function pathHasDoorway(dungeon: any, dir: 'forward' | 'right'): boolean {
+  // Whether the current room should show a visible doorway on a given back wall.
+  // We show a 'forward' doorway only if the party hasn't reached the boss yet.
+  if (!dungeon) return false;
+  if (dir === 'forward') {
+    return dungeon.pathIndex < dungeon.path.length - 1;
+  }
+  // 'right' — show doorway when returning is possible (all rooms except final).
+  return dungeon.pathIndex > 0 && dungeon.pathIndex < dungeon.path.length - 1;
+}
 
 function hashHue(id: string): number {
   let h = 0;

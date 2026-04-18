@@ -52,7 +52,7 @@ const DungeonPicker: React.FC<Props> = ({ state, enterDungeon }) => {
                 ${unlocked
                   ? 'border-[#3D3328] hover:border-[#D4A943] hover:scale-[1.02] hover:shadow-2xl cursor-pointer'
                   : 'border-[#1E1A16] opacity-40 cursor-not-allowed grayscale'}`}
-              style={{ background: theme.skyGradient }}
+              style={{ background: `linear-gradient(180deg, ${theme.wallDark} 0%, ${theme.floorDark} 60%, ${theme.floorMid} 100%)` }}
             >
               {/* Decorative bg layer */}
               <div className="absolute inset-0 pointer-events-none">
