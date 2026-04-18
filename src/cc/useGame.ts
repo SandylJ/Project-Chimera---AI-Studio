@@ -76,6 +76,9 @@ function createInitialState(): GameState {
     autoSellRarities: [],
     collectionLog: [],
     tutorialStep: 0,
+    killCombo: 0,
+    lastKillAt: 0,
+    bestKillCombo: 0,
   };
   // starter consumables
   state.stash.items['healing_potion'] = 3;
@@ -127,6 +130,9 @@ function migrate(s: Partial<GameState>): GameState {
     collectionLog: s.collectionLog ?? [],
     pendingOfflineReport: s.pendingOfflineReport,
     tutorialStep: s.tutorialStep ?? 0,
+    killCombo: s.killCombo ?? 0,
+    lastKillAt: s.lastKillAt ?? 0,
+    bestKillCombo: s.bestKillCombo ?? 0,
   };
   // Validate activeDungeon shape — if it's malformed, drop it to send the
   // player back to the town picker rather than crashing BattleView.

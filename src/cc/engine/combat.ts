@@ -376,16 +376,41 @@ export function onMonsterKilled(state: GameState, m: MonsterInstance): void {
   const def = MONSTERS[m.monsterId];
   if (!def) return;
   state.totalMonstersKilled++;
-  // XP: split evenly across alive heroes in encounter
+
+  // Combo: increment if last kill was within 3s, else restart.
+  const now = Date.now();
+  if (now - state.lastKillAt < 3000) {
+    state.killCombo++;
+  } else {
+    state.killCombo = 1;
+  }
+  state.lastKillAt = now;
+  if (state.killCombo > state.bestKillCombo) state.bestKillCombo = state.killCombo;
+
+  // Combo bonus gold (capped) — +5% per step over 1, to +100% at combo 21
+  const comboBonus = Math.min(1.0, (state.killCombo - 1) * 0.05);
+
+  // XP: split evenly across alive heroes in encounter, with combo bonus
   const alive = aliveActiveHeroes(state);
   if (alive.length > 0) {
-    const xpEach = Math.ceil(def.xpReward / alive.length);
+    const xpEach = Math.ceil((def.xpReward * (1 + comboBonus)) / alive.length);
     for (const h of alive) awardXp(state, h, xpEach);
   }
-  // Loot
+
+  // Loot + combo gold
   const luck = alive.reduce((acc, h) => acc + effectiveStats(h).luck, 0) * 0.003;
   rollMonsterLoot(state, def, luck);
-  pushLog(state, 'combat', `${def.icon} ${def.name} defeated!`);
+  if (comboBonus > 0) {
+    // Bonus coins ON TOP of loot-roll gold
+    const comboGold = Math.floor((def.goldReward[0] + def.goldReward[1]) / 2 * comboBonus);
+    if (comboGold > 0) {
+      state.stash.gold += comboGold;
+      state.totalGoldEarned += comboGold;
+    }
+  }
+
+  const comboTag = state.killCombo >= 3 ? ` 🔥x${state.killCombo}` : '';
+  pushLog(state, 'combat', `${def.icon} ${def.name} defeated!${comboTag}`);
 }
 
 // ============ Helpers ============

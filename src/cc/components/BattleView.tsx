@@ -5,7 +5,7 @@ import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
 import { ITEMS } from '../data/items';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
-import { effectiveStats, totalArmor, weaponPower } from '../engine/util';
+import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
 
 /* ============================================================
    Isometric Clickpocalypse-style Battle View
@@ -37,6 +37,17 @@ interface DroppedLoot {
   x: number;     // % across room floor
   y: number;     // % down room floor
   bornAt: number;
+  rarity?: string;
+  big?: boolean; // spotlight effect for rare+
+}
+
+interface CoinBurst {
+  id: string;
+  x: number;
+  y: number;
+  bornAt: number;
+  count: number;
+  gold: number;
 }
 
 interface SpriteSlot {
@@ -84,8 +95,10 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
   const [floats, setFloats] = useState<Float[]>([]);
   const [flashes, setFlashes] = useState<Flash[]>([]);
   const [floorLoot, setFloorLoot] = useState<DroppedLoot[]>([]);
+  const [coinBursts, setCoinBursts] = useState<CoinBurst[]>([]);
   const [bossBanner, setBossBanner] = useState<{ name: string; until: number } | null>(null);
   const [tileTag, setTileTag] = useState<string | null>(null);
+  const [shakeUntil, setShakeUntil] = useState<number>(0);
 
   useEffect(() => {
     const now = Date.now();
@@ -116,17 +129,32 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
           if (mon) {
             const def = MONSTERS[mon.monsterId];
             if (def) {
-              // Pick one loot table entry to visualize on floor (rough)
               const dropRoll = def.lootTable.find(l => Math.random() < l.chance) ?? def.lootTable[0];
               const itemId = dropRoll?.itemId ?? 'gold_nugget';
+              const rarity = ITEMS[itemId]?.rarity ?? 'common';
+              const big = rarity === 'rare' || rarity === 'epic' || rarity === 'legendary' || rarity === 'celestial';
               const baseSlot = enemySlots.find(s => s.heroId === c.id);
+              const lx = baseSlot ? baseSlot.x : 50 + (Math.random() - 0.5) * 20;
+              const ly = baseSlot ? baseSlot.y : 55 + (Math.random() - 0.5) * 10;
               setFloorLoot(list => [...list.slice(-12), {
                 id: `loot_${now}_${c.id}`,
-                itemId,
-                x: baseSlot ? baseSlot.x : 50 + (Math.random() - 0.5) * 20,
-                y: baseSlot ? baseSlot.y : 55 + (Math.random() - 0.5) * 10,
-                bornAt: now,
+                itemId, x: lx, y: ly, bornAt: now,
+                rarity, big,
               }]);
+              // Coin burst from the kill
+              const goldRange = def.goldReward;
+              const estGold = Math.floor((goldRange[0] + goldRange[1]) / 2);
+              setCoinBursts(cs => [...cs.slice(-10), {
+                id: `cb_${now}_${c.id}`,
+                x: lx, y: ly,
+                bornAt: now,
+                count: Math.min(22, 5 + Math.floor(estGold / 3) + (def.boss ? 20 : 0)),
+                gold: estGold,
+              }]);
+              // Rare+ drops shake the screen
+              if (big) {
+                setShakeUntil(Date.now() + (rarity === 'legendary' || rarity === 'celestial' ? 500 : 280));
+              }
             }
           }
         }
@@ -158,9 +186,17 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
       setFloats(f => f.filter(x => now - x.bornAt < 1100));
       setFlashes(f => f.filter(x => x.until > now));
       setFloorLoot(l => l.filter(x => now - x.bornAt < 2800)); // rest 1.5s + fly 1.0s + fade
+      setCoinBursts(cs => cs.filter(c => now - c.bornAt < 1600));
     }, 300);
     return () => window.clearInterval(id);
   }, []);
+
+  // Screen shake when a crit happens
+  useEffect(() => {
+    if (flashes.some(f => f.kind === 'crit' && f.until > Date.now() - 200)) {
+      setShakeUntil(prev => Math.max(prev, Date.now() + 220));
+    }
+  }, [flashes]);
 
   // Boss banner + tile-entry tag
   useEffect(() => {
@@ -239,7 +275,10 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
       {/* Top area: stage + right panel */}
       <div className="flex-1 flex overflow-hidden">
       {/* STAGE */}
-      <div className="relative flex-1 overflow-hidden" style={{ background: `radial-gradient(ellipse at center 30%, #1a1612 0%, #050403 80%)` }}>
+      <div className="relative flex-1 overflow-hidden" style={{
+            background: `radial-gradient(ellipse at center 30%, #1a1612 0%, #050403 80%)`,
+            animation: Date.now() < shakeUntil ? 'battleShake 0.22s linear' : undefined,
+          }}>
         <AmbientLayer theme={theme} />
 
         {/* Dungeon badge top-left */}
@@ -420,6 +459,21 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
                 </div>
               )}
             </div>
+
+            {/* Coin bursts — shower of gold from killed enemies */}
+            {coinBursts.map(cb => (
+              <CoinBurstFX key={cb.id} burst={cb} nowTick={nowTick} />
+            ))}
+
+            {/* Rare-drop spotlight beams from the floor */}
+            {floorLoot.filter(l => l.big && (nowTick - l.bornAt < 1600)).map(l => (
+              <RarityBeam key={'beam_' + l.id} loot={l} nowTick={nowTick} />
+            ))}
+
+            {/* Combo banner — bottom-right of stage */}
+            {state.killCombo >= 2 && (nowTick - state.lastKillAt < 3000) && (
+              <ComboBanner combo={state.killCombo} lastKillAt={state.lastKillAt} nowTick={nowTick} />
+            )}
 
             {/* Boss banner — overlay above the iso stage, flat */}
             {bossBanner && (
@@ -818,6 +872,160 @@ const MonsterSpriteBody: React.FC<{
   );
 };
 
+// ============ Coin Burst FX ============
+
+const CoinBurstFX: React.FC<{ burst: CoinBurst; nowTick: number }> = ({ burst, nowTick }) => {
+  const age = nowTick - burst.bornAt;
+  if (age > 1500) return null;
+  // Precompute per-coin angles/speeds (memoize via bornAt)
+  const coins = useMemo(() => {
+    return Array.from({ length: burst.count }, (_, i) => {
+      const angle = (i / burst.count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      const speed = 40 + Math.random() * 70;
+      return {
+        angle,
+        speed,
+        dr: (Math.random() - 0.5) * 720,
+        phase: Math.random() * 0.3,
+      };
+    });
+  }, [burst.id]);
+  return (
+    <div className="absolute pointer-events-none z-20"
+         style={{
+           left: `${burst.x}%`, top: `${burst.y}%`,
+           transform: 'translate(-50%, -70%) rotateX(-58deg)',
+           transformOrigin: '50% 100%',
+         }}>
+      {coins.map((c, i) => {
+        const t = Math.min(1, (age / 1500) + c.phase * 0.3);
+        const dx = Math.cos(c.angle) * c.speed * t;
+        // gravity-like fall
+        const dy = Math.sin(c.angle) * c.speed * t - Math.sin(Math.min(1, t) * Math.PI) * 32 + t * t * 60;
+        const opacity = t < 0.8 ? 1 : Math.max(0, (1 - t) * 5);
+        const rotate = c.dr * t;
+        return (
+          <span key={i}
+                className="absolute"
+                style={{
+                  left: 0, top: 0,
+                  transform: `translate(${dx}px, ${dy}px) rotate(${rotate}deg) scale(${1 - t * 0.2})`,
+                  fontSize: 16,
+                  opacity,
+                  filter: 'drop-shadow(0 0 4px #f2c846) drop-shadow(0 1px 1px #000)',
+                }}>🪙</span>
+        );
+      })}
+      {/* +Ng text that rises up */}
+      {age < 900 && (
+        <div className="absolute font-black text-[#f2c846]"
+             style={{
+               left: 0,
+               top: -20 - age * 0.05,
+               transform: `translate(-50%, 0)`,
+               opacity: 1 - age / 900,
+               fontSize: 20,
+               textShadow: '0 0 6px #f2c846, 2px 2px 0 #000',
+               fontFamily: "'JetBrains Mono', monospace",
+               whiteSpace: 'nowrap',
+             }}>
+          +{burst.gold}g
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============ Rarity Beam (rare+ drops shoot a vertical beam) ============
+
+const RarityBeam: React.FC<{ loot: DroppedLoot; nowTick: number }> = ({ loot, nowTick }) => {
+  const age = nowTick - loot.bornAt;
+  if (age > 1600) return null;
+  const color = rarityGlow((loot.rarity as Rarity) ?? 'rare');
+  const t = Math.min(1, age / 1600);
+  const opacity = t < 0.7 ? Math.min(1, t * 3) : 1 - (t - 0.7) / 0.3;
+  return (
+    <div className="absolute pointer-events-none z-15"
+         style={{
+           left: `${loot.x}%`, top: `${loot.y}%`,
+           transform: 'translate(-50%, -100%) rotateX(-58deg)',
+           transformOrigin: '50% 100%',
+         }}>
+      <div style={{
+        width: 18, height: 130,
+        background: `linear-gradient(180deg, ${color} 0%, ${color}80 50%, transparent 100%)`,
+        boxShadow: `0 0 24px ${color}, 0 0 40px ${color}80`,
+        borderRadius: 8,
+        opacity,
+        animation: 'rarityBeam 1.6s ease-out forwards',
+        transformOrigin: 'bottom',
+      }} />
+      {/* Burst ring at base */}
+      <div className="absolute left-1/2 bottom-0 -translate-x-1/2 rounded-full"
+           style={{
+             width: 28, height: 12,
+             background: `radial-gradient(ellipse, ${color} 0%, transparent 70%)`,
+             filter: 'blur(2px)',
+             opacity,
+           }} />
+    </div>
+  );
+};
+
+// ============ Combo Banner ============
+
+const ComboBanner: React.FC<{ combo: number; lastKillAt: number; nowTick: number }> = ({ combo, lastKillAt, nowTick }) => {
+  const since = nowTick - lastKillAt;
+  const timeLeft = Math.max(0, 3000 - since);
+  const pctLeft = timeLeft / 3000;
+  const tier =
+    combo >= 20 ? { label: 'UNSTOPPABLE', color: '#ff6060', bg: '#3a0808' } :
+    combo >= 10 ? { label: 'RAMPAGE',    color: '#ffa040', bg: '#3a1a00' } :
+    combo >= 5  ? { label: 'ON FIRE',    color: '#ffe080', bg: '#2a1a00' } :
+    combo >= 3  ? { label: 'STREAK',     color: '#d4a943', bg: '#2a1c08' } :
+                  { label: 'COMBO',      color: '#b0e8a0', bg: '#142a12' };
+  // pulse on each new kill
+  const pulseT = Math.min(1, since / 400);
+  const scale = 1 + (1 - pulseT) * 0.25;
+  return (
+    <div className="absolute right-3 bottom-3 z-30 pointer-events-none"
+         style={{
+           transform: `scale(${scale})`,
+           transformOrigin: 'bottom right',
+           transition: 'transform 120ms ease-out',
+         }}>
+      <div className="px-4 py-2 rounded-lg border-2 shadow-lg"
+           style={{
+             background: `linear-gradient(90deg, ${tier.bg}f0 0%, ${tier.bg}c0 100%)`,
+             borderColor: tier.color,
+             boxShadow: `0 0 18px ${tier.color}aa, inset 0 0 10px ${tier.color}40`,
+           }}>
+        <div className="text-[10px] uppercase tracking-[0.3em] font-bold"
+             style={{ color: tier.color, fontFamily: "'JetBrains Mono', monospace" }}>
+          {tier.label}
+        </div>
+        <div className="text-3xl font-black leading-none"
+             style={{
+               color: tier.color,
+               textShadow: `0 0 10px ${tier.color}, 2px 2px 0 #000`,
+               fontFamily: "'Cinzel', serif",
+             }}>
+          🔥 ×{combo}
+        </div>
+        {/* countdown bar */}
+        <div className="h-1 mt-1 rounded bg-black/60 overflow-hidden">
+          <div className="h-full transition-all"
+               style={{
+                 width: `${pctLeft * 100}%`,
+                 background: tier.color,
+                 boxShadow: `0 0 6px ${tier.color}`,
+               }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ============ Projectile / attack effect ============
 
 interface SlotRef { heroId: string; x: number; y: number; depth: number }
@@ -1165,24 +1373,15 @@ const RightPanel: React.FC<{
     <aside className="w-56 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
       {/* Totals */}
       <div className="p-2 border-b border-[#3D3328] space-y-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#D4A943]/30">
-          <span className="text-xs text-[#D4A943] font-bold flex items-center gap-1">🪙 GOLD</span>
-          <span className="text-sm text-[#D4A943] font-black">{state.stash.gold.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#B485E8]/30">
-          <span className="text-xs text-[#B485E8] font-bold flex items-center gap-1">⟡ ESS</span>
-          <span className="text-sm text-[#B485E8] font-black">{state.stash.essence.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#7FE2A0]/30">
-          <span className="text-xs text-[#7FE2A0] font-bold flex items-center gap-1">⚔ KILLS</span>
-          <span className="text-sm text-[#7FE2A0] font-black">{state.totalMonstersKilled.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#F2E6A8]/30">
-          <span className="text-xs text-[#F2E6A8] font-bold flex items-center gap-1">XP</span>
-          <span className="text-sm text-[#F2E6A8] font-black">
-            {xpTotal > 9999 ? (xpTotal / 1000).toFixed(1) + 'K' : xpTotal.toLocaleString()}
-          </span>
-        </div>
+        <FlashingStat
+          label="🪙 GOLD"
+          value={state.stash.gold}
+          color="#D4A943"
+          keyProp={state.stash.gold}
+        />
+        <FlashingStat label="⟡ ESS" value={state.stash.essence} color="#B485E8" keyProp={state.stash.essence} />
+        <FlashingStat label="⚔ KILLS" value={state.totalMonstersKilled} color="#7FE2A0" keyProp={state.totalMonstersKilled} />
+        <FlashingStat label="XP" value={xpTotal} color="#F2E6A8" keyProp={xpTotal} />
       </div>
 
       {/* Quick actions */}
@@ -1268,6 +1467,50 @@ const RightPanel: React.FC<{
         </div>
       </div>
     </aside>
+  );
+};
+
+function useCountUp(target: number, durationMs = 600): number {
+  const [value, setValue] = useState(target);
+  useEffect(() => {
+    const from = value;
+    if (from === target) return;
+    const startAt = performance.now();
+    let raf: number = 0;
+    const tick = () => {
+      const t = Math.min(1, (performance.now() - startAt) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target]);
+  return value;
+}
+
+const FlashingStat: React.FC<{
+  label: string; value: number; color: string; keyProp: number;
+}> = ({ label, value, color, keyProp }) => {
+  const [flashKey, setFlashKey] = useState(0);
+  const prevRef = useRef<number>(value);
+  const displayed = useCountUp(value, 500);
+  useEffect(() => {
+    if (value > prevRef.current) setFlashKey(k => k + 1);
+    prevRef.current = value;
+  }, [value]);
+  return (
+    <div key={flashKey}
+         className="flex items-center justify-between px-2 py-1 rounded border"
+         style={{
+           background: 'rgba(0,0,0,0.4)',
+           borderColor: color + '30',
+           animation: flashKey > 0 ? 'goldCounterFlash 0.45s ease-out' : undefined,
+         }}>
+      <span className="text-xs font-bold flex items-center gap-1" style={{ color }}>{label}</span>
+      <span className="text-sm font-black" style={{ color }}>{displayed.toLocaleString()}</span>
+    </div>
   );
 };
 
@@ -1494,11 +1737,20 @@ const RosterPanel: React.FC<{ heroes: Hero[] }> = ({ heroes }) => {
                       </div>
                     </div>
                     <div className="relative h-2 bg-black/80 mt-0.5">
-                      <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc' }} />
+                      <div className="h-full transition-all" style={{ width: mpPct + '%', background: '#2060dc' }} />
                       <div className="absolute inset-0 text-[8px] text-white font-bold text-right pr-1 leading-2"
                            style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000' }}>
                         {Math.ceil(h.mp)}/{h.maxMp} SP
                       </div>
+                    </div>
+                    {/* XP bar */}
+                    <div className="relative h-1 bg-black/80 mt-0.5 overflow-hidden">
+                      <div className="h-full transition-all"
+                           style={{
+                             width: Math.min(100, (h.xp / Math.max(1, xpToNext(h))) * 100) + '%',
+                             background: 'linear-gradient(90deg, #9a8030 0%, #ffe080 100%)',
+                             boxShadow: '0 0 4px #ffe080',
+                           }} />
                     </div>
                   </td>
                   <td className="px-1 py-1 text-[10px] text-[#7fe890] font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>

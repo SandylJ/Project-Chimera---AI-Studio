@@ -271,4 +271,8 @@ export interface GameState {
   collectionLog: string[];
   pendingOfflineReport?: OfflineReport;
   tutorialStep: number; // 0 = not started, 1+ steps
+  // Combo / streak feedback
+  killCombo: number;
+  lastKillAt: number;
+  bestKillCombo: number;
 }
