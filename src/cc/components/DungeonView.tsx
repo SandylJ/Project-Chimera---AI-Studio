@@ -9,13 +9,22 @@ interface Props {
   state: GameState;
   enterDungeon: (id: string) => void;
   clickMonster?: (id: string) => void;
+  autoEquipBest?: () => void;
+  quickHealParty?: () => void;
+  reviveHero?: (heroId: string) => void;
 }
 
-export const DungeonView: React.FC<Props> = ({ state, enterDungeon, clickMonster }) => {
+export const DungeonView: React.FC<Props> = ({
+  state, enterDungeon, clickMonster, autoEquipBest, quickHealParty, reviveHero,
+}) => {
   if (!state.activeDungeon) {
     return <DungeonPicker state={state} enterDungeon={enterDungeon} />;
   }
-  return <BattleView state={state} clickMonster={clickMonster} />;
+  return <BattleView state={state}
+                     clickMonster={clickMonster}
+                     autoEquipBest={autoEquipBest}
+                     quickHealParty={quickHealParty}
+                     reviveHero={reviveHero} />;
 };
 
 const DungeonPicker: React.FC<Props> = ({ state, enterDungeon }) => {

@@ -47,6 +47,9 @@ interface SpriteSlot {
 interface Props {
   state: GameState;
   clickMonster?: (monsterId: string) => void;
+  autoEquipBest?: () => void;
+  quickHealParty?: () => void;
+  reviveHero?: (heroId: string) => void;
 }
 
 // Deterministic scatter so sprite positions don't jitter between renders
@@ -56,7 +59,7 @@ function stableRand(id: string, salt: number): number {
   return Math.abs(h % 1000) / 1000;
 }
 
-export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
+export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero }) => {
   const dungeon = state.activeDungeon!;
   const theme = themeFor(dungeon.defId);
   const tile = dungeon.tiles.find(t => t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y)!;
@@ -231,6 +234,8 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: '#000' }}>
+      {/* Top area: stage + right panel */}
+      <div className="flex-1 flex overflow-hidden">
       {/* STAGE */}
       <div className="relative flex-1 overflow-hidden" style={{ background: `radial-gradient(ellipse at center 30%, #1a1612 0%, #050403 80%)` }}>
         <AmbientLayer theme={theme} />
@@ -397,6 +402,14 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster }) => {
                }} />
         )}
       </div>
+
+      {/* RIGHT QUICK-ACTIONS PANEL */}
+      <RightPanel state={state}
+                  autoEquipBest={autoEquipBest}
+                  quickHealParty={quickHealParty}
+                  reviveHero={reviveHero} />
+
+      </div> {/* end stage+right row */}
 
       {/* BOTTOM PANEL */}
       <BottomPanel state={state} />
@@ -837,6 +850,158 @@ const DungeonProgress: React.FC<{ state: GameState; theme: DungeonTheme }> = ({ 
         );
       })}
     </div>
+  );
+};
+
+// ============ Right quick-actions panel ============
+
+const RightPanel: React.FC<{
+  state: GameState;
+  autoEquipBest?: () => void;
+  quickHealParty?: () => void;
+  reviveHero?: (heroId: string) => void;
+}> = ({ state, autoEquipBest, quickHealParty, reviveHero }) => {
+  const dead = state.heroes.filter(h => h.state !== 'alive');
+  const xpTotal = state.heroes.reduce((a, h) => a + h.xp + h.level * 1000, 0);
+  const healingPotions = Object.entries(state.stash.items)
+    .filter(([id]) => ['healing_potion', 'greater_healing_potion', 'elixir_of_life'].includes(id))
+    .reduce((a, [, q]) => a + q, 0);
+  const manaPotions = state.stash.items['mana_potion'] ?? 0;
+
+  return (
+    <aside className="w-56 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
+      {/* Totals */}
+      <div className="p-2 border-b border-[#3D3328] space-y-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#D4A943]/30">
+          <span className="text-xs text-[#D4A943] font-bold flex items-center gap-1">🪙 GOLD</span>
+          <span className="text-sm text-[#D4A943] font-black">{state.stash.gold.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#B485E8]/30">
+          <span className="text-xs text-[#B485E8] font-bold flex items-center gap-1">⟡ ESS</span>
+          <span className="text-sm text-[#B485E8] font-black">{state.stash.essence.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#7FE2A0]/30">
+          <span className="text-xs text-[#7FE2A0] font-bold flex items-center gap-1">⚔ KILLS</span>
+          <span className="text-sm text-[#7FE2A0] font-black">{state.totalMonstersKilled.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center justify-between bg-black/40 px-2 py-1 rounded border border-[#F2E6A8]/30">
+          <span className="text-xs text-[#F2E6A8] font-bold flex items-center gap-1">XP</span>
+          <span className="text-sm text-[#F2E6A8] font-black">
+            {xpTotal > 9999 ? (xpTotal / 1000).toFixed(1) + 'K' : xpTotal.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="p-2 space-y-1.5 flex-1 overflow-y-auto">
+        <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold px-1"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          Quick Actions
+        </div>
+
+        <ActionCard
+          icon="🛡"
+          title="Auto-Equip Best"
+          subtitle="Swap in upgrades"
+          onClick={autoEquipBest}
+          color="#D4A943"
+        />
+
+        <ActionCard
+          icon="🧪"
+          title="Heal Party"
+          subtitle={`${healingPotions} potions · ${manaPotions} mana`}
+          onClick={quickHealParty}
+          color="#7FE2A0"
+          disabled={healingPotions + manaPotions === 0}
+        />
+
+        {dead.length > 0 && (
+          <div className="space-y-1">
+            <div className="text-[9px] text-[#E86E6E] uppercase tracking-widest font-bold px-1"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              Downed Heroes
+            </div>
+            {dead.map(h => {
+              const c = CLASSES[h.classId];
+              const cost = 100 + h.level * 20;
+              return (
+                <button
+                  key={h.id}
+                  onClick={() => reviveHero && reviveHero(h.id)}
+                  disabled={state.stash.gold < cost}
+                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all ${
+                    state.stash.gold >= cost
+                      ? 'bg-[#2a1410] border-[#E86E6E]/50 hover:border-[#E86E6E] hover:bg-[#3a1a14]'
+                      : 'bg-[#1a0a08] border-[#3D3328] opacity-60 cursor-not-allowed'
+                  }`}
+                >
+                  <span className="text-lg">{c.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] font-bold truncate" style={{ color: c.color }}>{h.name}</div>
+                    <div className="text-[9px] text-[#E86E6E]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      Revive {cost}g
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Stash-stacks info */}
+        <div className="mt-2 text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold px-1"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          Collection
+        </div>
+        <div className="bg-black/40 rounded border border-[#3D3328] p-2 text-[10px]"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <div className="flex justify-between text-[#B8A890]">
+            <span>Unique items</span>
+            <span className="text-[#F2E6A8] font-bold">{state.collectionLog.length}</span>
+          </div>
+          <div className="flex justify-between text-[#B8A890]">
+            <span>Dungeons beat</span>
+            <span className="text-[#F2E6A8] font-bold">
+              {Object.values(state.dungeonsCompleted).reduce((a, b) => a + b, 0)}
+            </span>
+          </div>
+          <div className="flex justify-between text-[#B8A890]">
+            <span>Playtime</span>
+            <span className="text-[#F2E6A8] font-bold">
+              {Math.floor(state.totalPlaytime / 60000)}m
+            </span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+const ActionCard: React.FC<{
+  icon: string; title: string; subtitle: string;
+  onClick?: () => void; color: string; disabled?: boolean;
+}> = ({ icon, title, subtitle, onClick, color, disabled }) => {
+  return (
+    <button
+      disabled={disabled || !onClick}
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2 py-2 rounded border text-left transition-all ${
+        disabled
+          ? 'bg-[#0a0706] border-[#1E1A16] opacity-40 cursor-not-allowed'
+          : 'hover:scale-[1.02] cursor-pointer'
+      }`}
+      style={{
+        background: disabled ? undefined : `linear-gradient(90deg, ${color}18 0%, transparent 100%)`,
+        borderColor: disabled ? undefined : color + '70',
+      }}>
+      <span className="text-xl" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-bold truncate" style={{ color }}>{title}</div>
+        <div className="text-[9px] text-[#B8A890] truncate"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>{subtitle}</div>
+      </div>
+    </button>
   );
 };
 

@@ -371,6 +371,95 @@ export function useCcGame() {
     mutate(s => { s.tutorialStep = s.tutorialStep + 1; });
   }, [mutate]);
 
+  // Auto-equip the best item from stash into each active hero's empty or
+  // clearly-inferior slots. Non-destructive — returns swapped items to stash.
+  const autoEquipBest = useCallback(() => {
+    mutate(s => {
+      const active = s.heroes.filter(h => !h.bench);
+      let equipped = 0;
+      const slots: EquipSlot[] = ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
+      for (const h of active) {
+        for (const slot of slots) {
+          // Find the best available item for this slot
+          let bestId: string | undefined;
+          let bestScore = -1;
+          for (const [id, qty] of Object.entries(s.stash.items)) {
+            if (qty <= 0) continue;
+            const it = ITEMS[id];
+            if (!it || it.slot !== slot) continue;
+            if (it.classReq && !it.classReq.includes(h.classId)) continue;
+            if (it.levelReq && h.level < it.levelReq) continue;
+            const stats = it.stats ?? {};
+            const statSum = (stats.str ?? 0) + (stats.dex ?? 0) + (stats.int ?? 0) + (stats.con ?? 0) + (stats.spd ?? 0) + (stats.luck ?? 0);
+            const score = (it.weaponPower ?? 0) + (it.armor ?? 0) + statSum * 1.2;
+            if (score > bestScore) {
+              bestScore = score;
+              bestId = id;
+            }
+          }
+          if (!bestId) continue;
+          // Compare with currently-equipped
+          const curId = h.equipment[slot];
+          if (curId) {
+            const cur = ITEMS[curId];
+            const curStats = cur?.stats ?? {};
+            const curSum = (curStats.str ?? 0) + (curStats.dex ?? 0) + (curStats.int ?? 0) + (curStats.con ?? 0) + (curStats.spd ?? 0) + (curStats.luck ?? 0);
+            const curScore = (cur?.weaponPower ?? 0) + (cur?.armor ?? 0) + curSum * 1.2;
+            if (curScore >= bestScore) continue;
+          }
+          // Do the swap
+          if (curId) {
+            s.stash.items[curId] = (s.stash.items[curId] ?? 0) + 1;
+          }
+          s.stash.items[bestId] = (s.stash.items[bestId] ?? 0) - 1;
+          if (s.stash.items[bestId] <= 0) delete s.stash.items[bestId];
+          h.equipment[slot] = bestId;
+          recomputeHeroMaxHPMP(h);
+          equipped++;
+        }
+      }
+      if (equipped > 0) pushLog(s, 'system', `🛡 Auto-equipped ${equipped} upgrade${equipped === 1 ? '' : 's'}.`);
+      else pushLog(s, 'system', `🛡 No better gear available.`);
+    });
+  }, [mutate]);
+
+  // Use party's potions to top off HP/MP
+  const quickHealParty = useCallback(() => {
+    mutate(s => {
+      const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+      let used = 0;
+      // Major potions first
+      const potionOrder = ['elixir_of_life', 'greater_healing_potion', 'healing_potion'];
+      for (const h of active) {
+        if (h.hp >= h.maxHp * 0.95) continue;
+        for (const pid of potionOrder) {
+          if ((s.stash.items[pid] ?? 0) <= 0) continue;
+          const pot = ITEMS[pid];
+          if (!pot) continue;
+          h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
+          if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
+          s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
+          if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+          used++;
+          if (h.hp >= h.maxHp * 0.95) break;
+        }
+      }
+      // Mana potions on casters
+      for (const h of active) {
+        if (h.mp >= h.maxMp * 0.9) continue;
+        while ((s.stash.items['mana_potion'] ?? 0) > 0 && h.mp < h.maxMp * 0.9) {
+          const pot = ITEMS['mana_potion'];
+          h.mp = Math.min(h.maxMp, h.mp + (pot.manaOnUse ?? 0));
+          s.stash.items['mana_potion'] = (s.stash.items['mana_potion'] ?? 0) - 1;
+          if (s.stash.items['mana_potion'] <= 0) delete s.stash.items['mana_potion'];
+          used++;
+        }
+      }
+      if (used > 0) pushLog(s, 'heal', `🧪 Used ${used} potion${used === 1 ? '' : 's'} across the party.`);
+      else pushLog(s, 'system', `🧪 No potions needed or available.`);
+    });
+  }, [mutate]);
+
   // Click monster → bonus damage (classic CC2 interaction)
   const clickMonster = useCallback((monsterId: string) => {
     mutate(s => {
@@ -418,5 +507,7 @@ export function useCcGame() {
     resetGame,
     advanceTutorial,
     clickMonster,
+    autoEquipBest,
+    quickHealParty,
   };
 }
