@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCcGame } from './useGame';
-import { Sidebar } from './components/Sidebar';
-import { HUDBar } from './components/HUDBar';
 import { DungeonView } from './components/DungeonView';
 import { PartyView } from './components/PartyView';
 import { StashView } from './components/StashView';
@@ -52,49 +50,45 @@ export default function CcApp() {
   }, [g]);
 
   return (
-    <div className="w-screen h-screen flex bg-[#0D0B09] text-[#E8E0D4] overflow-hidden"
+    <div className="w-screen h-screen flex flex-col bg-[#0D0B09] text-[#E8E0D4] overflow-hidden"
          style={{ fontFamily: "'Nunito', sans-serif" }}>
-      <Sidebar tab={tab} setTab={setTab} state={state} />
+      <TopTabBar tab={tab} setTab={setTab} state={state}
+                 setSpeed={g.setSpeed}
+                 togglePause={g.togglePause}
+                 retreatToTown={g.retreatToTown} />
       <main className="flex-1 flex flex-col overflow-hidden">
-        <HUDBar state={state}
-                setSpeed={g.setSpeed}
-                togglePause={g.togglePause}
-                retreatToTown={g.retreatToTown} />
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            {tab === 'dungeon' && (
-              <DungeonView state={state}
-                           enterDungeon={g.enterDungeon}
-                           clickMonster={g.clickMonster}
-                           autoEquipBest={g.autoEquipBest}
-                           quickHealParty={g.quickHealParty}
-                           reviveHero={g.reviveHero} />
-            )}
-            {tab === 'party' && (
-              <PartyView state={state}
-                         unequipItem={g.unequipItem}
-                         toggleBench={g.toggleBench}
-                         buyAbility={g.buyAbility}
-                         reviveHero={g.reviveHero}
-                         useConsumable={g.useConsumable}
-                         equipItem={g.equipItem} />
-            )}
-            {tab === 'stash' && (
-              <StashView state={state}
-                         sellItem={g.sellItem}
-                         setAutoSell={g.setAutoSell} />
-            )}
-            {tab === 'town' && (
-              <TownView state={state}
-                        recruitHero={g.recruitHero}
-                        buyShopItem={g.buyShopItem}
-                        reviveHero={g.reviveHero}
-                        healParty={g.healParty}
-                        resetGame={g.resetGame} />
-            )}
-            {tab === 'log' && <CombatLog state={state} />}
-          </div>
-          {tab !== 'log' && <CombatLog state={state} compact />}
+        <div className="flex-1 overflow-hidden">
+          {tab === 'dungeon' && (
+            <DungeonView state={state}
+                         enterDungeon={g.enterDungeon}
+                         clickMonster={g.clickMonster}
+                         autoEquipBest={g.autoEquipBest}
+                         quickHealParty={g.quickHealParty}
+                         reviveHero={g.reviveHero} />
+          )}
+          {tab === 'party' && (
+            <PartyView state={state}
+                       unequipItem={g.unequipItem}
+                       toggleBench={g.toggleBench}
+                       buyAbility={g.buyAbility}
+                       reviveHero={g.reviveHero}
+                       useConsumable={g.useConsumable}
+                       equipItem={g.equipItem} />
+          )}
+          {tab === 'stash' && (
+            <StashView state={state}
+                       sellItem={g.sellItem}
+                       setAutoSell={g.setAutoSell} />
+          )}
+          {tab === 'town' && (
+            <TownView state={state}
+                      recruitHero={g.recruitHero}
+                      buyShopItem={g.buyShopItem}
+                      reviveHero={g.reviveHero}
+                      healParty={g.healParty}
+                      resetGame={g.resetGame} />
+          )}
+          {tab === 'log' && <CombatLog state={state} />}
         </div>
       </main>
       <DecisionModal decision={state.activeDecision} onChoose={g.resolveDecision} />
@@ -104,6 +98,112 @@ export default function CcApp() {
     </div>
   );
 }
+
+// ========== Top tab bar (CC2-style) ==========
+
+const TopTabBar: React.FC<{
+  tab: string; setTab: (t: string) => void; state: ReturnType<typeof useCcGame>['state'];
+  setSpeed: (s: 1|2|4) => void; togglePause: () => void; retreatToTown: () => void;
+}> = ({ tab, setTab, state, setSpeed, togglePause, retreatToTown }) => {
+  const TABS = [
+    { id: 'dungeon', label: 'Dungeon', icon: '⚔' },
+    { id: 'party',   label: 'Party',   icon: '👥' },
+    { id: 'stash',   label: 'Stash',   icon: '📦' },
+    { id: 'town',    label: 'Town',    icon: '🏰' },
+    { id: 'log',     label: 'Log',     icon: '📜' },
+  ];
+  const dungeon = state.activeDungeon;
+  return (
+    <div className="shrink-0 bg-[#0A0806] border-b-2 border-[#3D3328] flex items-center gap-1 px-2 py-1"
+         style={{ backgroundImage: 'linear-gradient(180deg, #1a1410 0%, #0a0806 100%)' }}>
+      {/* Tabs */}
+      <div className="flex items-center gap-0.5">
+        {TABS.map(t => {
+          const active = tab === t.id;
+          const needsAttention = t.id === 'party' && state.heroes.some(h => h.abilityPoints > 0);
+          return (
+            <button key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={`relative px-3 py-1 text-xs rounded transition-all ${
+                      active
+                        ? 'bg-[#6EA9E4] text-[#0a0806] font-bold'
+                        : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
+                    }`}
+                    style={{ fontFamily: "'Nunito', sans-serif" }}>
+              <span className="mr-1">{t.icon}</span>{t.label}
+              {needsAttention && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#D4A943] animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Center: current dungeon badge if in one */}
+      <div className="flex-1 flex items-center justify-center">
+        {dungeon ? (
+          <div className="text-[10px] uppercase tracking-widest text-[#F2E6A8] font-bold"
+               style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            {dungeon.icon} {dungeon.name} — Room {dungeon.pathIndex + 1}/{dungeon.path.length}
+          </div>
+        ) : (
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[#7A6E60]"
+               style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            Party Idle
+          </div>
+        )}
+      </div>
+
+      {/* Right: currencies + controls */}
+      <div className="flex items-center gap-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-lg">🪙</span>
+          <span className="text-[#D4A943] font-bold tabular-nums">{state.stash.gold.toLocaleString()}</span>
+        </div>
+        {state.stash.essence > 0 && (
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-lg">⟡</span>
+            <span className="text-[#B485E8] font-bold tabular-nums">{state.stash.essence.toLocaleString()}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-[#7A6E60]">XP</span>
+          <span className="text-[#F2E6A8] font-bold tabular-nums">
+            {state.heroes.reduce((a,h)=>a+h.xp+h.level*1000,0).toLocaleString()}
+          </span>
+        </div>
+        {/* Speed/pause */}
+        <div className="flex items-center gap-0.5 ml-2">
+          {[1, 2, 4].map(s => (
+            <button key={s} onClick={() => setSpeed(s as 1|2|4)}
+                    className={`w-7 h-7 text-[10px] font-bold rounded ${
+                      state.speed === s ? 'bg-[#D4A943] text-black' : 'bg-[#1E1A16] text-[#B8A890]'
+                    }`}>{s}×</button>
+          ))}
+          <button onClick={togglePause}
+                  className={`w-7 h-7 rounded text-xs ${
+                    state.paused ? 'bg-[#6EA9E4] text-black' : 'bg-[#1E1A16] text-[#E8E0D4]'
+                  }`}>{state.paused ? '▶' : '❚❚'}</button>
+          {dungeon && (
+            <button onClick={retreatToTown}
+                    className="ml-1 px-2 h-7 text-[10px] font-bold rounded bg-[#1E1A16] text-[#E86E6E] hover:bg-[#2a1410] border border-[#3D3328]">
+              ← TOWN
+            </button>
+          )}
+          <button onClick={() => {
+                    if (!confirm('Hard reset: wipe save, clear cache, reload?')) return;
+                    try { localStorage.removeItem('cc_save_v1'); } catch {}
+                    window.location.href = window.location.pathname + '?nuked=' + Date.now();
+                  }}
+                  className="ml-1 px-1.5 h-7 text-[9px] rounded bg-[#14100C] text-[#7A6E60] hover:text-[#E86E6E] border border-[#3D3328]"
+                  title="Hard reset">
+            ⚠
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const OfflineOverlay: React.FC<{ report: NonNullable<ReturnType<typeof useCcGame>['state']['pendingOfflineReport']>; dismiss: () => void }> = ({ report, dismiss }) => {
   const mins = Math.floor(report.duration / 60000);

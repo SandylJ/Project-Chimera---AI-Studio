@@ -5,6 +5,7 @@ import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
 import { ITEMS } from '../data/items';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
+import { ClassSprite } from '../visuals/sprites';
 import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
 
 /* ============================================================
@@ -323,11 +324,11 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
           <div
             className="relative"
             style={{
-              width: '82%',
-              height: '80%',
-              marginTop: '2%',
-              perspective: '1500px',
-              perspectiveOrigin: '50% 20%',
+              width: '92%',
+              height: '94%',
+              marginTop: '1%',
+              perspective: '1700px',
+              perspectiveOrigin: '50% 18%',
             }}
           >
             <div
@@ -726,20 +727,13 @@ const HeroSpriteBody: React.FC<{
              transform: `translate(${lungeX}px, ${bob}px) ${lungeT > 0 && actionKind === 'melee' ? `scale(${1 + lungeT * 0.08})` : ''}`,
              transition: lungeT > 0 ? 'transform 100ms ease-out' : 'transform 180ms ease-out',
            }}>
-      {/* Name + HP bars (tiny, CC2-style) */}
-      <div style={{ minWidth: 70, marginBottom: 2 }}>
-        <div className="px-1 py-px bg-black/75 rounded-sm border border-black/70 text-center"
-             style={{ fontFamily: "'Nunito', sans-serif" }}>
-          <div className="text-[9px] font-bold leading-none truncate"
-               style={{ color: cls.color, textShadow: '0 1px 0 #000' }}>
-            {hero.name}
-          </div>
-        </div>
-        <div className="h-1 bg-black/80 overflow-hidden relative" style={{ marginTop: 1 }}>
+      {/* Tiny HP/MP bars (no name — names are in the roster panel) */}
+      <div style={{ width: 56, marginBottom: 2 }}>
+        <div className="h-[3px] bg-black/80 overflow-hidden relative rounded-sm">
           <div className="h-full" style={{ width: hpPct + '%', background: '#dc2020', transition: 'width 200ms ease-out' }} />
         </div>
         {hero.maxMp > 0 && (
-          <div className="h-0.5 bg-black/80 overflow-hidden">
+          <div className="h-[2px] bg-black/80 overflow-hidden mt-[1px] rounded-sm">
             <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc', transition: 'width 200ms' }} />
           </div>
         )}
@@ -747,39 +741,29 @@ const HeroSpriteBody: React.FC<{
 
       {/* The sprite itself */}
       <div className="relative">
-        {/* Shadow */}
-        <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]"
-             style={{ width: 36, height: 7, bottom: -4, background: 'radial-gradient(ellipse, rgba(0,0,0,0.75) 0%, transparent 70%)' }} />
-        {/* Chunky pixel character */}
-        <div
-          className="relative flex items-center justify-center"
-          style={{
-            width: 44, height: 44,
-            background: `radial-gradient(circle at 35% 30%, ${cls.color}e6 0%, ${cls.color}66 55%, ${cls.color}00 100%)`,
-            border: `2px solid ${cls.color}`,
-            borderRadius: '50% 50% 42% 42% / 55% 55% 45% 45%',
-            boxShadow: `0 0 8px ${cls.color}90, inset 0 -6px 10px rgba(0,0,0,0.5)`,
-          }}
-        >
-          <div className="text-2xl select-none"
-               style={{
-                 filter: 'drop-shadow(1px 1px 0 #000) drop-shadow(-1px 1px 0 #000) drop-shadow(1px -1px 0 #000) drop-shadow(0 2px 2px rgba(0,0,0,0.6))',
-               }}>
-            {cls.icon}
+        {/* Pixel art character */}
+        <div className="relative"
+             style={{
+               filter: `drop-shadow(0 2px 3px rgba(0,0,0,0.75)) ${flash ? `drop-shadow(0 0 6px ${flashColor})` : ''}`,
+               width: 64, height: 88,
+             }}>
+          <div className="absolute inset-0 flex items-end justify-center"
+               style={{ transform: 'translateY(-4px)' }}>
+            <ClassSprite classId={hero.classId} size={64} />
           </div>
-          {/* Shield indicator */}
+          {/* Shield indicator (glowing ring around sprite) */}
           {hero.shield > 0 && (
-            <div className="absolute inset-0 rounded-[inherit] animate-pulse pointer-events-none"
-                 style={{ boxShadow: `inset 0 0 10px #6EA9E4, 0 0 14px #6EA9E480`, border: '2px solid #6EA9E4' }} />
+            <div className="absolute inset-x-0 bottom-0 h-20 rounded-full animate-pulse pointer-events-none"
+                 style={{ boxShadow: `inset 0 0 14px #6EA9E4, 0 0 16px #6EA9E480`, border: '2px solid #6EA9E4' }} />
           )}
-          {/* Flash overlay */}
+          {/* Hit flash tint */}
           {flash && (
-            <div className="absolute inset-0 rounded-[inherit] pointer-events-none"
-                 style={{ background: flashColor, mixBlendMode: 'screen', opacity: 0.6 }} />
+            <div className="absolute inset-0 pointer-events-none"
+                 style={{ background: flashColor, mixBlendMode: 'screen', opacity: 0.45 }} />
           )}
-          {/* "!" ability point indicator */}
+          {/* Ability-point badge */}
           {hero.abilityPoints > 0 && (
-            <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-[#D4A943] text-black text-[9px] font-black flex items-center justify-center animate-pulse shadow">
+            <div className="absolute top-0 right-0 w-5 h-5 rounded-full bg-[#D4A943] text-black text-[10px] font-black flex items-center justify-center animate-pulse shadow-lg z-10">
               !
             </div>
           )}
@@ -1306,20 +1290,30 @@ const FloorLoot: React.FC<{ loot: DroppedLoot; nowTick: number }> = ({ loot, now
 
 const MidRoomRing: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, theme }) => {
   const t = 1 - Math.min(1, dungeon.moveTimer / 3500);
+  const sec = Math.max(0, dungeon.moveTimer / 1000);
   return (
-    <div className="absolute left-1/2 top-[35%] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-      <svg width="64" height="64" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r="24" stroke="#00000080" strokeWidth="3" fill="none" />
-        <circle cx="32" cy="32" r="24"
-                stroke={theme.accentColor}
-                strokeWidth="3"
-                fill="none"
-                strokeDasharray={`${Math.PI * 48}`}
-                strokeDashoffset={`${Math.PI * 48 * (1 - t)}`}
-                strokeLinecap="round"
-                transform="rotate(-90 32 32)"
-                style={{ transition: 'stroke-dashoffset 100ms linear' }} />
-      </svg>
+    <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center gap-1">
+      <div className="relative w-16 h-16">
+        <svg width="64" height="64" viewBox="0 0 64 64" className="absolute inset-0">
+          <circle cx="32" cy="32" r="24" stroke="#00000080" strokeWidth="3" fill="none" />
+          <circle cx="32" cy="32" r="24"
+                  stroke={theme.accentColor}
+                  strokeWidth="3"
+                  fill="none"
+                  strokeDasharray={`${Math.PI * 48}`}
+                  strokeDashoffset={`${Math.PI * 48 * (1 - t)}`}
+                  strokeLinecap="round"
+                  transform="rotate(-90 32 32)"
+                  style={{ transition: 'stroke-dashoffset 100ms linear' }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-2xl">
+          👣
+        </div>
+      </div>
+      <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-black/70 rounded-full"
+           style={{ color: theme.accentColor, fontFamily: "'JetBrains Mono', monospace" }}>
+        Advancing · {sec.toFixed(1)}s
+      </div>
     </div>
   );
 };
@@ -1370,7 +1364,7 @@ const RightPanel: React.FC<{
   const manaPotions = state.stash.items['mana_potion'] ?? 0;
 
   return (
-    <aside className="w-56 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
+    <aside className="w-72 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
       {/* Totals */}
       <div className="p-2 border-b border-[#3D3328] space-y-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         <FlashingStat
@@ -1624,10 +1618,10 @@ const AmbientLayer: React.FC<{ theme: DungeonTheme }> = ({ theme }) => {
 const BottomPanel: React.FC<{ state: GameState }> = ({ state }) => {
   const heroes = state.heroes.filter(h => !h.bench);
   return (
-    <div className="shrink-0 bg-[#0B0807] border-t-2 border-[#3D3328] grid gap-2 p-2"
+    <div className="shrink-0 bg-[#0B0807] border-t-2 border-[#3D3328] grid gap-2 p-1.5"
          style={{
-           gridTemplateColumns: '1fr 1.6fr 0.9fr',
-           minHeight: 200,
+           gridTemplateColumns: '0.8fr 1.8fr 0.8fr',
+           height: 150,
          }}>
       <SpellGrid heroes={heroes} />
       <RosterPanel heroes={heroes} />
