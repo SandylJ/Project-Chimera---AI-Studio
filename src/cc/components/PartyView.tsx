@@ -38,11 +38,16 @@ export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, bu
         {state.heroes.map(h => {
           const cls = CLASSES[h.classId];
           const isSel = selected?.id === h.id;
+          const hpPct = Math.max(0, (h.hp / Math.max(1, h.maxHp)) * 100);
+          const mpPct = h.maxMp > 0 ? Math.max(0, (h.mp / h.maxMp) * 100) : 0;
+          const xpPct = Math.min(100, (h.xp / Math.max(1, xpToNext(h))) * 100);
+          const hpColor = hpPct > 66 ? '#55d86b' : hpPct > 33 ? '#e9cc3a' : '#e04040';
+          const downed = h.state !== 'alive';
           return (
             <button
               key={h.id}
               onClick={() => setSelectedId(h.id)}
-              className={`w-full text-left p-2 border-b border-[#1E1A16] flex items-center gap-2 transition-all
+              className={`relative w-full text-left p-2 border-b border-[#1E1A16] flex items-center gap-2 transition-all
                 ${isSel ? 'bg-[#2B231B] border-l-2 border-l-[#D4A943]' : 'hover:bg-[#1E1A16] border-l-2 border-l-transparent'}`}
             >
               <div className="shrink-0 flex items-end justify-center rounded"
@@ -50,17 +55,44 @@ export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, bu
                      width: 42, height: 48,
                      background: `linear-gradient(180deg, ${cls.color}22 0%, #00000000 100%)`,
                      border: `1px solid ${cls.color}60`,
+                     filter: downed ? 'grayscale(1) opacity(0.5)' : undefined,
                    }}>
                 <ClassSprite classId={h.classId} size={40} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold truncate" style={{ color: cls.color }}>{h.name}</div>
-                <div className="text-[9px] text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  L{h.level} {cls.role.toUpperCase()}{h.bench ? ' • BENCH' : ''}{h.state !== 'alive' ? ' • DOWN' : ''}
+                <div className="flex items-baseline gap-1">
+                  <div className="text-xs font-bold truncate flex-1" style={{ color: cls.color }}>{h.name}</div>
+                  <div className="text-[8px] text-[#f2e08a] font-bold shrink-0"
+                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    L{h.level}
+                  </div>
+                </div>
+                <div className="text-[9px] text-[#7A6E60] leading-none mt-0.5"
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {cls.role.toUpperCase()}{h.bench ? ' · BENCH' : ''}{downed ? ' · DOWN' : ''}
+                </div>
+                {/* HP bar */}
+                <div className="relative h-[4px] mt-1 bg-black rounded-sm overflow-hidden">
+                  <div className="h-full" style={{ width: hpPct + '%', background: hpColor, transition: 'width 200ms' }} />
+                </div>
+                {/* MP bar */}
+                {h.maxMp > 0 && (
+                  <div className="relative h-[2px] mt-0.5 bg-black rounded-sm overflow-hidden">
+                    <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc' }} />
+                  </div>
+                )}
+                {/* XP bar */}
+                <div className="relative h-[2px] mt-0.5 bg-black rounded-sm overflow-hidden">
+                  <div className="h-full"
+                       style={{
+                         width: xpPct + '%',
+                         background: 'linear-gradient(90deg, #9a8030 0%, #ffe080 100%)',
+                       }} />
                 </div>
               </div>
               {h.abilityPoints > 0 && (
-                <span className="text-[9px] bg-[#D4A943] text-black px-1.5 rounded-full font-bold">+{h.abilityPoints}</span>
+                <span className="absolute top-1 right-1 text-[9px] bg-[#D4A943] text-black px-1.5 rounded-full font-black"
+                      style={{ boxShadow: '0 0 6px #D4A943aa' }}>+{h.abilityPoints}</span>
               )}
             </button>
           );
