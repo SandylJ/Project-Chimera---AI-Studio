@@ -8,6 +8,7 @@ import { themeFor } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
 import { PixelMapView } from './PixelMapView';
 import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
+import { bountyProgress } from '../useGame';
 
 /* ============================================================
    BattleView — hosts the PixelMapView stage, plus overlays
@@ -22,9 +23,10 @@ interface Props {
   quickHealParty?: () => void;
   reviveHero?: (heroId: string) => void;
   sellJunk?: () => void;
+  useScroll?: (itemId: string) => void;
 }
 
-export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk }) => {
+export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll }) => {
   const dungeon = state.activeDungeon!;
   const tile = dungeon.tiles.find(t => t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y)!;
   const heroes = state.heroes.filter(h => !h.bench);
@@ -140,7 +142,8 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
                     autoEquipBest={autoEquipBest}
                     quickHealParty={quickHealParty}
                     reviveHero={reviveHero}
-                    sellJunk={sellJunk} />
+                    sellJunk={sellJunk}
+                    useScroll={useScroll} />
       </div>
 
       {/* BOTTOM PANEL */}
@@ -254,7 +257,8 @@ const RightPanel: React.FC<{
   quickHealParty?: () => void;
   reviveHero?: (heroId: string) => void;
   sellJunk?: () => void;
-}> = ({ state, autoEquipBest, quickHealParty, reviveHero, sellJunk }) => {
+  useScroll?: (itemId: string) => void;
+}> = ({ state, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll }) => {
   const dead = state.heroes.filter(h => h.state !== 'alive');
   const xpTotal = state.heroes.reduce((a, h) => a + h.xp + h.level * 1000, 0);
   const healingPotions = Object.entries(state.stash.items)
@@ -356,6 +360,47 @@ const RightPanel: React.FC<{
           </div>
         )}
 
+        {/* Scroll quickbar */}
+        {useScroll && (() => {
+          const scrolls = Object.entries(state.stash.items)
+            .filter(([id, q]) => q > 0 && id.startsWith('scroll_'))
+            .map(([id, q]) => ({ id, qty: q, item: ITEMS[id] }))
+            .filter(x => x.item);
+          if (scrolls.length === 0) return null;
+          return (
+            <div>
+              <div className="text-[9px] text-[#6EA9E4] uppercase tracking-widest font-bold px-1"
+                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Scrolls
+              </div>
+              <div className="grid grid-cols-2 gap-1 mt-1">
+                {scrolls.map(s => (
+                  <button key={s.id}
+                          onClick={() => useScroll(s.id)}
+                          className="group px-2 py-1.5 rounded border text-left transition-all hover:scale-[1.02] hover:border-[#6EA9E4]"
+                          style={{
+                            background: 'linear-gradient(90deg, #0e1a2a 0%, #050a14 100%)',
+                            borderColor: '#2b486e',
+                          }}
+                          title={s.item.description}>
+                    <div className="flex items-center gap-1">
+                      <span className="text-lg shrink-0">{s.item.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-bold text-[#9bc9ff] truncate">
+                          {s.item.name.replace(/^Scroll of /, '')}
+                        </div>
+                        <div className="text-[9px] text-[#5e8aba]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          ×{s.qty}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {dead.length > 0 && (
           <div className="space-y-1">
             <div className="text-[9px] text-[#E86E6E] uppercase tracking-widest font-bold px-1"
@@ -386,6 +431,41 @@ const RightPanel: React.FC<{
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* Daily bounties (compact) */}
+        {state.bountyBoard && (
+          <div className="mt-2">
+            <div className="text-[9px] text-[#F2E6A8] uppercase tracking-widest font-bold px-1"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              Daily Bounties
+            </div>
+            <div className="bg-black/40 rounded border border-[#D4A943]/40 p-2 space-y-1.5">
+              {state.bountyBoard.bounties.map(b => {
+                const prog = bountyProgress(state, b);
+                const pct = Math.min(100, (prog / b.target) * 100);
+                const done = prog >= b.target;
+                return (
+                  <div key={b.id} className={b.claimed ? 'opacity-40' : ''}>
+                    <div className="flex items-center justify-between gap-1 text-[10px]"
+                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span className="text-[#B8A890] truncate flex-1">{b.label}</span>
+                      <span className={done && !b.claimed ? 'text-[#7FE2A0] font-bold' : 'text-[#7A6E60]'}>
+                        {Math.min(prog, b.target)}/{b.target}
+                      </span>
+                    </div>
+                    <div className="h-1 bg-black/80 rounded overflow-hidden mt-0.5">
+                      <div className="h-full transition-all"
+                           style={{
+                             width: pct + '%',
+                             background: done ? '#7FE2A0' : '#D4A943',
+                           }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

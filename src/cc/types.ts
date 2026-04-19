@@ -267,6 +267,37 @@ export interface ShopRotation {
   bundles: Array<{ id: string; label: string; items: Array<[string, number]>; price: number }>;
 }
 
+export type BountyKind = 'kill_count' | 'earn_gold' | 'find_items' | 'clear_dungeon' | 'best_combo';
+
+export interface Bounty {
+  id: string;
+  kind: BountyKind;
+  label: string;
+  description: string;
+  target: number;
+  claimed: boolean;
+  reward: { gold?: number; essence?: number; itemId?: string; itemQty?: number };
+  // Context for tracking
+  dungeonId?: string; // for clear_dungeon
+}
+
+export interface BountyBoard {
+  day: number;
+  bounties: Bounty[];
+  // Snapshot values at board rollover; bounty progress = current - snapshot.
+  snapshot: {
+    totalMonstersKilled: number;
+    totalGoldEarned: number;
+    itemsCollected: number;
+    dungeonsCleared: Record<string, number>;
+    bestKillCombo: number;
+  };
+  // Dungeons cleared on this board (for clear_dungeon tracking by id)
+  dungeonClearCount: Record<string, number>;
+  // Items collected on this board (total new drops added to stash)
+  itemsCollected: number;
+}
+
 export interface OfflineReport {
   duration: number; // ms
   tilesCleared: number;
@@ -305,4 +336,6 @@ export interface GameState {
   blessings: Partial<Record<BlessingId, number>>;
   // Rotating daily shop stock / scrolls / bundles (regenerated each day).
   shopRotation?: ShopRotation;
+  // Daily bounty board — 3 rotating goals per day with claimable rewards.
+  bountyBoard?: BountyBoard;
 }

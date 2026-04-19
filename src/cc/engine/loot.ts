@@ -59,6 +59,8 @@ export function addToStash(state: GameState, itemId: string, qty: number): void 
   if (!ITEMS[itemId]) return;
   const existing = state.stash.items[itemId] ?? 0;
   const rarity = ITEMS[itemId].rarity;
+  // Bounty progress: count every drop even if auto-sold.
+  if (state.bountyBoard) state.bountyBoard.itemsCollected += qty;
   // Auto-sell check
   if (state.autoSellRarities.includes(rarity)) {
     const gold = ITEMS[itemId].value * qty;

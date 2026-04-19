@@ -168,6 +168,10 @@ export function onDungeonVictory(state: GameState): void {
   pushLog(state, 'victory', `🏆 ${def.name} cleared (floor ${d.floor})!`, 'legendary');
   state.dungeonsCompleted[d.defId] = Math.max(state.dungeonsCompleted[d.defId] ?? 0, d.floor);
   state.stash.essence += def.rewards.essenceOnBoss;
+  // Bounty: mark this dungeon as cleared today
+  if (state.bountyBoard) {
+    state.bountyBoard.dungeonClearCount[d.defId] = (state.bountyBoard.dungeonClearCount[d.defId] ?? 0) + 1;
+  }
   if (def.rewards.guaranteedLoot) {
     const itemId = def.rewards.guaranteedLoot;
     state.stash.items[itemId] = (state.stash.items[itemId] ?? 0) + 1;

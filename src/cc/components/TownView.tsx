@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { BlessingId, ClassId, EquipSlot, GameState, Hero } from '../types';
+import { BlessingId, Bounty, ClassId, EquipSlot, GameState, Hero } from '../types';
 import { CLASSES } from '../data/classes';
 import { ITEMS } from '../data/items';
 import { enchantCost, enchantTier, MAX_ENCHANT, blessingLevel, blessingCost, blessingBonus } from '../engine/util';
 import { ClassSprite } from '../visuals/sprites';
+import { bountyProgress } from '../useGame';
 
 interface Props {
   state: GameState;
@@ -15,6 +16,7 @@ interface Props {
   resetGame: () => void;
   upgradeEquip: (heroId: string, slot: EquipSlot) => void;
   buyBlessing: (id: BlessingId) => void;
+  claimBounty: (id: string) => void;
 }
 
 const STATIC_STOCK = [
@@ -26,9 +28,9 @@ const STATIC_STOCK = [
 
 export const TownView: React.FC<Props> = ({
   state, recruitHero, buyShopItem, buyShopBundle, reviveHero, healParty, resetGame,
-  upgradeEquip, buyBlessing,
+  upgradeEquip, buyBlessing, claimBounty,
 }) => {
-  const [section, setSection] = useState<'tavern' | 'shop' | 'blacksmith' | 'shrine' | 'temple' | 'inn' | 'about'>('shop');
+  const [section, setSection] = useState<'tavern' | 'shop' | 'blacksmith' | 'shrine' | 'bounties' | 'temple' | 'inn' | 'about'>('shop');
 
   return (
     <div className="p-4 h-full overflow-hidden flex flex-col">
@@ -39,21 +41,28 @@ export const TownView: React.FC<Props> = ({
         Rest, recruit, trade, upgrade, and prepare for the next expedition.
       </div>
       <div className="flex border-b border-[#3D3328] mb-3 flex-wrap">
-        {(['shop', 'blacksmith', 'shrine', 'tavern', 'temple', 'inn', 'about'] as const).map(s => {
+        {(['shop', 'blacksmith', 'shrine', 'bounties', 'tavern', 'temple', 'inn', 'about'] as const).map(s => {
           const label: Record<typeof s, string> = {
             shop: '🛒 Shop',
             blacksmith: '🔨 Blacksmith',
             shrine: '⟡ Shrine',
+            bounties: '🎯 Bounties',
             tavern: '🍺 Tavern',
             temple: '⛪ Temple',
             inn: '🛌 Inn',
             about: 'ℹ About',
           } as any;
+          const unclaimedComplete = s === 'bounties' &&
+            (state.bountyBoard?.bounties.some(b => !b.claimed && bountyProgress(state, b) >= b.target) ?? false);
           return (
             <button key={s} onClick={() => setSection(s)}
-                    className={`px-4 py-2 text-xs uppercase tracking-widest ${section === s ? 'text-[#F2E6A8] border-b-2 border-[#D4A943]' : 'text-[#7A6E60] hover:text-[#B8A890]'}`}
+                    className={`relative px-4 py-2 text-xs uppercase tracking-widest ${section === s ? 'text-[#F2E6A8] border-b-2 border-[#D4A943]' : 'text-[#7A6E60] hover:text-[#B8A890]'}`}
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {label[s]}
+              {unclaimedComplete && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#7FE2A0] animate-pulse"
+                      style={{ boxShadow: '0 0 6px #7FE2A0' }} />
+              )}
             </button>
           );
         })}
@@ -63,6 +72,7 @@ export const TownView: React.FC<Props> = ({
         {section === 'shop' && <Shop state={state} buyShopItem={buyShopItem} buyShopBundle={buyShopBundle} />}
         {section === 'blacksmith' && <Blacksmith state={state} upgradeEquip={upgradeEquip} />}
         {section === 'shrine' && <Shrine state={state} buyBlessing={buyBlessing} />}
+        {section === 'bounties' && <Bounties state={state} claimBounty={claimBounty} />}
         {section === 'temple' && <Temple state={state} reviveHero={reviveHero} />}
         {section === 'inn' && <Inn state={state} healParty={healParty} />}
         {section === 'about' && <About resetGame={resetGame} state={state} />}
@@ -376,6 +386,89 @@ const Shrine: React.FC<{ state: GameState; buyBlessing: (id: BlessingId) => void
     </div>
   );
 };
+
+/* ============ Bounties ============ */
+
+const Bounties: React.FC<{ state: GameState; claimBounty: (id: string) => void }> = ({ state, claimBounty }) => {
+  const board = state.bountyBoard;
+  if (!board) return <div className="text-sm text-[#7A6E60]">No bounties available.</div>;
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setUTCHours(24, 0, 0, 0);
+  const msLeft = tomorrow.getTime() - now.getTime();
+  const hrs = Math.floor(msLeft / 3600000);
+  const mins = Math.floor((msLeft % 3600000) / 60000);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <div className="text-sm text-[#B8A890]">
+          Three bounties rotate every day. Claim rewards after completing them.
+        </div>
+        <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          Resets in {hrs}h {mins}m
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {board.bounties.map(b => {
+          const prog = bountyProgress(state, b);
+          const pct = Math.min(100, (prog / b.target) * 100);
+          const done = prog >= b.target;
+          const claimed = b.claimed;
+          return (
+            <div key={b.id}
+                 className="p-3 rounded border"
+                 style={{
+                   background: claimed ? '#0a0806' : done ? 'linear-gradient(135deg, #1a2408 0%, #0a1004 100%)' : '#14100C',
+                   borderColor: claimed ? '#3D3328' : done ? '#7FE2A0' : '#3D3328',
+                   boxShadow: done && !claimed ? '0 0 10px #7FE2A080' : undefined,
+                 }}>
+              <div className="text-sm font-bold text-[#F2E6A8] leading-tight" style={{ fontFamily: "'Cinzel', serif" }}>
+                {b.label}
+              </div>
+              <div className="text-[11px] text-[#B8A890] mt-1 leading-tight">{b.description}</div>
+              <div className="mt-2 h-2 bg-black/80 rounded overflow-hidden">
+                <div className="h-full transition-all"
+                     style={{
+                       width: pct + '%',
+                       background: done ? '#7FE2A0' : '#D4A943',
+                     }} />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <div className="text-[10px] text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {Math.min(prog, b.target)} / {b.target}
+                </div>
+                <div className="text-[10px] text-[#D4A943]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {bountyRewardText(b)}
+                </div>
+              </div>
+              <button onClick={() => claimBounty(b.id)}
+                      disabled={claimed || !done}
+                      className={`w-full mt-2 py-1.5 text-xs font-bold rounded ${
+                        claimed ? 'bg-[#1E1A16] text-[#5a5040] cursor-not-allowed' :
+                        done ? 'bg-[#7FE2A0] text-black hover:bg-[#5fc085]' :
+                               'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'
+                      }`}>
+                {claimed ? '✓ Claimed' : done ? 'Claim Reward' : 'In progress'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+function bountyRewardText(b: Bounty): string {
+  const parts: string[] = [];
+  if (b.reward.gold) parts.push(`+${b.reward.gold}g`);
+  if (b.reward.essence) parts.push(`+${b.reward.essence}⟡`);
+  if (b.reward.itemId && b.reward.itemQty) {
+    const item = ITEMS[b.reward.itemId];
+    if (item) parts.push(`+${b.reward.itemQty}× ${item.icon}`);
+  }
+  return parts.join(' · ');
+}
 
 /* ============ Temple ============ */
 

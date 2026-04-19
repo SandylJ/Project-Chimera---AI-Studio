@@ -79,7 +79,8 @@ export default function CcApp() {
                          autoEquipBest={g.autoEquipBest}
                          quickHealParty={g.quickHealParty}
                          reviveHero={g.reviveHero}
-                         sellJunk={g.sellJunk} />
+                         sellJunk={g.sellJunk}
+                         useScroll={g.useScroll} />
           )}
           {tab === 'party' && (
             <PartyView state={state}
@@ -106,7 +107,8 @@ export default function CcApp() {
                       healParty={g.healParty}
                       resetGame={g.resetGame}
                       upgradeEquip={g.upgradeEquip}
-                      buyBlessing={g.buyBlessing} />
+                      buyBlessing={g.buyBlessing}
+                      claimBounty={g.claimBounty} />
           )}
           {tab === 'log' && <CombatLog state={state} />}
         </div>
