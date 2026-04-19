@@ -7,6 +7,7 @@ import { ITEMS } from '../data/items';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
 import { MonsterSpriteArt } from '../visuals/monsterSprites';
+import { PixelMapView } from './PixelMapView';
 import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
 
 /* ============================================================
@@ -285,243 +286,45 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
             background: `radial-gradient(ellipse at center 30%, #1a1612 0%, #050403 80%)`,
             animation: Date.now() < shakeUntil ? 'battleShake 0.22s linear' : undefined,
           }}>
-        <AmbientLayer theme={theme} />
+        {/* Pixel-art top-down map — party walks through the dungeon */}
+        <PixelMapView state={state} clickMonster={clickMonster} />
 
-        {/* Dungeon badge top-left */}
-        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-3 py-1.5 bg-black/60 backdrop-blur rounded-lg border"
-             style={{ borderColor: theme.accentColor + '70', color: theme.accentColor }}>
-          <span className="text-xl">{dungeon.icon}</span>
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[0.25em]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              {dungeon.name}
-            </div>
-            <div className="text-[10px] text-[#B8A890]">
-              Room {dungeon.pathIndex + 1}/{dungeon.path.length} · Floor {dungeon.floor}
-            </div>
-          </div>
-        </div>
-
-        {/* Progress tile ribbon top-right */}
-        <DungeonProgress state={state} theme={theme} />
-
-        {/* Tile entry tag (empty corridors / shrines etc.) */}
-        {tileTag && tile.kind !== 'monster' && tile.kind !== 'boss' && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-1 rounded-full border"
-               style={{
-                 background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.7), transparent)',
-                 borderColor: theme.accentColor + '70',
-                 color: theme.accentColor,
-                 animation: 'fadeIn 0.3s',
-               }}>
-            <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              {tileTag}
-            </span>
-          </div>
+        {/* Victory celebration overlay */}
+        {dungeon.status === 'victory' && dungeon.victoryAt && (
+          <VictoryCelebration dungeon={dungeon} nowTick={nowTick} />
         )}
 
-        {/* CC2-style "An Encounter!" banner at the bottom while fighting */}
-        {enemies.length > 0 && tile.kind !== 'boss' && (
-          <EncounterBanner enemies={enemies} />
-        )}
-
-        {/* The tilted isometric room */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div
-            className="relative"
-            style={{
-              width: '92%',
-              height: '94%',
-              marginTop: '1%',
-              perspective: '1700px',
-              perspectiveOrigin: '50% 18%',
-            }}
-          >
-            <div
-              className="relative w-full h-full"
-              style={{
-                transformStyle: 'preserve-3d',
-                transform: 'rotateX(58deg)',
-              }}
-            >
-              {/* Floor */}
-              <RoomFloor theme={theme} />
-              {/* Back walls (the two visible in iso view) */}
-              <BackWall side="top" theme={theme} doorway={pathHasDoorway(dungeon, 'forward')} />
-              <BackWall side="right" theme={theme} doorway={pathHasDoorway(dungeon, 'right')} />
-
-              {/* Tile-kind floor decoration (chest, shrine, fountain…) */}
-              {!tile.cleared && <TileFloorDecor tile={tile} theme={theme} nowTick={nowTick} />}
-
-              {/* Loot on floor (lays flat on the tilted floor, then flies to stash) */}
-              {floorLoot.map(l => (
-                <FloorLoot key={l.id} loot={l} nowTick={nowTick} />
-              ))}
-
-              {/* Sprites — positioned on the tilted plane, counter-rotated to face camera */}
-              {spriteOrder.map(s => {
-                // Tile-change walk-in: heroes slide in from the left, enemies from the right
-                const entryAge = nowTick - tileChangedAtRef.current;
-                const entryT = entryAge < 500 ? entryAge / 500 : 1;
-                // Walk-out: when about to advance to the next tile (final 400ms of moveTimer),
-                // heroes slide rightward toward the forward doorway.
-                const isWalkingOut =
-                  s.kind === 'hero' &&
-                  !tile.encounter &&
-                  tile.cleared &&
-                  dungeon.status === 'active' &&
-                  dungeon.moveTimer > 0 && dungeon.moveTimer < 400;
-                const walkOutT = isWalkingOut ? 1 - dungeon.moveTimer / 400 : 0;
-                const walkOutX = walkOutT * 60;
-                const walkInX = entryT < 1
-                  ? (1 - entryT) * (s.kind === 'hero' ? -40 : 40)
-                  : 0;
-                const totalX = walkInX + walkOutX;
-                const entryOpacity = Math.min(1, entryT * 2);
-                const commonStyle: React.CSSProperties = {
-                  position: 'absolute',
-                  left: `${s.x}%`, top: `${s.y}%`,
-                  transform: `translate(calc(-50% + ${totalX}px), -100%) rotateX(-58deg)`,
-                  transformOrigin: '50% 100%',
-                  transformStyle: 'preserve-3d',
-                  pointerEvents: 'auto',
-                  opacity: entryOpacity,
-                  transition: entryT < 1 ? 'transform 120ms linear' : undefined,
-                };
-                if (s.kind === 'hero') {
-                  const h = heroes.find(x => x.id === s.id)!;
-                  const flash = flashes.find(f => f.targetId === s.id);
-                  return (
-                    <div key={s.id} style={commonStyle}>
-                      <HeroSpriteBody hero={h} flash={flash} nowTick={nowTick} walkingIn={entryT < 1} />
-                    </div>
-                  );
-                } else {
-                  const m = enemies.find(x => x.id === s.id)!;
-                  const flash = flashes.find(f => f.targetId === s.id);
-                  return (
-                    <div key={s.id} style={commonStyle}>
-                      <MonsterSpriteBody
-                        monster={m} flash={flash} nowTick={nowTick}
-                        onClick={clickMonster ? () => clickMonster(s.id) : undefined}
-                      />
-                    </div>
-                  );
-                }
-              })}
-
-              {/* Projectiles / attack effects: hero actions */}
-              {heroes.map(h => {
-                if (!h.lastAction) return null;
-                const age = nowTick - h.lastAction.at;
-                if (age < 0 || age > 600) return null;
-                const src = heroSlots.find(s => s.heroId === h.id);
-                // target can be hero (for heal/buff) or enemy
-                const tgtHero = heroSlots.find(s => s.heroId === h.lastAction!.targetId);
-                const tgtEnemy = enemySlots.find(s => s.heroId === h.lastAction!.targetId);
-                const tgt = tgtHero ?? tgtEnemy;
-                if (!src || !tgt) return null;
-                return (
-                  <Projectile
-                    key={'p_' + h.id + '_' + h.lastAction.at}
-                    src={src} tgt={tgt}
-                    kind={h.lastAction.kind}
-                    age={age}
-                  />
-                );
-              })}
-
-              {/* Projectiles: monster basic attacks */}
-              {enemies.map(m => {
-                if (!m.lastAttack) return null;
-                const age = nowTick - m.lastAttack.at;
-                if (age < 0 || age > 450) return null;
-                const src = enemySlots.find(s => s.heroId === m.id);
-                const tgt = heroSlots.find(s => s.heroId === m.lastAttack!.targetHeroId);
-                if (!src || !tgt) return null;
-                return (
-                  <Projectile
-                    key={'mp_' + m.id + '_' + m.lastAttack.at}
-                    src={src} tgt={tgt}
-                    kind="melee"
-                    age={age}
-                    hostile
-                  />
-                );
-              })}
-
-              {/* Floating damage numbers — positioned on floor, counter-rotated */}
-              {floats.map(f => {
-                const hIdx = heroSlots.find(s => s.heroId === f.targetId);
-                const eIdx = enemySlots.find(s => s.heroId === f.targetId);
-                const pos = hIdx ?? eIdx;
-                if (!pos) return null;
-                return (
-                  <div key={f.id}
-                       className="absolute pointer-events-none z-30"
-                       style={{
-                         left: `${pos.x}%`, top: `${pos.y}%`,
-                         transform: 'translate(-50%, -170%) rotateX(-58deg)',
-                         transformOrigin: '50% 100%',
-                       }}>
-                    <FloatingNumberBody float={f} nowTick={nowTick} />
-                  </div>
-                );
-              })}
-
-              {/* Mid-room "searching" indicator */}
-              {enemies.length === 0 && dungeon.moveTimer > 0 && (
-                <div className="absolute" style={{
-                       left: '50%', top: '50%',
-                       transform: 'translate(-50%, -50%) rotateX(-58deg)',
-                       transformOrigin: '50% 50%',
-                     }}>
-                  <MidRoomRing dungeon={dungeon} theme={theme} />
-                </div>
-              )}
-            </div>
-
-            {/* Coin bursts — shower of gold from killed enemies */}
-            {coinBursts.map(cb => (
-              <CoinBurstFX key={cb.id} burst={cb} nowTick={nowTick} />
-            ))}
-
-            {/* Rare-drop spotlight beams from the floor */}
-            {floorLoot.filter(l => l.big && (nowTick - l.bornAt < 1600)).map(l => (
-              <RarityBeam key={'beam_' + l.id} loot={l} nowTick={nowTick} />
-            ))}
-
-            {/* Combo banner — bottom-right of stage */}
-            {state.killCombo >= 2 && (nowTick - state.lastKillAt < 3000) && (
-              <ComboBanner combo={state.killCombo} lastKillAt={state.lastKillAt} nowTick={nowTick} />
-            )}
-
-            {/* Victory overlay — fires on dungeon clear */}
-            {dungeon.status === 'victory' && dungeon.victoryAt && (
-              <VictoryCelebration dungeon={dungeon} nowTick={nowTick} />
-            )}
-
-            {/* Boss banner — overlay above the iso stage, flat */}
-            {bossBanner && (
-              <div className="absolute left-1/2 top-[18%] -translate-x-1/2 z-50 pointer-events-none"
-                   style={{ animation: 'bossEntrance 0.9s ease-out forwards' }}>
-                <div className="text-center">
-                  <div className="text-[10px] text-[#ff6060] uppercase tracking-[0.5em] font-bold mb-1"
-                       style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 10px #ff4040' }}>
-                    ⚠ BOSS ENCOUNTER ⚠
-                  </div>
-                  <div className="text-4xl font-black text-[#ff5050] px-6 py-1 bg-[#4a1818]/85 border-2 border-[#ff4040] rounded"
-                       style={{
-                         fontFamily: "'Cinzel', serif",
-                         textShadow: '0 0 20px #ff4040, 2px 2px 0 #000',
-                         letterSpacing: '0.08em',
-                       }}>
-                    {bossBanner.name.toUpperCase()}
-                  </div>
-                </div>
+        {/* Boss entrance banner */}
+        {bossBanner && (
+          <div className="absolute left-1/2 top-[22%] -translate-x-1/2 z-50 pointer-events-none"
+               style={{ animation: 'bossEntrance 0.9s ease-out forwards' }}>
+            <div className="text-center">
+              <div className="text-[10px] text-[#ff6060] uppercase tracking-[0.5em] font-bold mb-1"
+                   style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 10px #ff4040' }}>
+                ⚠ BOSS ENCOUNTER ⚠
               </div>
-            )}
+              <div className="text-4xl font-black text-[#ff5050] px-6 py-1 bg-[#4a1818]/85 border-2 border-[#ff4040] rounded"
+                   style={{
+                     fontFamily: "'Cinzel', serif",
+                     textShadow: '0 0 20px #ff4040, 2px 2px 0 #000',
+                     letterSpacing: '0.08em',
+                   }}>
+                {bossBanner.name.toUpperCase()}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Screen flash on crits (handled via shakeUntil on wrapper; add flash overlay) */}
+        {Date.now() < shakeUntil && (
+          <div className="absolute inset-0 pointer-events-none z-40"
+               style={{ background: 'rgba(255, 60, 60, 0.18)' }} />
+        )}
+
+        {/* Combo streak banner bottom-right */}
+        {state.killCombo >= 2 && (Date.now() - state.lastKillAt < 3000) && (
+          <ComboBanner combo={state.killCombo} lastKillAt={state.lastKillAt} nowTick={nowTick} />
+        )}
 
         {/* Low-HP red pulse overlay */}
         {lowHP && (
