@@ -57,12 +57,13 @@ export const CombatLog: React.FC<Props> = ({ state, compact = false }) => {
           const color = f === 'all' ? '#F2E6A8' : kindColor(f as LogEntry['kind']);
           const count = counts[f] ?? 0;
           return (
-            <button key={f} onClick={() => setFilter(f)}
-                    className={`px-2.5 py-1 text-[10px] uppercase tracking-widest rounded border transition-all ${active ? 'font-black' : 'hover:scale-[1.03]'}`}
+            <button key={f} type="button" onClick={() => setFilter(f)}
+                    className={`press px-2.5 py-1 text-[10px] uppercase tracking-widest border transition-colors ${active ? 'font-black' : 'hover:bg-[#2B2B32]'}`}
                     style={{
                       background: active ? color : '#14100C',
                       borderColor: color + (active ? '' : '40'),
                       color: active ? '#0a0806' : color,
+                      borderRadius: 2,
                       fontFamily: "'JetBrains Mono', monospace",
                     }}>
                 <span>{f}</span>

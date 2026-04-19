@@ -91,36 +91,61 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {(['all', 'weapon', 'armor', 'trinket', 'potion', 'consumable', 'material'] as Filter[]).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded ${filter === f ? 'bg-[#D4A943] text-black' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16]'}`}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            {f}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {(['all', 'weapon', 'armor', 'trinket', 'potion', 'consumable', 'material'] as Filter[]).map(f => {
+          const active = filter === f;
+          return (
+            <button key={f} type="button" onClick={() => setFilter(f)}
+                    className={`press px-3 py-1 text-[10px] uppercase tracking-widest transition-colors ${
+                      active ? 'text-[#0a0806] font-black' : 'text-[#B8A890] hover:bg-[#2B2B32]'
+                    }`}
+                    style={{
+                      background: active ? 'var(--cc-blue)' : '#14100C',
+                      border: `1px solid ${active ? 'var(--cc-blue)' : '#2B2B32'}`,
+                      borderRadius: 2,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}>
+              {f}
+            </button>
+          );
+        })}
         <div className="w-px bg-[#3D3328]" />
-        <button onClick={() => setRarityFilter('all')}
-                className={`px-3 py-1 text-[10px] rounded ${rarityFilter === 'all' ? 'bg-[#D4A943] text-black' : 'bg-[#14100C] text-[#B8A890]'}`}>
-          Any rarity
-        </button>
-        {RARITIES.map(r => (
-          <button key={r} onClick={() => setRarityFilter(r)}
-                  className={`px-3 py-1 text-[10px] rounded ${rarityFilter === r ? 'bg-[#D4A943] text-black' : 'bg-[#14100C] hover:bg-[#1E1A16]'}`}
-                  style={{ color: rarityFilter === r ? '#000' : rarityColor(r) }}>
-            {r}
-          </button>
-        ))}
+        {['all' as const, ...RARITIES].map(r => {
+          const active = rarityFilter === r;
+          const color = r === 'all' ? '#E8E0D4' : rarityColor(r);
+          return (
+            <button key={r} type="button" onClick={() => setRarityFilter(r)}
+                    className={`press px-3 py-1 text-[10px] uppercase tracking-widest transition-colors ${active ? 'font-black' : 'hover:bg-[#2B2B32]'}`}
+                    style={{
+                      background: active ? color : '#14100C',
+                      color: active ? '#0a0806' : color,
+                      border: `1px solid ${active ? color : '#2B2B32'}`,
+                      borderRadius: 2,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}>
+              {r === 'all' ? 'any' : r}
+            </button>
+          );
+        })}
         <div className="w-px bg-[#3D3328]" />
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-[#7A6E60] uppercase"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sort</span>
-          {(['rarity', 'value', 'qty', 'name'] as Sort[]).map(s => (
-            <button key={s} onClick={() => setSort(s)}
-                    className={`px-2 py-1 text-[10px] rounded ${sort === s ? 'bg-[#6EA9E4] text-black font-bold' : 'bg-[#14100C] text-[#B8A890]'}`}>
-              {s}
-            </button>
-          ))}
+          {(['rarity', 'value', 'qty', 'name'] as Sort[]).map(s => {
+            const active = sort === s;
+            return (
+              <button key={s} type="button" onClick={() => setSort(s)}
+                      className={`press px-2 py-1 text-[10px] uppercase transition-colors ${active ? 'text-[#0a0806] font-black' : 'text-[#B8A890] hover:bg-[#2B2B32]'}`}
+                      style={{
+                        background: active ? 'var(--cc-blue)' : '#14100C',
+                        border: `1px solid ${active ? 'var(--cc-blue)' : '#2B2B32'}`,
+                        borderRadius: 2,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}>
+                {s}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -151,18 +176,33 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
             <div className="flex gap-1 mt-2 flex-wrap">
               {/* Use-scroll shortcut */}
               {useScroll && e.item.type === 'consumable' && e.id.startsWith('scroll_') && (
-                <button onClick={() => useScroll(e.id)}
-                        className="flex-1 text-[10px] py-1 rounded bg-[#6EA9E4] text-black font-bold hover:bg-[#8ac0ef]">
+                <button type="button" onClick={() => useScroll(e.id)}
+                        className="press flex-1 text-[10px] py-1 text-[#0a0806] font-bold hover:brightness-110"
+                        style={{
+                          background: 'var(--cc-blue)',
+                          border: '1px solid var(--cc-blue)',
+                          borderRadius: 2,
+                        }}>
                   Use
                 </button>
               )}
-              <button onClick={() => sellItem(e.id, 1)}
-                      className="flex-1 text-[10px] py-1 rounded bg-[#1E1A16] hover:bg-[#2B231B] text-[#D4A943]">
+              <button type="button" onClick={() => sellItem(e.id, 1)}
+                      className="press flex-1 text-[10px] py-1 text-[#D4A943] hover:bg-[#2B2B32] transition-colors"
+                      style={{
+                        background: '#14100C',
+                        border: '1px solid #2B2B32',
+                        borderRadius: 2,
+                      }}>
                 Sell 1 ({sellValue(e.id, 1)})
               </button>
               {e.qty > 1 && (
-                <button onClick={() => sellItem(e.id, e.qty)}
-                        className="flex-1 text-[10px] py-1 rounded bg-[#1E1A16] hover:bg-[#2B231B] text-[#D4A943]">
+                <button type="button" onClick={() => sellItem(e.id, e.qty)}
+                        className="press flex-1 text-[10px] py-1 text-[#D4A943] hover:bg-[#2B2B32] transition-colors"
+                        style={{
+                          background: '#14100C',
+                          border: '1px solid #2B2B32',
+                          borderRadius: 2,
+                        }}>
                   Sell all ({sellValue(e.id, e.qty)})
                 </button>
               )}
@@ -187,10 +227,16 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
             const { gold, count } = bulkByRarity[r];
             const disabled = gold === 0;
             return (
-              <button key={r} onClick={() => !disabled && bulkSellRarity(r)}
+              <button key={r} type="button" onClick={() => !disabled && bulkSellRarity(r)}
                       disabled={disabled}
-                      className={`px-2 py-1 text-[10px] rounded border ${disabled ? 'border-[#1E1A16] bg-[#0a0806] text-[#3D3328] cursor-not-allowed' : 'border-[#D4A943] bg-[#D4A943]/10 hover:bg-[#D4A943]/25'}`}
-                      style={{ color: disabled ? '#3D3328' : rarityColor(r), fontFamily: "'JetBrains Mono', monospace" }}>
+                      className={`press px-2 py-1 text-[10px] transition-colors ${disabled ? 'cursor-not-allowed' : 'hover:bg-[#2B2B32]'}`}
+                      style={{
+                        background: disabled ? '#0a0806' : '#14100C',
+                        border: `1px solid ${disabled ? '#1E1A16' : 'var(--cc-orange)'}`,
+                        color: disabled ? '#3D3328' : rarityColor(r),
+                        borderRadius: 2,
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}>
                 <span className="font-bold">{r}</span> ×{count} → +{gold}g
               </button>
             );
@@ -204,9 +250,14 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
             {RARITIES.map(r => {
               const on = state.autoSellRarities.includes(r);
               return (
-                <button key={r} onClick={() => setAutoSell(r, !on)}
-                        className={`px-2 py-0.5 text-[10px] rounded border ${on ? 'border-[#D4A943] bg-[#D4A943]/20' : 'border-[#3D3328] bg-[#1E1A16]'}`}
-                        style={{ color: rarityColor(r) }}>
+                <button key={r} type="button" onClick={() => setAutoSell(r, !on)}
+                        className="press px-2 py-0.5 text-[10px] transition-colors hover:bg-[#2B2B32]"
+                        style={{
+                          background: on ? '#2B2B32' : '#14100C',
+                          border: `1px solid ${on ? 'var(--cc-orange)' : '#2B2B32'}`,
+                          color: rarityColor(r),
+                          borderRadius: 2,
+                        }}>
                   {on ? '✓ ' : ''}{r}
                 </button>
               );

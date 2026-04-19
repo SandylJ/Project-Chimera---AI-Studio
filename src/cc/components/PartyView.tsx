@@ -46,9 +46,10 @@ export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, bu
           return (
             <button
               key={h.id}
+              type="button"
               onClick={() => setSelectedId(h.id)}
-              className={`relative w-full text-left p-2 border-b border-[#1E1A16] flex items-center gap-2 transition-all
-                ${isSel ? 'bg-[#2B231B] border-l-2 border-l-[#D4A943]' : 'hover:bg-[#1E1A16] border-l-2 border-l-transparent'}`}
+              className={`press relative w-full text-left p-2 border-b border-[#1E1A16] flex items-center gap-2 transition-colors
+                ${isSel ? 'bg-[#2B231B] border-l-2 border-l-[var(--cc-blue)]' : 'hover:bg-[#1E1A16] border-l-2 border-l-transparent'}`}
             >
               <div className="shrink-0 flex items-end justify-center rounded"
                    style={{
@@ -160,13 +161,23 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <button onClick={() => toggleBench(hero.id)}
-                  className="px-3 py-1.5 bg-[#1E1A16] hover:bg-[#2B231B] text-xs rounded border border-[#3D3328] text-[#E8E0D4]">
+          <button type="button" onClick={() => toggleBench(hero.id)}
+                  className="press px-3 py-1.5 text-xs text-[#E8E0D4] hover:bg-[#2B2B32] transition-colors"
+                  style={{
+                    background: '#14100C',
+                    border: '1px solid #2B2B32',
+                    borderRadius: 2,
+                  }}>
             {hero.bench ? 'Activate' : 'Bench'}
           </button>
           {hero.state !== 'alive' && (
-            <button onClick={() => reviveHero(hero.id)}
-                    className="px-3 py-1.5 bg-[#7FE2A0] hover:bg-[#5fc085] text-xs rounded text-black font-bold">
+            <button type="button" onClick={() => reviveHero(hero.id)}
+                    className="press px-3 py-1.5 text-xs text-[#0a0806] font-bold hover:brightness-110"
+                    style={{
+                      background: 'var(--cc-blue)',
+                      border: '1px solid var(--cc-blue)',
+                      borderRadius: 2,
+                    }}>
               Revive ({100 + hero.level * 20} gp)
             </button>
           )}
@@ -185,14 +196,26 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
         <Stat label="LUCK" value={String(Math.floor(stats.luck))} color="#FF6EE6" />
       </div>
 
-      <div className="flex border-b border-[#3D3328] mb-3">
-        {(['gear', 'abilities', 'stats'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-                  className={`px-4 py-2 text-xs uppercase tracking-widest ${tab === t ? 'text-[#F2E6A8] border-b-2 border-[#D4A943]' : 'text-[#7A6E60] hover:text-[#B8A890]'}`}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            {t}
-          </button>
-        ))}
+      <div className="flex border-b border-[#3D3328] mb-3 gap-1">
+        {(['gear', 'abilities', 'stats'] as const).map(t => {
+          const active = tab === t;
+          return (
+            <button key={t} type="button" onClick={() => setTab(t)}
+                    className={`press px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
+                      active ? 'text-[#0a0806] font-black' : 'text-[#B8A890] hover:bg-[#2B2B32]'
+                    }`}
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      background: active ? 'var(--cc-blue)' : 'transparent',
+                      border: `1px solid ${active ? 'var(--cc-blue)' : 'transparent'}`,
+                      borderBottom: 'none',
+                      borderRadius: 2,
+                      marginBottom: -1,
+                    }}>
+              {t}
+            </button>
+          );
+        })}
       </div>
 
       {tab === 'gear' && (
@@ -250,12 +273,17 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
                   return (
                     <button
                       key={id}
+                      type="button"
                       disabled={!check.ok}
                       onClick={() => equipItem(hero.id, id)}
-                      className={`text-left p-2 rounded border text-xs
+                      className={`press text-left p-2 border text-xs transition-colors
                         ${check.ok
-                          ? 'bg-[#14100C] border-[#3D3328] hover:border-[#D4A943] hover:bg-[#2B231B]'
-                          : 'bg-[#0A0806] border-[#1E1A16] opacity-50 cursor-not-allowed'}`}
+                          ? 'bg-[#14100C] hover:bg-[#2B2B32]'
+                          : 'bg-[#0A0806] opacity-50 cursor-not-allowed'}`}
+                      style={{
+                        borderColor: check.ok ? 'var(--cc-blue)' : '#2B2B32',
+                        borderRadius: 2,
+                      }}
                     >
                       <div className="font-bold" style={{ color: rarityColor(item.rarity) }}>{item.icon} {item.name}</div>
                       <div className="text-[10px] text-[#7A6E60]">×{qty} • {item.slot}</div>
@@ -280,8 +308,14 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
                   const p = ITEMS[id];
                   return (
                     <button key={id}
+                            type="button"
                             onClick={() => useConsumable(hero.id, id)}
-                            className="px-3 py-1.5 text-xs bg-[#14100C] border border-[#3D3328] hover:bg-[#2B231B] rounded">
+                            className="press px-3 py-1.5 text-xs hover:bg-[#2B2B32] transition-colors"
+                            style={{
+                              background: '#14100C',
+                              border: '1px solid var(--cc-blue)',
+                              borderRadius: 2,
+                            }}>
                       {p.icon} {p.name} <span className="text-[#7A6E60]">×{state.stash.items[id]}</span>
                     </button>
                   );
@@ -355,9 +389,14 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
                           ) : !levelOk ? (
                             <span className="text-[10px] text-[#E86E6E]">L{ab.levelReq}</span>
                           ) : (
-                            <button disabled={!canBuy}
+                            <button type="button" disabled={!canBuy}
                                     onClick={() => buyAbility(hero.id, abId)}
-                                    className={`px-3 py-1 text-xs rounded font-bold ${canBuy ? 'bg-[#D4A943] text-black hover:bg-[#e5bb55]' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}>
+                                    className={`press px-3 py-1 text-xs font-bold transition-colors ${canBuy ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                                    style={{
+                                      background: canBuy ? 'var(--cc-orange)' : '#14100C',
+                                      border: `1px solid ${canBuy ? 'var(--cc-orange)' : '#2B2B32'}`,
+                                      borderRadius: 2,
+                                    }}>
                               Learn
                             </button>
                           )}

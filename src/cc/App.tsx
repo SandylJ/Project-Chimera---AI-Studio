@@ -386,28 +386,51 @@ const TopTabBar: React.FC<{
         </div>
         {/* Speed/pause */}
         <div className="flex items-center gap-0.5 ml-2">
-          {[1, 2, 4].map(s => (
-            <button key={s} onClick={() => setSpeed(s as 1|2|4)}
-                    className={`w-7 h-7 text-[10px] font-bold rounded ${
-                      state.speed === s ? 'bg-[#D4A943] text-black' : 'bg-[#1E1A16] text-[#B8A890]'
-                    }`}>{s}×</button>
-          ))}
-          <button onClick={togglePause}
-                  className={`w-7 h-7 rounded text-xs ${
-                    state.paused ? 'bg-[#6EA9E4] text-black' : 'bg-[#1E1A16] text-[#E8E0D4]'
-                  }`}>{state.paused ? '▶' : '❚❚'}</button>
+          {[1, 2, 4].map(s => {
+            const active = state.speed === s;
+            return (
+              <button key={s} type="button" onClick={() => setSpeed(s as 1|2|4)}
+                      className={`press w-7 h-7 text-[10px] font-bold transition-colors ${
+                        active ? 'text-[#0a0806]' : 'text-[#B8A890] hover:bg-[#2B2B32]'
+                      }`}
+                      style={{
+                        background: active ? 'var(--cc-orange)' : '#14100C',
+                        border: `1px solid ${active ? 'var(--cc-orange)' : '#2B2B32'}`,
+                        borderRadius: 2,
+                      }}>{s}×</button>
+            );
+          })}
+          <button type="button" onClick={togglePause}
+                  className={`press w-7 h-7 text-xs font-bold transition-colors ${
+                    state.paused ? 'text-[#0a0806]' : 'text-[#E8E0D4] hover:bg-[#2B2B32]'
+                  }`}
+                  style={{
+                    background: state.paused ? 'var(--cc-blue)' : '#14100C',
+                    border: `1px solid ${state.paused ? 'var(--cc-blue)' : '#2B2B32'}`,
+                    borderRadius: 2,
+                  }}>{state.paused ? '▶' : '❚❚'}</button>
           {dungeon && (
-            <button onClick={retreatToTown}
-                    className="ml-1 px-2 h-7 text-[10px] font-bold rounded bg-[#1E1A16] text-[#E86E6E] hover:bg-[#2a1410] border border-[#3D3328]">
+            <button type="button" onClick={retreatToTown}
+                    className="press ml-1 px-2 h-7 text-[10px] font-bold text-[#E86E6E] hover:bg-[#2a1410]"
+                    style={{
+                      background: '#14100C',
+                      border: '1px solid #E86E6E50',
+                      borderRadius: 2,
+                    }}>
               ← TOWN
             </button>
           )}
-          <button onClick={() => {
+          <button type="button" onClick={() => {
                     if (!confirm('Hard reset: wipe save, clear cache, reload?')) return;
                     try { localStorage.removeItem('cc_save_v1'); } catch {}
                     window.location.href = window.location.pathname + '?nuked=' + Date.now();
                   }}
-                  className="ml-1 px-1.5 h-7 text-[9px] rounded bg-[#14100C] text-[#7A6E60] hover:text-[#E86E6E] border border-[#3D3328]"
+                  className="press ml-1 px-1.5 h-7 text-[9px] text-[#7A6E60] hover:text-[#E86E6E]"
+                  style={{
+                    background: '#14100C',
+                    border: '1px solid #2B2B32',
+                    borderRadius: 2,
+                  }}
                   title="Hard reset">
             ⚠
           </button>

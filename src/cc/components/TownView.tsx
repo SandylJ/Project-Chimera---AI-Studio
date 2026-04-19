@@ -54,14 +54,26 @@ export const TownView: React.FC<Props> = ({
           } as any;
           const unclaimedComplete = s === 'bounties' &&
             (state.bountyBoard?.bounties.some(b => !b.claimed && bountyProgress(state, b) >= b.target) ?? false);
+          const isActive = section === s;
           return (
-            <button key={s} onClick={() => setSection(s)}
-                    className={`relative px-4 py-2 text-xs uppercase tracking-widest ${section === s ? 'text-[#F2E6A8] border-b-2 border-[#D4A943]' : 'text-[#7A6E60] hover:text-[#B8A890]'}`}
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <button key={s} type="button" onClick={() => setSection(s)}
+                    className={`press relative px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
+                      isActive
+                        ? 'text-[#0a0806] font-black'
+                        : 'text-[#B8A890] hover:bg-[#2B2B32] hover:text-[#E8E0D4]'
+                    }`}
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      background: isActive ? 'var(--cc-blue)' : '#14100C',
+                      border: `1px solid ${isActive ? 'var(--cc-blue)' : '#2B2B32'}`,
+                      borderBottom: isActive ? '1px solid var(--cc-blue)' : '1px solid transparent',
+                      borderRadius: 2,
+                      marginBottom: -1,
+                    }}>
               {label[s]}
               {unclaimedComplete && (
-                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#7FE2A0] animate-pulse"
-                      style={{ boxShadow: '0 0 6px #7FE2A0' }} />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#7FE2A0]"
+                      style={{ boxShadow: '0 0 6px #7FE2A0', animation: 'glowPulse 1.4s ease-in-out infinite', ['--glow' as any]: '#7FE2A0' }} />
               )}
             </button>
           );
@@ -112,9 +124,15 @@ const Tavern: React.FC<{ state: GameState; recruitHero: (id: ClassId) => void }>
               </div>
               <p className="text-xs text-[#B8A890] mb-3">{c.description}</p>
               <button
+                type="button"
                 onClick={() => recruitHero(c.id)}
                 disabled={state.stash.gold < cost}
-                className={`w-full py-2 text-xs font-bold rounded ${state.stash.gold >= cost ? 'bg-[#D4A943] hover:bg-[#e5bb55] text-black' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}>
+                className={`press w-full py-2 text-xs font-bold transition-colors ${state.stash.gold >= cost ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                style={{
+                  background: state.stash.gold >= cost ? 'var(--cc-blue)' : '#14100C',
+                  border: `1px solid ${state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32'}`,
+                  borderRadius: 2,
+                }}>
                 {cost === 0 && have === 0 ? 'Recruit (free)' : `Recruit (${cost} gp)`}
               </button>
             </div>
@@ -165,9 +183,14 @@ const Shop: React.FC<{
                     <span key={id} className="block">· {q}× {ITEMS[id]?.icon} {ITEMS[id]?.name}</span>
                   ))}
                 </div>
-                <button onClick={() => buyShopBundle(b.id)}
+                <button type="button" onClick={() => buyShopBundle(b.id)}
                         disabled={!canAfford}
-                        className={`w-full text-xs py-1.5 rounded font-bold ${canAfford ? 'bg-[#D4A943] text-black hover:bg-[#e5bb55]' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}>
+                        className={`press w-full text-xs py-1.5 font-bold transition-colors ${canAfford ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                        style={{
+                          background: canAfford ? 'var(--cc-blue)' : '#14100C',
+                          border: `1px solid ${canAfford ? 'var(--cc-blue)' : '#2B2B32'}`,
+                          borderRadius: 2,
+                        }}>
                   Buy ({b.price} gp)
                 </button>
               </div>
@@ -205,9 +228,14 @@ const ShopCard: React.FC<{ state: GameState; id: string; buy: () => void }> = ({
       {it.description && <div className="text-[10px] text-[#7A6E60] italic mt-1 line-clamp-2">{it.description}</div>}
       {it.weaponPower && <div className="text-[10px] text-[#E86E6E]">+{it.weaponPower} DMG</div>}
       {it.armor && <div className="text-[10px] text-[#D4A943]">+{it.armor} ARM</div>}
-      <button onClick={buy}
+      <button type="button" onClick={buy}
               disabled={!canAfford}
-              className={`w-full mt-2 text-[10px] py-1 rounded ${canAfford ? 'bg-[#D4A943] text-black hover:bg-[#e5bb55]' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}>
+              className={`press w-full mt-2 text-[10px] py-1 transition-colors ${canAfford ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+              style={{
+                background: canAfford ? 'var(--cc-blue)' : '#14100C',
+                border: `1px solid ${canAfford ? 'var(--cc-blue)' : '#2B2B32'}`,
+                borderRadius: 2,
+              }}>
         Buy {it.value} gp
       </button>
     </div>
@@ -302,9 +330,14 @@ const BlacksmithHero: React.FC<{ hero: Hero; state: GameState; upgradeEquip: (he
                     );
                   })}
                 </div>
-                <button onClick={() => upgradeEquip(hero.id, slot)}
+                <button type="button" onClick={() => upgradeEquip(hero.id, slot)}
                         disabled={!canAfford}
-                        className={`w-full text-[10px] py-1 rounded font-bold ${canAfford ? 'bg-[#D4A943] text-black hover:bg-[#e5bb55]' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}>
+                        className={`press w-full text-[10px] py-1 font-bold transition-colors ${canAfford ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                        style={{
+                          background: canAfford ? 'var(--cc-orange)' : '#14100C',
+                          border: `1px solid ${canAfford ? 'var(--cc-orange)' : '#2B2B32'}`,
+                          borderRadius: 2,
+                        }}>
                   Enchant to +{tier + 1}
                 </button>
               </div>
@@ -373,10 +406,14 @@ const Shrine: React.FC<{ state: GameState; buyBlessing: (id: BlessingId) => void
               <div className="mt-2 h-1.5 bg-black/80 rounded overflow-hidden">
                 <div className="h-full" style={{ width: `${(lvl / b.max) * 100}%`, background: b.color }} />
               </div>
-              <button onClick={() => buyBlessing(b.id)}
+              <button type="button" onClick={() => buyBlessing(b.id)}
                       disabled={!canAfford}
-                      className={`w-full mt-2 text-[11px] py-1 rounded font-bold ${canAfford ? 'text-black hover:brightness-110' : 'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'}`}
-                      style={canAfford ? { background: b.color } : undefined}>
+                      className={`press w-full mt-2 text-[11px] py-1 font-bold transition-colors ${canAfford ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                      style={{
+                        background: canAfford ? b.color : '#14100C',
+                        border: `1px solid ${canAfford ? b.color : '#2B2B32'}`,
+                        borderRadius: 2,
+                      }}>
                 {maxed ? 'Maxed' : `Burn ${cost} ⟡`}
               </button>
             </div>
@@ -442,13 +479,20 @@ const Bounties: React.FC<{ state: GameState; claimBounty: (id: string) => void }
                   {bountyRewardText(b)}
                 </div>
               </div>
-              <button onClick={() => claimBounty(b.id)}
+              <button type="button" onClick={() => claimBounty(b.id)}
                       disabled={claimed || !done}
-                      className={`w-full mt-2 py-1.5 text-xs font-bold rounded ${
-                        claimed ? 'bg-[#1E1A16] text-[#5a5040] cursor-not-allowed' :
-                        done ? 'bg-[#7FE2A0] text-black hover:bg-[#5fc085]' :
-                               'bg-[#1E1A16] text-[#7A6E60] cursor-not-allowed'
-                      }`}>
+                      className={`press w-full mt-2 py-1.5 text-xs font-bold transition-colors ${
+                        claimed ? 'text-[#5a5040] cursor-not-allowed' :
+                        done ? 'text-[#0a0806] hover:brightness-110' :
+                               'text-[#AAAAAA] cursor-not-allowed'
+                      }`}
+                      style={{
+                        background: done && !claimed ? 'var(--cc-orange)' : '#14100C',
+                        border: `1px solid ${done && !claimed ? 'var(--cc-orange)' : '#2B2B32'}`,
+                        borderRadius: 2,
+                        animation: done && !claimed ? 'glowPulse 1.6s ease-in-out infinite' : undefined,
+                        ['--glow' as any]: 'var(--cc-orange)',
+                      }}>
                 {claimed ? '✓ Claimed' : done ? 'Claim Reward' : 'In progress'}
               </button>
             </div>
@@ -490,9 +534,14 @@ const Temple: React.FC<{ state: GameState; reviveHero: (id: string) => void }> =
               <div className="font-bold" style={{ color: c.color }}>{h.name}</div>
               <div className="text-[10px] text-[#7A6E60]">L{h.level} {c.name}</div>
             </div>
-            <button onClick={() => reviveHero(h.id)}
+            <button type="button" onClick={() => reviveHero(h.id)}
                     disabled={state.stash.gold < cost}
-                    className={`px-3 py-1.5 text-xs rounded font-bold ${state.stash.gold >= cost ? 'bg-[#7FE2A0] text-black hover:bg-[#5fc085]' : 'bg-[#1E1A16] text-[#7A6E60]'}`}>
+                    className={`press px-3 py-1.5 text-xs font-bold transition-colors ${state.stash.gold >= cost ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                    style={{
+                      background: state.stash.gold >= cost ? 'var(--cc-blue)' : '#14100C',
+                      border: `1px solid ${state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32'}`,
+                      borderRadius: 2,
+                    }}>
               Revive ({cost} gp)
             </button>
           </div>
@@ -515,9 +564,14 @@ const Inn: React.FC<{ state: GameState; healParty: () => void }> = ({ state, hea
           <div className="font-bold text-[#F2E6A8]">The Tired Hound</div>
           <div className="text-xs text-[#7A6E60]">Warm fire. Hearty stew.</div>
         </div>
-        <button onClick={healParty}
+        <button type="button" onClick={healParty}
                 disabled={cost === 0 || state.stash.gold < cost}
-                className={`px-4 py-2 text-xs font-bold rounded ${cost > 0 && state.stash.gold >= cost ? 'bg-[#7FE2A0] text-black hover:bg-[#5fc085]' : 'bg-[#1E1A16] text-[#7A6E60]'}`}>
+                className={`press px-4 py-2 text-xs font-bold transition-colors ${cost > 0 && state.stash.gold >= cost ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                style={{
+                  background: cost > 0 && state.stash.gold >= cost ? 'var(--cc-blue)' : '#14100C',
+                  border: `1px solid ${cost > 0 && state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32'}`,
+                  borderRadius: 2,
+                }}>
           {cost === 0 ? 'Nothing to heal' : `Rest (${cost} gp)`}
         </button>
       </div>
