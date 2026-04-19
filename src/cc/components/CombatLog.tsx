@@ -34,21 +34,44 @@ export const CombatLog: React.FC<Props> = ({ state, compact = false }) => {
     );
   }
 
+  const filters: Array<LogEntry['kind'] | 'all'> = ['all', 'combat', 'loot', 'level', 'heal', 'decision', 'victory', 'death'];
+  // Aggregate counts per kind for the filter chip labels
+  const counts: Record<string, number> = {};
+  for (const e of state.currentLog) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
+  counts.all = state.currentLog.length;
+
   return (
     <div className="p-4 h-full flex flex-col overflow-hidden">
-      <h2 className="text-2xl font-bold text-[#F2E6A8] mb-2" style={{ fontFamily: "'Cinzel', serif" }}>
-        📜 Event Log
-      </h2>
-      <div className="flex flex-wrap gap-2 mb-3">
-        {(['all', 'combat', 'loot', 'level', 'decision', 'victory', 'death'] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded ${filter === f ? 'bg-[#D4A943] text-black' : 'bg-[#14100C] text-[#B8A890]'}`}
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-            {f}
-          </button>
-        ))}
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="text-2xl font-bold text-[#F2E6A8]" style={{ fontFamily: "'Cinzel', serif" }}>
+          📜 Event Log
+        </h2>
+        <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          {state.currentLog.length} entries · newest first
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto bg-[#0D0B09] border border-[#3D3328] rounded p-3 text-xs space-y-1"
+      <div className="flex flex-wrap gap-1 mb-3">
+        {filters.map(f => {
+          const active = filter === f;
+          const color = f === 'all' ? '#F2E6A8' : kindColor(f as LogEntry['kind']);
+          const count = counts[f] ?? 0;
+          return (
+            <button key={f} onClick={() => setFilter(f)}
+                    className={`px-2.5 py-1 text-[10px] uppercase tracking-widest rounded border transition-all ${active ? 'font-black' : 'hover:scale-[1.03]'}`}
+                    style={{
+                      background: active ? color : '#14100C',
+                      borderColor: color + (active ? '' : '40'),
+                      color: active ? '#0a0806' : color,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}>
+                <span>{f}</span>
+                <span className="ml-1 opacity-70">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex-1 overflow-y-auto bg-[#0D0B09] border border-[#3D3328] rounded p-3 text-xs space-y-0.5"
            style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         {entries.map(e => <LogLine key={e.id} entry={e} />)}
         {entries.length === 0 && <div className="text-[#7A6E60] italic">No entries match this filter.</div>}
@@ -60,11 +83,13 @@ export const CombatLog: React.FC<Props> = ({ state, compact = false }) => {
 const LogLine: React.FC<{ entry: LogEntry }> = ({ entry }) => {
   const color = entry.rarity ? rarityColor(entry.rarity) : kindColor(entry.kind);
   const time = new Date(entry.t).toLocaleTimeString(undefined, { hour12: false });
+  const borderColor = entry.rarity ? color + '60' : 'transparent';
   return (
-    <div className="flex gap-2 items-start">
-      <span className="text-[#3D3328] shrink-0">{time}</span>
-      <span className="shrink-0">{KIND_ICONS[entry.kind]}</span>
-      <span style={{ color }}>{entry.text}</span>
+    <div className="flex gap-2 items-start px-1.5 py-0.5 rounded hover:bg-[#14100C] transition-colors"
+         style={{ borderLeft: `2px solid ${borderColor}` }}>
+      <span className="text-[#3D3328] shrink-0 tabular-nums text-[10px]">{time}</span>
+      <span className="shrink-0 text-sm leading-none" style={{ color }}>{KIND_ICONS[entry.kind]}</span>
+      <span className="leading-snug" style={{ color }}>{entry.text}</span>
     </div>
   );
 };

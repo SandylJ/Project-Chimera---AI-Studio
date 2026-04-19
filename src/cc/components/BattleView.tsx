@@ -776,6 +776,10 @@ const SpellGrid: React.FC<{ heroes: Hero[] }> = ({ heroes }) => (
         const cd = h.cooldowns[abId] ?? 0;
         const ready = cd <= 0 && h.mp >= ab.manaCost && h.state === 'alive';
         const t = ab.cooldown > 0 ? 1 - Math.min(1, cd / ab.cooldown) : 1;
+        const effectsSummary = ab.effects.map(e => {
+          const scale = e.flat ? `${e.power} flat` : `${e.power}× ${e.scaling.toUpperCase()}`;
+          return `${e.kind}: ${scale}${e.duration ? ` (${e.duration / 1000}s)` : ''}`;
+        }).join('\n');
         return (
           <div key={idx}
                className="relative aspect-square rounded border-2 flex items-center justify-center overflow-hidden"
@@ -784,7 +788,7 @@ const SpellGrid: React.FC<{ heroes: Hero[] }> = ({ heroes }) => (
                  borderColor: ready ? cls.color + 'bb' : '#3D3328',
                  boxShadow: ready ? `0 0 6px ${cls.color}80` : 'inset 0 1px 2px rgba(0,0,0,0.6)',
                }}
-               title={`${h.name} · ${ab.name}\n${ab.description}`}>
+               title={`${h.name} · ${ab.name}\n${ab.description}\n\n${effectsSummary}\n\nCD ${ab.cooldown / 1000}s · ${ab.manaCost} MP · ${ab.targeting.replace(/_/g, ' ')}`}>
             <span className="text-xl" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }}>{ab.icon}</span>
             {!ready && (
               <svg className="absolute inset-0" viewBox="0 0 40 40">
