@@ -113,6 +113,36 @@
   --rarity-epic: #7B3FA0;
   --rarity-legendary: #D4A943;
   --rarity-celestial: #22D3EE;
+
+  /* CC2-inspired interaction tokens (complement the warm palette above) */
+  --cc-blue: #3AA5E6;      /* available / interactive */
+  --cc-orange: #FFAA00;    /* owned / active */
+  --cc-surface: #2B2B32;   /* section chip bg */
+  --cc-hp: #E04040;
+  --cc-sp: #3060E0;
+}
+
+/* CC2-inspired: every interactive element drops 1px when pressed. */
+.press {
+  position: relative;
+  top: 0;
+  transition: top 40ms ease-out;
+}
+.press:active:not(:disabled) { top: 1px; }
+
+/* Section chip — used for panel headers (Quick Actions, Party Status, etc.) */
+.chip-header {
+  background: var(--cc-surface);
+  color: #fff;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: 1px solid #1a1a20;
+  display: inline-block;
+  line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 /* ----------------------------------------------------------

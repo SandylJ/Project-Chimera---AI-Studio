@@ -224,10 +224,15 @@ const TopTabBar: React.FC<{
       {/* Tabs */}
       <div className="flex items-center gap-1">
         {/* Main 'Game' tab — always takes you to dungeon view (picker or battle) */}
-        <button onClick={() => setTab('dungeon')}
-                className={`px-3 py-1.5 text-xs rounded transition-all font-bold ${
-                  tab === 'dungeon' ? 'bg-[#6EA9E4] text-[#0a0806]' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
-                }`}>
+        <button type="button" onClick={() => setTab('dungeon')}
+                className={`press px-3 py-1.5 text-xs transition-colors font-bold ${
+                  tab === 'dungeon' ? 'text-[#0a0806]' : 'text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
+                }`}
+                style={{
+                  background: tab === 'dungeon' ? 'var(--cc-blue)' : '#14100C',
+                  border: `1px solid ${tab === 'dungeon' ? 'var(--cc-blue)' : '#2B2B32'}`,
+                  borderRadius: 2,
+                }}>
           <span className="mr-1">⚔</span>Game
         </button>
 
@@ -241,15 +246,17 @@ const TopTabBar: React.FC<{
           const downed = h.state !== 'alive';
           return (
             <button key={h.id}
+                    type="button"
                     onClick={() => focusHero(h.id)}
-                    className="relative flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-all hover:bg-[#1E1A16] hover:scale-[1.03]"
+                    className="press relative flex items-center gap-1.5 px-1.5 py-0.5 transition-colors hover:bg-[#2B2B32]"
                     style={{
-                      background: downed ? '#2a1010' : 'linear-gradient(180deg, #1a1410 0%, #0d0a08 100%)',
-                      border: `1px solid ${downed ? '#E86E6E' : cls.color + '55'}`,
+                      background: downed ? '#2a1010' : '#14100C',
+                      border: `1px solid ${downed ? 'var(--cc-orange)' : cls.color + '55'}`,
+                      borderRadius: 2,
                       fontFamily: "'Nunito', sans-serif",
-                      boxShadow: lowHp ? '0 0 8px #E86E6Eaa' : undefined,
+                      boxShadow: lowHp ? '0 0 8px var(--cc-orange)' : undefined,
                       animation: lowHp ? 'glowPulse 1.4s ease-in-out infinite' : undefined,
-                      ['--glow' as any]: '#E86E6Ecc',
+                      ['--glow' as any]: 'var(--cc-orange)',
                     }}
                     title={`${h.name} — ${cls.name}\nHP ${Math.ceil(h.hp)}/${h.maxHp} · MP ${Math.ceil(h.mp)}/${h.maxMp}`}>
               <span className="shrink-0" style={{ width: 24, height: 28, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -299,8 +306,8 @@ const TopTabBar: React.FC<{
 
         {TABS.slice(1).map(t => {
           const active = tab === t.id;
-          // Bounty pulse indicator
-          const bountyAlert = t.id === 'town' && state.bountyBoard?.bounties.some(b => {
+          // Per-tab "pending action" indicators — CC2 tabHighlighted style
+          const townAlert = t.id === 'town' && state.bountyBoard?.bounties.some(b => {
             const prog =
               b.kind === 'kill_count' ? Math.max(0, state.totalMonstersKilled - state.bountyBoard!.snapshot.totalMonstersKilled) :
               b.kind === 'earn_gold'  ? Math.max(0, state.totalGoldEarned - state.bountyBoard!.snapshot.totalGoldEarned) :
@@ -309,20 +316,36 @@ const TopTabBar: React.FC<{
               Object.values(state.bountyBoard?.dungeonClearCount ?? {}).reduce((a, v) => a + (v as number), 0);
             return !b.claimed && prog >= b.target;
           });
+          const partyAlert = t.id === 'party' && state.heroes.some(h => !h.bench && (h.abilityPoints > 0 || h.state !== 'alive'));
+          const stashAlert = t.id === 'stash' && Object.entries(state.stash.items).some(([id]) => {
+            const it = (globalThis as any).__ITEMS?.[id]; // not available — safe fallback
+            return !!it;
+          });
+          const highlighted = townAlert || partyAlert;
           return (
             <button key={t.id}
+                    type="button"
                     onClick={() => setTab(t.id)}
-                    className={`relative px-3 py-1.5 text-xs rounded transition-all font-bold ${
+                    className={`press relative px-3 py-1.5 text-xs transition-colors font-bold ${
                       active
-                        ? 'bg-[#6EA9E4] text-[#0a0806]'
-                        : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
+                        ? 'text-[#0a0806]'
+                        : highlighted
+                          ? 'text-[#0a0806] hover:brightness-110'
+                          : 'text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
                     }`}
-                    style={{ fontFamily: "'Nunito', sans-serif" }}>
+                    style={{
+                      background: active
+                        ? 'var(--cc-blue)'
+                        : highlighted
+                          ? 'var(--cc-blue)'
+                          : '#14100C',
+                      border: `1px solid ${active || highlighted ? 'var(--cc-blue)' : '#2B2B32'}`,
+                      borderRadius: 2,
+                      fontFamily: "'Nunito', sans-serif",
+                      animation: highlighted && !active ? 'glowPulse 1.8s ease-in-out infinite' : undefined,
+                      ['--glow' as any]: 'var(--cc-blue)',
+                    }}>
               <span className="mr-1">{t.icon}</span>{t.label}
-              {bountyAlert && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#7FE2A0] animate-pulse"
-                      style={{ boxShadow: '0 0 6px #7FE2A0' }} />
-              )}
             </button>
           );
         })}

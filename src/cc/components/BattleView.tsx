@@ -434,16 +434,17 @@ const RightPanel: React.FC<{
                       onClick={() => quickHealHero && quickHealHero(h.id)}
                       title={low ? 'Heal this hero' : 'Fully healthy'}
                       disabled={!low || healingPotions === 0}
-                      className={`group flex items-center gap-1.5 px-1.5 py-1 rounded border text-left transition-colors ${
+                      className={`press group flex items-center gap-1.5 px-1.5 py-1 border text-left transition-colors ${
                         low && healingPotions > 0
-                          ? 'cursor-pointer hover:brightness-110 hover:border-[#7FE2A0]'
+                          ? 'cursor-pointer hover:bg-[#2B2B32] hover:border-[var(--cc-orange)]'
                           : 'cursor-default'
                       }`}
                       style={{
                         background: 'rgba(10,8,6,0.75)',
-                        borderColor: low ? '#E86E6E' : cls.color + '50',
+                        borderColor: low ? 'var(--cc-orange)' : cls.color + '55',
+                        borderRadius: 2,
                         animation: low && healingPotions > 0 ? 'glowPulse 1.4s ease-in-out infinite' : undefined,
-                        ['--glow' as any]: '#E86E6Eaa',
+                        ['--glow' as any]: 'var(--cc-orange)',
                       }}>
                 <span style={{ width: 24, height: 28, display: 'inline-flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                   <ClassSprite classId={h.classId} size={24} />
@@ -577,11 +578,13 @@ const RightPanel: React.FC<{
               <div className="grid grid-cols-2 gap-1">
                 {scrolls.map(s => (
                   <button key={s.id}
+                          type="button"
                           onClick={() => useScroll(s.id)}
-                          className="group px-1.5 py-1 rounded border text-left transition-all hover:scale-[1.04] hover:border-[#6EA9E4] cursor-pointer"
+                          className="press group px-1.5 py-1 border text-left transition-colors cursor-pointer hover:bg-[#2B2B32]"
                           style={{
-                            background: 'linear-gradient(140deg, #6EA9E424 0%, #6EA9E408 60%, transparent 100%)',
-                            borderColor: '#6EA9E460',
+                            background: '#14100c',
+                            borderColor: 'var(--cc-blue)',
+                            borderRadius: 2,
                           }}
                           title={s.item.description}>
                     <div className="flex items-center gap-1">
@@ -612,13 +615,18 @@ const RightPanel: React.FC<{
               return (
                 <button
                   key={h.id}
+                  type="button"
                   onClick={() => reviveHero && reviveHero(h.id)}
                   disabled={state.stash.gold < cost}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded border text-left transition-all ${
+                  className={`press w-full flex items-center gap-2 px-2 py-1.5 border text-left transition-colors ${
                     state.stash.gold >= cost
-                      ? 'bg-[#2a1410] border-[#E86E6E]/50 hover:border-[#E86E6E] hover:bg-[#3a1a14]'
-                      : 'bg-[#1a0a08] border-[#3D3328] opacity-60 cursor-not-allowed'
+                      ? 'bg-[#2a1410] hover:bg-[#2B2B32]'
+                      : 'bg-[#1a0a08] opacity-60 cursor-not-allowed'
                   }`}
+                  style={{
+                    borderColor: state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32',
+                    borderRadius: 2,
+                  }}
                 >
                   <span className="text-lg">{c.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -742,14 +750,15 @@ const FlashingStat: React.FC<{ label: string; value: number; color: string }> = 
   }, [value]);
   return (
     <div key={flashKey}
-         className="relative flex flex-col px-1.5 py-1 rounded border overflow-hidden"
+         className="relative flex flex-col px-1.5 py-1 border"
          style={{
-           background: `linear-gradient(140deg, ${color}18 0%, rgba(0,0,0,0.55) 100%)`,
-           borderColor: color + '40',
+           background: 'rgba(0,0,0,0.55)',
+           borderColor: color + '55',
+           borderRadius: 2,
            animation: flashKey > 0 ? 'goldCounterFlash 0.45s ease-out' : undefined,
          }}>
-      <span className="text-[9px] font-black tracking-widest" style={{ color, opacity: 0.85 }}>{label}</span>
-      <span className="text-sm font-black tabular-nums leading-none" style={{ color, textShadow: `0 0 6px ${color}40` }}>
+      <span className="text-[9px] font-black tracking-widest" style={{ color, opacity: 0.9 }}>{label}</span>
+      <span className="text-sm font-black tabular-nums leading-none" style={{ color }}>
         {displayed.toLocaleString()}
       </span>
     </div>
@@ -790,13 +799,11 @@ const RecentLootTicker: React.FC<{ state: GameState }> = ({ state }) => {
   );
 };
 
-const SectionLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({ children, color }) => (
-  <div className="text-[9px] uppercase tracking-widest font-bold px-1 pb-1"
-       style={{
-         color: color ?? '#7A6E60',
-         fontFamily: "'JetBrains Mono', monospace",
-         letterSpacing: '0.18em',
-       }}>
+const SectionLabel: React.FC<{ children: React.ReactNode; color?: string; accent?: string }> = ({ children, color, accent }) => (
+  <div className="chip-header mb-1"
+       style={color
+         ? { background: 'rgba(43,43,50,0.95)', color, borderColor: (accent ?? color) + '70' }
+         : undefined}>
     {children}
   </div>
 );
@@ -806,36 +813,43 @@ const MiniAction: React.FC<{
   onClick?: () => void; color: string; disabled?: boolean; pulse?: boolean;
 }> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => {
   const clickable = !!onClick && !disabled;
+  // CC2 convention: blue = available, orange = pulsing/active, gray = disabled.
+  const borderColor = disabled
+    ? '#2B2B32'
+    : pulse
+      ? 'var(--cc-orange)'
+      : 'var(--cc-blue)';
+  const textColor = disabled ? '#AAAAAA' : color;
   return (
     <button type="button"
             disabled={!clickable}
             onClick={clickable ? onClick : undefined}
-            className={`relative w-full rounded-md border px-1.5 py-1.5 text-left transition-colors ${
+            className={`press relative w-full border px-1.5 py-1.5 text-left transition-colors ${
               disabled
-                ? 'bg-[#0a0706] border-[#1E1A16] opacity-45 cursor-not-allowed'
-                : 'cursor-pointer hover:brightness-110 active:brightness-95'
+                ? 'bg-[#0a0706] cursor-not-allowed'
+                : 'cursor-pointer bg-[#14100c] hover:bg-[#2B2B32]'
             }`}
             style={{
-              background: disabled ? undefined : `linear-gradient(140deg, ${color}24 0%, ${color}08 60%, transparent 100%)`,
-              borderColor: disabled ? undefined : (pulse ? color : color + '60'),
-              boxShadow: !disabled && pulse ? `0 0 8px ${color}80, inset 0 0 6px ${color}30` : undefined,
-              // in-place glow pulse — no translate/scale, so the button never dodges the cursor
+              borderColor,
+              borderRadius: 3,
+              // in-place glow — no transform so the button never dodges the cursor
               animation: !disabled && pulse ? 'glowPulse 1.6s ease-in-out infinite' : undefined,
-              ['--glow' as any]: color + 'aa',
+              ['--glow' as any]: 'var(--cc-orange)',
             }}>
       <div className="flex items-center gap-1.5 pointer-events-none">
         <span className="text-lg shrink-0 leading-none" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-1">
-            <div className="text-[10px] font-black truncate tracking-wide" style={{ color }}>{title}</div>
+            <div className="text-[10px] font-black truncate tracking-wide" style={{ color: textColor }}>{title}</div>
             {right && (
               <div className="text-[10px] font-black tabular-nums shrink-0"
-                   style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
+                   style={{ color: textColor, fontFamily: "'JetBrains Mono', monospace" }}>
                 {right}
               </div>
             )}
           </div>
-          <div className="text-[9px] text-[#8a7f72] truncate leading-tight">{subtitle}</div>
+          <div className="text-[9px] truncate leading-tight"
+               style={{ color: disabled ? '#6a6056' : '#B8A890' }}>{subtitle}</div>
         </div>
       </div>
     </button>
