@@ -113,7 +113,11 @@ export function generateDungeon(def: DungeonDef, floor: number): Dungeon {
 
 function populateTile(t: Tile, def: DungeonDef, floor: number): void {
   if (t.kind === 'monster') {
-    const count = rngInt(1, 3) + (floor > 5 ? 1 : 0);
+    // More enemies per fight — matches CC2's '8/8' style encounters.
+    // Regular tiles: 2–5, scaling with floor.
+    const base = rngInt(2, 5);
+    const bonus = Math.min(3, Math.floor(floor / 3));
+    const count = base + bonus;
     t.encounter = { monsters: [] };
     for (let i = 0; i < count; i++) {
       t.encounter.monsters.push(spawnMonster(rngChoice(def.monsterPool), floor));

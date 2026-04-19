@@ -6,6 +6,7 @@ import { ABILITIES } from '../data/abilities';
 import { ITEMS } from '../data/items';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
+import { MonsterSpriteArt } from '../visuals/monsterSprites';
 import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
 
 /* ============================================================
@@ -62,6 +63,7 @@ interface Props {
   autoEquipBest?: () => void;
   quickHealParty?: () => void;
   reviveHero?: (heroId: string) => void;
+  sellJunk?: () => void;
 }
 
 // Deterministic scatter so sprite positions don't jitter between renders
@@ -71,7 +73,7 @@ function stableRand(id: string, salt: number): number {
   return Math.abs(h % 1000) / 1000;
 }
 
-export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero }) => {
+export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk }) => {
   const dungeon = state.activeDungeon!;
   const theme = themeFor(dungeon.defId);
   const tile = dungeon.tiles.find(t => t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y)!;
@@ -250,11 +252,14 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
 
   const enemySlots: Array<{ heroId: string; x: number; y: number; depth: number }> = useMemo(() =>
     enemies.map((m, i) => {
-      // Enemies adjacent to the heroes — melee range
-      const baseX = 56 + (i % 2) * 6;
-      const baseY = 45 + Math.floor(i / 2) * 12;
-      const jx = (stableRand(m.id, 5) - 0.5) * 6;
-      const jy = (stableRand(m.id, 11) - 0.5) * 5;
+      // Spread enemies across the right half of the floor, 2 rows × 4 columns.
+      const cols = 4;
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const baseX = 54 + col * 7;
+      const baseY = 42 + row * 14;
+      const jx = (stableRand(m.id, 5) - 0.5) * 4;
+      const jy = (stableRand(m.id, 11) - 0.5) * 4;
       return { heroId: m.id, x: baseX + jx, y: baseY + jy, depth: baseY + jy };
     }),
   [enemies]);
@@ -513,7 +518,8 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
       <RightPanel state={state}
                   autoEquipBest={autoEquipBest}
                   quickHealParty={quickHealParty}
-                  reviveHero={reviveHero} />
+                  reviveHero={reviveHero}
+                  sellJunk={sellJunk} />
 
       </div> {/* end stage+right row */}
 
@@ -744,12 +750,12 @@ const HeroSpriteBody: React.FC<{
         {/* Pixel art character */}
         <div className="relative"
              style={{
-               filter: `drop-shadow(0 2px 3px rgba(0,0,0,0.75)) ${flash ? `drop-shadow(0 0 6px ${flashColor})` : ''}`,
-               width: 64, height: 88,
+               filter: `drop-shadow(0 3px 4px rgba(0,0,0,0.75)) ${flash ? `drop-shadow(0 0 8px ${flashColor})` : ''}`,
+               width: 84, height: 116,
              }}>
           <div className="absolute inset-0 flex items-end justify-center"
                style={{ transform: 'translateY(-4px)' }}>
-            <ClassSprite classId={hero.classId} size={64} />
+            <ClassSprite classId={hero.classId} size={84} />
           </div>
           {/* Shield indicator (glowing ring around sprite) */}
           {hero.shield > 0 && (
@@ -817,40 +823,40 @@ const MonsterSpriteBody: React.FC<{
         </div>
       </div>
 
-      {/* Sprite */}
-      <div className="relative">
-        <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%]"
-             style={{ width: size * 0.9, height: 7, bottom: -4, background: 'radial-gradient(ellipse, rgba(0,0,0,0.8) 0%, transparent 70%)' }} />
-        <div
-          className="relative flex items-center justify-center"
-          style={{
-            width: size, height: size,
-            background: `radial-gradient(circle at 30% 30%, #a01e1ee6 0%, #40080866 55%, #40000000 100%)`,
-            border: `2px solid ${isBoss ? '#ff3030' : '#E86E6E'}`,
-            borderRadius: '50% 50% 42% 42% / 55% 55% 45% 45%',
-            boxShadow: `0 0 10px ${isBoss ? '#ff3030' : '#E86E6E'}90, inset 0 -6px 10px rgba(0,0,0,0.55)`,
-          }}
-        >
-          <div className="select-none"
-               style={{
-                 fontSize: size * 0.55,
-                 transform: `scaleX(-1) ${stunned ? `rotate(${Math.sin(nowTick / 80) * 18}deg)` : ''}`,
-                 filter: 'drop-shadow(1px 1px 0 #000) drop-shadow(-1px 1px 0 #000) drop-shadow(1px -1px 0 #000)',
-               }}>
-            {def.icon}
-          </div>
-          {stunned && (
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-xs font-black bg-black/80 px-1.5 rounded text-[#F2E6A8] border border-[#F2E6A8]/60"
-                 style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 4px #F2E6A8' }}>
-              STUNNED!
-            </div>
-          )}
-          {monster.dots.length > 0 && <div className="absolute -bottom-1 -right-1 text-[10px]">🟢</div>}
-          {flash && (
-            <div className="absolute inset-0 rounded-[inherit] pointer-events-none"
-                 style={{ background: flashColor, mixBlendMode: 'screen', opacity: 0.65 }} />
-          )}
+      {/* Pixel art monster sprite */}
+      <div className="relative"
+           style={{
+             filter: `drop-shadow(0 3px 4px rgba(0,0,0,0.8)) ${flash ? `drop-shadow(0 0 8px ${flashColor})` : ''} ${isBoss ? 'drop-shadow(0 0 14px #ff3030aa)' : ''}`,
+             width: isBoss ? 100 : 72,
+             height: isBoss ? 140 : 98,
+             transform: 'scaleX(-1)', // face heroes (left)
+           }}>
+        <div className="absolute inset-0 flex items-end justify-center">
+          <MonsterSpriteArt
+            monsterId={monster.monsterId}
+            icon={def.icon}
+            size={isBoss ? 100 : 72}
+            level={def.level}
+          />
         </div>
+        {stunned && (
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs font-black bg-black/80 px-1.5 rounded text-[#F2E6A8] border border-[#F2E6A8]/60"
+               style={{
+                 fontFamily: "'JetBrains Mono', monospace",
+                 textShadow: '0 0 4px #F2E6A8',
+                 transform: 'translateX(-50%) scaleX(-1)', // counter-flip so text reads normally
+               }}>
+            STUNNED!
+          </div>
+        )}
+        {monster.dots.length > 0 && (
+          <div className="absolute bottom-0 right-0 text-[14px]"
+               style={{ transform: 'scaleX(-1)' }}>🟢</div>
+        )}
+        {flash && (
+          <div className="absolute inset-0 pointer-events-none"
+               style={{ background: flashColor, mixBlendMode: 'screen', opacity: 0.5 }} />
+        )}
       </div>
     </div>
   );
@@ -1355,13 +1361,38 @@ const RightPanel: React.FC<{
   autoEquipBest?: () => void;
   quickHealParty?: () => void;
   reviveHero?: (heroId: string) => void;
-}> = ({ state, autoEquipBest, quickHealParty, reviveHero }) => {
+  sellJunk?: () => void;
+}> = ({ state, autoEquipBest, quickHealParty, reviveHero, sellJunk }) => {
   const dead = state.heroes.filter(h => h.state !== 'alive');
   const xpTotal = state.heroes.reduce((a, h) => a + h.xp + h.level * 1000, 0);
   const healingPotions = Object.entries(state.stash.items)
     .filter(([id]) => ['healing_potion', 'greater_healing_potion', 'elixir_of_life'].includes(id))
     .reduce((a, [, q]) => a + q, 0);
   const manaPotions = state.stash.items['mana_potion'] ?? 0;
+
+  // Count items that could be auto-equip upgrades (any equipment in stash)
+  const upgradeCount = Object.entries(state.stash.items)
+    .filter(([id]) => {
+      const it = ITEMS[id];
+      return it?.slot;
+    })
+    .reduce((a, [, q]) => a + q, 0);
+
+  // Total junk value (common/uncommon non-equipment)
+  const { junkGold, junkCount } = Object.entries(state.stash.items).reduce((acc, [id, qty]) => {
+    const it = ITEMS[id];
+    if (!it || it.slot || it.type === 'potion') return acc;
+    if (it.rarity === 'common' || it.rarity === 'uncommon') {
+      acc.junkGold += Math.floor(it.value * qty * 0.5);
+      acc.junkCount += qty;
+    }
+    return acc;
+  }, { junkGold: 0, junkCount: 0 });
+
+  // Party's avg HP + MP percentage for heal pressure
+  const active = state.heroes.filter(h => !h.bench && h.state === 'alive');
+  const avgHpPct = active.length ? active.reduce((a, h) => a + h.hp / h.maxHp, 0) / active.length : 1;
+  const partyNeedsHeal = avgHpPct < 0.7;
 
   return (
     <aside className="w-72 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
@@ -1385,22 +1416,64 @@ const RightPanel: React.FC<{
           Quick Actions
         </div>
 
-        <ActionCard
+        <UpgradeCard
           icon="🛡"
-          title="Auto-Equip Best"
-          subtitle="Swap in upgrades"
+          title="Equip Upgrades"
+          right={upgradeCount > 0 ? `+${upgradeCount}` : '—'}
+          subtitle={upgradeCount > 0 ? 'Swap in best gear' : 'No new gear in stash'}
           onClick={autoEquipBest}
           color="#D4A943"
+          pulse={upgradeCount > 3}
+          disabled={upgradeCount === 0}
         />
 
-        <ActionCard
+        <UpgradeCard
           icon="🧪"
           title="Heal Party"
-          subtitle={`${healingPotions} potions · ${manaPotions} mana`}
+          right={partyNeedsHeal ? `!${Math.round((1 - avgHpPct) * 100)}%` : 'OK'}
+          subtitle={`${healingPotions} heal · ${manaPotions} mana`}
           onClick={quickHealParty}
           color="#7FE2A0"
-          disabled={healingPotions + manaPotions === 0}
+          pulse={partyNeedsHeal && healingPotions > 0}
+          disabled={healingPotions + manaPotions === 0 || !partyNeedsHeal}
         />
+
+        <UpgradeCard
+          icon="💰"
+          title="Collect Item Sales"
+          right={junkGold > 0 ? `+${junkGold.toLocaleString()}g` : '—'}
+          subtitle={junkGold > 0 ? `Sell ${junkCount} junk item${junkCount === 1 ? '' : 's'}` : 'No junk to sell'}
+          onClick={sellJunk}
+          color="#F2B84B"
+          pulse={junkGold > 200}
+          disabled={junkGold === 0}
+        />
+
+        {state.killCombo >= 3 && (
+          <div className="rounded-lg border-2 px-2 py-2"
+               style={{
+                 background: 'linear-gradient(90deg, #3a0808 0%, #1a0404 100%)',
+                 borderColor: '#ff6060',
+                 boxShadow: '0 0 12px #ff606060',
+               }}>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🔥</span>
+              <div className="flex-1">
+                <div className="text-[11px] font-black uppercase tracking-widest text-[#ff8a5a]"
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Combo Streak
+                </div>
+                <div className="text-[9px] text-[#B8A890]">
+                  +{Math.min(100, (state.killCombo - 1) * 5)}% gold/xp bonus
+                </div>
+              </div>
+              <div className="text-xl font-black text-[#ff8a5a]"
+                   style={{ textShadow: '0 0 8px #ff6060' }}>
+                ×{state.killCombo}
+              </div>
+            </div>
+          </div>
+        )}
 
         {dead.length > 0 && (
           <div className="space-y-1">
@@ -1505,6 +1578,43 @@ const FlashingStat: React.FC<{
       <span className="text-xs font-bold flex items-center gap-1" style={{ color }}>{label}</span>
       <span className="text-sm font-black" style={{ color }}>{displayed.toLocaleString()}</span>
     </div>
+  );
+};
+
+const UpgradeCard: React.FC<{
+  icon: string; title: string; right?: string; subtitle: string;
+  onClick?: () => void; color: string; disabled?: boolean; pulse?: boolean;
+}> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => {
+  return (
+    <button disabled={disabled || !onClick}
+            onClick={onClick}
+            className={`w-full rounded-lg border-2 px-2 py-1.5 text-left transition-all ${
+              disabled
+                ? 'bg-[#0a0706] border-[#1E1A16] opacity-40 cursor-not-allowed'
+                : 'hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
+            }`}
+            style={{
+              background: disabled ? undefined : `linear-gradient(90deg, ${color}22 0%, transparent 100%)`,
+              borderColor: disabled ? undefined : color + '70',
+              boxShadow: !disabled && pulse ? `0 0 10px ${color}aa` : undefined,
+              animation: !disabled && pulse ? 'ambientFloat 2s ease-in-out infinite alternate' : undefined,
+            }}>
+      <div className="flex items-center gap-2">
+        <span className="text-xl shrink-0" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <div className="text-xs font-bold truncate" style={{ color }}>{title}</div>
+            {right && (
+              <div className="text-xs font-black tabular-nums"
+                   style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
+                {right}
+              </div>
+            )}
+          </div>
+          <div className="text-[10px] text-[#B8A890] truncate leading-tight">{subtitle}</div>
+        </div>
+      </div>
+    </button>
   );
 };
 

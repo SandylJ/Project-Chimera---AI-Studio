@@ -533,6 +533,32 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Auto-sell common/uncommon items in stash (fast "collect item sales" card)
+  const sellJunk = useCallback(() => {
+    mutate(s => {
+      let gold = 0;
+      let sold = 0;
+      for (const [id, qty] of Object.entries(s.stash.items)) {
+        const it = ITEMS[id];
+        if (!it) continue;
+        if (it.slot) continue; // don't sell equipment
+        if (it.type === 'potion') continue; // don't sell potions
+        if (it.rarity === 'common' || it.rarity === 'uncommon') {
+          gold += Math.floor(it.value * qty * 0.5);
+          sold += qty;
+          delete s.stash.items[id];
+        }
+      }
+      if (sold === 0) {
+        pushLog(s, 'system', `No junk to sell.`);
+        return;
+      }
+      s.stash.gold += gold;
+      s.totalGoldEarned += gold;
+      pushLog(s, 'loot', `💰 Sold ${sold} junk item${sold === 1 ? '' : 's'} for ${gold} gp.`);
+    });
+  }, [mutate]);
+
   // Click monster → bonus damage (classic CC2 interaction)
   const clickMonster = useCallback((monsterId: string) => {
     mutate(s => {
@@ -582,5 +608,6 @@ export function useCcGame() {
     clickMonster,
     autoEquipBest,
     quickHealParty,
+    sellJunk,
   };
 }

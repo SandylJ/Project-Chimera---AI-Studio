@@ -64,7 +64,8 @@ export default function CcApp() {
                          clickMonster={g.clickMonster}
                          autoEquipBest={g.autoEquipBest}
                          quickHealParty={g.quickHealParty}
-                         reviveHero={g.reviveHero} />
+                         reviveHero={g.reviveHero}
+                         sellJunk={g.sellJunk} />
           )}
           {tab === 'party' && (
             <PartyView state={state}
