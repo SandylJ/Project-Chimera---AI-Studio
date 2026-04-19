@@ -349,6 +349,9 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
               <BackWall side="top" theme={theme} doorway={pathHasDoorway(dungeon, 'forward')} />
               <BackWall side="right" theme={theme} doorway={pathHasDoorway(dungeon, 'right')} />
 
+              {/* Tile-kind floor decoration (chest, shrine, fountain…) */}
+              {!tile.cleared && <TileFloorDecor tile={tile} theme={theme} nowTick={nowTick} />}
+
               {/* Loot on floor (lays flat on the tilted floor, then flies to stash) */}
               {floorLoot.map(l => (
                 <FloorLoot key={l.id} loot={l} nowTick={nowTick} />
@@ -1288,6 +1291,56 @@ const FloorLoot: React.FC<{ loot: DroppedLoot; nowTick: number }> = ({ loot, now
         fontSize: 28,
         filter: `drop-shadow(0 0 10px ${glow}) drop-shadow(0 4px 6px rgba(0,0,0,0.9))`,
       }}>{icon}</div>
+    </div>
+  );
+};
+
+// ============ Tile kind floor decoration ============
+
+const TileFloorDecor: React.FC<{ tile: Tile; theme: DungeonTheme; nowTick: number }> = ({ tile, theme, nowTick }) => {
+  const decor = (() => {
+    switch (tile.kind) {
+      case 'chest':    return { icon: '📦', color: '#D4A943', label: 'Treasure Chest' };
+      case 'shrine':   return { icon: '⛩', color: '#7FE2A0', label: 'Ancient Shrine' };
+      case 'fountain': return { icon: '⛲', color: '#6EA9E4', label: 'Mystic Fountain' };
+      case 'fork':     return { icon: '🛤', color: '#F2E6A8', label: 'Fork in the Path' };
+      case 'merchant': return { icon: '🧳', color: '#F2B84B', label: 'Wandering Merchant' };
+      case 'trap':     return { icon: '⚠', color: '#ff6060', label: 'Pressure Plate' };
+      default:         return null;
+    }
+  })();
+  if (!decor) return null;
+  const pulse = 0.75 + 0.25 * Math.sin(nowTick / 400);
+  return (
+    <div className="absolute pointer-events-none"
+         style={{
+           left: '50%', top: '62%',
+           transform: 'translate(-50%, -50%) rotateX(-58deg)',
+           transformOrigin: '50% 100%',
+         }}>
+      {/* Glow ring on floor */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+           style={{
+             width: 90, height: 40,
+             background: `radial-gradient(ellipse, ${decor.color}55 0%, transparent 75%)`,
+             boxShadow: `0 0 30px ${decor.color}80`,
+             filter: 'blur(1px)',
+             transform: `rotateX(58deg) scaleY(0.6)`,
+             opacity: pulse,
+           }} />
+      <div className="flex flex-col items-center gap-1">
+        <div className="text-5xl"
+             style={{
+               filter: `drop-shadow(0 3px 4px rgba(0,0,0,0.85)) drop-shadow(0 0 8px ${decor.color})`,
+               transform: `translateY(${-Math.sin(nowTick / 700) * 3}px)`,
+             }}>
+          {decor.icon}
+        </div>
+        <div className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 bg-black/75 rounded-full border"
+             style={{ color: decor.color, borderColor: decor.color + '60', fontFamily: "'JetBrains Mono', monospace" }}>
+          {decor.label}
+        </div>
+      </div>
     </div>
   );
 };
