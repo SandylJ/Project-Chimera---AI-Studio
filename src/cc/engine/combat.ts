@@ -3,7 +3,7 @@ import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
 import {
   effectiveStats, totalArmor, weaponPower, heroAttackIntervalMs, monsterAttackIntervalMs,
-  aliveActiveHeroes, pushLog, mkId, rollChance,
+  aliveActiveHeroes, pushLog, mkId, rollChance, blessingBonus,
 } from './util';
 import { rollMonsterLoot } from './loot';
 import { awardXp } from './progression';
@@ -65,7 +65,7 @@ export function tickCombat(state: GameState, dt: number): void {
       const target = pickLowestHpEnemy(tile);
       if (target) {
         hero.lastAction = { targetId: target.id, kind: classAttackVisual(hero.classId), at: Date.now() };
-        const dmg = heroBasicAttackDamage(hero);
+        const dmg = heroBasicAttackDamage(hero, state);
         applyDamageToMonster(state, target, dmg, hero.name);
       }
     }
@@ -89,7 +89,8 @@ export function tickCombat(state: GameState, dt: number): void {
     const rawDmg = def.damage;
     const defStats = effectiveStats(target);
     const armor = totalArmor(target);
-    const reduction = armor * 0.4 + defStats.con * 0.3;
+    const warding = blessingBonus(state, 'warding');
+    const reduction = armor * 0.4 + defStats.con * 0.3 + rawDmg * warding;
     let dmg = Math.max(1, Math.floor(rawDmg - reduction));
     m.lastAttack = { targetHeroId: target.id, at: Date.now() };
     applyDamageToHero(state, target, dmg);
@@ -221,13 +222,16 @@ function applyEffect(
   switch (eff.kind) {
     case 'damage':
     case 'aoe_damage': {
+      const might = blessingBonus(state, 'might');
+      const luckBonus = blessingBonus(state, 'luck');
       for (const m of targets) {
         if (m.hp <= 0) continue;
         let dmg = Math.max(1, Math.floor(base));
         // crit
-        if (rollChance(0.05 + stats.luck * 0.01)) {
+        if (rollChance(0.05 + stats.luck * 0.01 + luckBonus)) {
           dmg = Math.floor(dmg * 1.6);
         }
+        dmg = Math.floor(dmg * (1 + might));
         applyDamageToMonster(state, m, dmg, caster.name);
       }
       break;
@@ -290,7 +294,7 @@ function applyEffect(
 
 // ============ Damage resolution ============
 
-export function heroBasicAttackDamage(hero: Hero): number {
+export function heroBasicAttackDamage(hero: Hero, state?: GameState): number {
   const stats = effectiveStats(hero);
   const weapon = weaponPower(hero);
   // Physical class = str, magic class = int, dex for rogue/ranger
@@ -298,7 +302,11 @@ export function heroBasicAttackDamage(hero: Hero): number {
   const scale = stats[scalingStat];
   const base = weapon + scale * 1.2;
   let dmg = Math.floor(base);
-  if (rollChance(0.05 + stats.luck * 0.008)) dmg = Math.floor(dmg * 1.7);
+  const luckBonus = blessingBonus(state, 'luck');
+  if (rollChance(0.05 + stats.luck * 0.008 + luckBonus)) dmg = Math.floor(dmg * 1.7);
+  // 'might' blessing scales every point of damage up.
+  const might = blessingBonus(state, 'might');
+  dmg = Math.floor(dmg * (1 + might));
   return Math.max(1, dmg);
 }
 
@@ -365,6 +373,8 @@ export function applyDamageToHero(state: GameState, hero: Hero, dmg: number): vo
   if (remaining > 0) {
     hero.hp -= remaining;
   }
+  // Paint a hit flash on the battlefield sprite.
+  hero.lastHitAt = Date.now();
   if (hero.hp <= 0) {
     hero.hp = 0;
     hero.state = 'downed'; // can be revived at temple; not permadead for now
@@ -389,20 +399,22 @@ export function onMonsterKilled(state: GameState, m: MonsterInstance): void {
 
   // Combo bonus gold (capped) — +5% per step over 1, to +100% at combo 21
   const comboBonus = Math.min(1.0, (state.killCombo - 1) * 0.05);
+  const fortune = blessingBonus(state, 'fortune');
+  const wisdom = blessingBonus(state, 'wisdom');
 
-  // XP: split evenly across alive heroes in encounter, with combo bonus
+  // XP: split evenly across alive heroes in encounter, with combo + wisdom bonus
   const alive = aliveActiveHeroes(state);
   if (alive.length > 0) {
-    const xpEach = Math.ceil((def.xpReward * (1 + comboBonus)) / alive.length);
+    const xpEach = Math.ceil((def.xpReward * (1 + comboBonus + wisdom)) / alive.length);
     for (const h of alive) awardXp(state, h, xpEach);
   }
 
-  // Loot + combo gold
-  const luck = alive.reduce((acc, h) => acc + effectiveStats(h).luck, 0) * 0.003;
+  // Loot + combo gold + fortune blessing
+  const luck = alive.reduce((acc, h) => acc + effectiveStats(h).luck, 0) * 0.003 + blessingBonus(state, 'luck');
   rollMonsterLoot(state, def, luck);
-  if (comboBonus > 0) {
+  if (comboBonus > 0 || fortune > 0) {
     // Bonus coins ON TOP of loot-roll gold
-    const comboGold = Math.floor((def.goldReward[0] + def.goldReward[1]) / 2 * comboBonus);
+    const comboGold = Math.floor((def.goldReward[0] + def.goldReward[1]) / 2 * (comboBonus + fortune));
     if (comboGold > 0) {
       state.stash.gold += comboGold;
       state.totalGoldEarned += comboGold;

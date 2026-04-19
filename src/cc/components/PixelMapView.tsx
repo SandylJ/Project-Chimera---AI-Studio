@@ -344,12 +344,12 @@ const TileDecor: React.FC<{ tile: Tile; theme: DungeonTheme }> = ({ tile, theme 
 const PartyOnTile: React.FC<{
   heroes: Hero[]; tileX: number; tileY: number; now: number; walking: boolean; walkDir: string;
 }> = ({ heroes, tileX, tileY, now, walking }) => {
-  // 4-hero 2x2 cluster within the tile
+  // 4-hero 2x2 cluster within the tile — spread a bit wider so each plate has room.
   const offsets = [
-    { dx: -12, dy: -6 },
-    { dx:  12, dy: -6 },
-    { dx: -12, dy: 10 },
-    { dx:  12, dy: 10 },
+    { dx: -18, dy: -8 },
+    { dx:  18, dy: -8 },
+    { dx: -18, dy: 12 },
+    { dx:  18, dy: 12 },
   ];
   return (
     <>
@@ -358,29 +358,118 @@ const PartyOnTile: React.FC<{
         const bob = walking ? Math.sin((now / 120) + i) * 3 : Math.sin((now / 500) + i) * 1.2;
         const lx = tileX * TILE + TILE / 2 + o.dx;
         const ly = tileY * TILE + TILE / 2 + o.dy + bob;
+        const cls = CLASSES[h.classId];
+        const hpPct = Math.max(0, (h.hp / Math.max(1, h.maxHp)) * 100);
+        const mpPct = h.maxMp > 0 ? Math.max(0, (h.mp / h.maxMp) * 100) : 0;
+        // Hit flash: if hero took damage within ~260ms, tint red
+        const hitAge = h.lastHitAt ? now - h.lastHitAt : Infinity;
+        const flashT = hitAge < 260 ? 1 - hitAge / 260 : 0;
+        // Color grade the HP bar (green → yellow → red)
+        const barColor =
+          hpPct > 66 ? '#55d86b' :
+          hpPct > 33 ? '#e9cc3a' :
+                       '#e04040';
+        const lowHp = hpPct < 30 && h.state === 'alive';
+        const downed = h.state !== 'alive';
         return (
           <div key={h.id}
                className="absolute"
                style={{
                  left: lx, top: ly,
                  transform: 'translate(-50%, -100%)',
-                 filter: h.state !== 'alive'
+                 filter: downed
                    ? 'grayscale(1) opacity(0.5)'
-                   : 'drop-shadow(0 2px 2px rgba(0,0,0,0.85))',
+                   : flashT > 0
+                     ? `drop-shadow(0 0 8px rgba(255,80,80,${flashT})) drop-shadow(0 2px 2px rgba(0,0,0,0.85))`
+                     : 'drop-shadow(0 2px 2px rgba(0,0,0,0.85))',
                  zIndex: 10 + i,
                }}>
-            <ClassSprite classId={h.classId} size={40} />
-            {/* Tiny HP bar */}
-            <div className="absolute left-1/2 -top-2 -translate-x-1/2"
-                 style={{ width: 28 }}>
-              <div className="h-[2px] bg-black/80 rounded-sm overflow-hidden">
-                <div className="h-full transition-all"
-                     style={{ width: Math.max(0, (h.hp / h.maxHp) * 100) + '%', background: '#dc2020' }} />
+            {/* Big differentiated nameplate */}
+            <div className="absolute left-1/2 -translate-x-1/2"
+                 style={{
+                   bottom: 'calc(100% - 2px)',
+                   minWidth: 68,
+                   transform: `translate(-50%, 0) ${flashT > 0 ? `translateX(${(Math.random() - 0.5) * 4 * flashT}px)` : ''}`,
+                 }}>
+              {/* Name / level chip */}
+              <div className="flex items-center justify-between gap-1 px-1 py-[1px] rounded-sm leading-none border"
+                   style={{
+                     background: 'rgba(8,6,5,0.88)',
+                     borderColor: cls.color + 'aa',
+                     boxShadow: lowHp ? '0 0 6px #ff4040aa' : undefined,
+                   }}>
+                <span className="text-[8px] font-black tracking-wide"
+                      style={{ color: cls.color, fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
+                  {h.name.slice(0, 6).toUpperCase()}
+                </span>
+                <span className="text-[7px] text-[#f2e08a] font-bold"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  L{h.level}
+                </span>
               </div>
+              {/* HP bar with numbers */}
+              <div className="relative mt-0.5 h-[6px] rounded-sm overflow-hidden"
+                   style={{
+                     background: '#0a0606',
+                     border: '1px solid #000',
+                     boxShadow: flashT > 0 ? `0 0 6px rgba(255,60,60,${flashT})` : undefined,
+                   }}>
+                <div className="absolute inset-y-0 left-0"
+                     style={{
+                       width: hpPct + '%',
+                       background: `linear-gradient(180deg, ${barColor} 0%, ${darken(barColor, 0.4)} 100%)`,
+                       transition: 'width 180ms ease-out',
+                       boxShadow: `inset 0 1px 0 ${lighten(barColor, 0.3)}`,
+                     }} />
+                {flashT > 0 && (
+                  <div className="absolute inset-0 pointer-events-none"
+                       style={{ background: 'rgba(255,255,255,0.65)', opacity: flashT }} />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center text-[7px] font-black text-white leading-none"
+                     style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000, 0 1px 0 #000' }}>
+                  {Math.max(0, Math.ceil(h.hp))}/{h.maxHp}
+                </div>
+              </div>
+              {/* MP bar (thin) */}
+              {h.maxMp > 0 && (
+                <div className="relative mt-0.5 h-[3px] rounded-sm overflow-hidden"
+                     style={{ background: '#0a0606', border: '1px solid #000' }}>
+                  <div className="absolute inset-y-0 left-0"
+                       style={{
+                         width: mpPct + '%',
+                         background: 'linear-gradient(180deg, #5aa0ff 0%, #205090 100%)',
+                         transition: 'width 180ms ease-out',
+                       }} />
+                </div>
+              )}
             </div>
+            {/* Sprite */}
+            <ClassSprite classId={h.classId} size={42} />
+            {/* Shield ring */}
+            {h.shield > 0 && (
+              <div className="absolute inset-x-0 bottom-0 h-8 rounded-full pointer-events-none"
+                   style={{
+                     boxShadow: 'inset 0 0 10px #6EA9E4aa, 0 0 8px #6EA9E480',
+                     border: '1.5px solid #6EA9E4',
+                     animation: 'ambientFloat 1.4s ease-in-out infinite alternate',
+                   }} />
+            )}
+            {/* Hit overlay tint */}
+            {flashT > 0 && (
+              <div className="absolute inset-0 pointer-events-none"
+                   style={{ background: 'rgba(255,60,60,0.55)', mixBlendMode: 'screen', opacity: flashT }} />
+            )}
+            {/* Ability point badge */}
             {h.abilityPoints > 0 && (
-              <div className="absolute -top-3 -right-1 w-3 h-3 rounded-full bg-[#D4A943] animate-pulse"
-                   title="Unspent ability points" />
+              <div className="absolute -top-[2px] right-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black bg-[#D4A943] text-black animate-pulse shadow-md"
+                   title="Unspent ability points">+</div>
+            )}
+            {/* Downed overlay */}
+            {downed && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-[9px] font-black text-[#E86E6E] bg-black/80 px-1 rounded"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>DOWN</span>
+              </div>
             )}
           </div>
         );
@@ -388,6 +477,28 @@ const PartyOnTile: React.FC<{
     </>
   );
 };
+
+function lighten(hex: string, pct: number): string {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const lr = Math.min(255, Math.round(r + (255 - r) * pct));
+  const lg = Math.min(255, Math.round(g + (255 - g) * pct));
+  const lb = Math.min(255, Math.round(b + (255 - b) * pct));
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
+}
+
+function darken(hex: string, pct: number): string {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const lr = Math.max(0, Math.round(r * (1 - pct)));
+  const lg = Math.max(0, Math.round(g * (1 - pct)));
+  const lb = Math.max(0, Math.round(b * (1 - pct)));
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
+}
 
 // ============ Monster on Tile ============
 
@@ -402,12 +513,17 @@ const MonsterOnTile: React.FC<{
   const attackAge = monster.lastAttack ? now - monster.lastAttack.at : Infinity;
   const lungeT = attackAge < 260 ? 1 - attackAge / 260 : 0;
   const lungeX = -Math.sin(lungeT * Math.PI) * 14;
-  const size = isBoss ? 64 : 44;
-  const hpPct = Math.max(0, (monster.hp / monster.maxHp) * 100);
+  const size = isBoss ? 68 : 46;
+  const hpPct = Math.max(0, (monster.hp / Math.max(1, monster.maxHp)) * 100);
   const stunned = monster.stunRemaining > 0;
   const dying = monster.hp <= 0;
   const lx = tileX * TILE + TILE / 2 + dx;
   const ly = tileY * TILE + TILE / 2 + dy;
+  // Hit flash — hp just ticked this frame? Handled via damage floats; here we just color-grade
+  const barColor =
+    hpPct > 66 ? '#d83232' :
+    hpPct > 33 ? '#ff6e3e' :
+                 '#ffc048';
   return (
     <div className={`absolute ${onClick ? 'cursor-crosshair' : ''}`}
          onClick={onClick}
@@ -419,22 +535,42 @@ const MonsterOnTile: React.FC<{
            animation: dying ? 'fadeOut 0.5s forwards' : 'popIn 0.45s ease-out',
            zIndex: 20,
          }}>
+      {/* Big nameplate + HP bar (rendered in world orientation so not mirrored) */}
+      <div className="absolute left-1/2 -translate-x-1/2"
+           style={{ bottom: 'calc(100% + 2px)', minWidth: isBoss ? 90 : 60, pointerEvents: 'none' }}>
+        {isBoss && (
+          <div className="text-[8px] text-center font-black uppercase tracking-widest text-[#ff9060] leading-none mb-0.5"
+               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000, 0 0 6px #ff5040' }}>
+            👑 {def.name}
+          </div>
+        )}
+        {!isBoss && (
+          <div className="text-[7px] text-center text-[#ffd0a0] leading-none mb-0.5"
+               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
+            {def.name} <span className="text-[#ffa060]">L{def.level}</span>
+          </div>
+        )}
+        <div className="relative h-[5px] rounded-sm overflow-hidden"
+             style={{
+               background: '#0a0606',
+               border: `1px solid ${isBoss ? '#ff4040' : '#000'}`,
+               boxShadow: isBoss ? '0 0 6px #ff504080' : undefined,
+             }}>
+          <div className="absolute inset-y-0 left-0"
+               style={{
+                 width: hpPct + '%',
+                 background: `linear-gradient(180deg, ${barColor} 0%, ${darken(barColor, 0.45)} 100%)`,
+                 transition: 'width 180ms ease-out',
+                 boxShadow: `inset 0 1px 0 ${lighten(barColor, 0.35)}`,
+               }} />
+          <div className="absolute inset-0 flex items-center justify-center text-[7px] font-black text-white leading-none"
+               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000, 0 1px 0 #000' }}>
+            {Math.max(0, Math.ceil(monster.hp))}/{monster.maxHp}
+          </div>
+        </div>
+      </div>
       <div className="relative" style={{ transform: 'scaleX(-1)' }}>
         <MonsterSpriteArt monsterId={monster.monsterId} icon={def.icon} size={size} level={def.level} />
-        {/* HP bar above */}
-        <div className="absolute left-1/2 -top-1 -translate-x-1/2"
-             style={{ width: size * 0.8, transform: 'translateX(-50%) scaleX(-1)' }}>
-          <div className="h-[3px] bg-black/80 rounded-sm overflow-hidden">
-            <div className="h-full transition-all"
-                 style={{ width: hpPct + '%', background: isBoss ? '#ff3030' : '#dc2020' }} />
-          </div>
-          {isBoss && (
-            <div className="text-[8px] text-center font-bold text-[#ff8a5a] leading-none mt-0.5"
-                 style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
-              👑 {def.name}
-            </div>
-          )}
-        </div>
         {stunned && (
           <div className="absolute -top-4 left-1/2 text-[8px] font-black bg-black/80 px-1 rounded text-[#F2E6A8] border border-[#F2E6A8]/60"
                style={{ transform: 'translateX(-50%) scaleX(-1)', fontFamily: "'JetBrains Mono', monospace" }}>

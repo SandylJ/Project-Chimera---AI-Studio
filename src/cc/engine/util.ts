@@ -1,6 +1,108 @@
-import { Hero, Stats, StatKey, Item, Monster, GameState, LogEntry, Rarity } from '../types';
+import { Hero, Stats, StatKey, Item, Monster, GameState, LogEntry, Rarity, BlessingId, EquipSlot } from '../types';
 import { ITEMS } from '../data/items';
 import { CLASSES } from '../data/classes';
+
+// ============ Enchants / Blessings ============
+
+// Per-tier multiplier for weapon/armor/stat values from item enchants.
+const ENCHANT_MULT = 0.15; // +15% per tier
+export const MAX_ENCHANT = 10;
+
+export function enchantTier(hero: Hero, slot: EquipSlot): number {
+  return hero.enchants?.[slot] ?? 0;
+}
+
+export function enchantMultiplier(tier: number): number {
+  return 1 + tier * ENCHANT_MULT;
+}
+
+// Next-tier enchant cost: scales with tier and item value.
+export function enchantCost(hero: Hero, slot: EquipSlot): { gold: number; materials: Array<{ id: string; qty: number }> } | null {
+  const itemId = hero.equipment[slot];
+  if (!itemId) return null;
+  const tier = enchantTier(hero, slot);
+  if (tier >= MAX_ENCHANT) return null;
+  const item = ITEMS[itemId];
+  if (!item) return null;
+  const nextTier = tier + 1;
+  const baseGold = Math.floor(item.value * 0.6 * Math.pow(1.8, nextTier));
+  // Materials scale with item rarity and tier
+  const materials = requiredMaterials(item.rarity, nextTier);
+  return { gold: Math.max(20, baseGold), materials };
+}
+
+function requiredMaterials(rarity: Rarity, tier: number): Array<{ id: string; qty: number }> {
+  const rarityRank = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'celestial'].indexOf(rarity);
+  const list: Array<{ id: string; qty: number }> = [];
+  // Tier 1-3: slime gel / bone shard / goblin ear
+  if (tier <= 3) {
+    list.push({ id: 'slime_gel', qty: 2 + tier });
+    list.push({ id: 'bone_shard', qty: 1 + tier });
+  }
+  // Tier 4-6: spider silk + ice shard
+  if (tier >= 4 && tier <= 6) {
+    list.push({ id: 'spider_silk', qty: tier - 2 });
+    list.push({ id: 'bone_shard', qty: tier });
+  }
+  // Tier 7+: demon horn + dragon scale
+  if (tier >= 7) {
+    list.push({ id: 'demon_horn', qty: tier - 5 });
+    if (tier >= 9) list.push({ id: 'dragon_scale', qty: tier - 7 });
+    if (tier >= 10) list.push({ id: 'celestial_dust', qty: 1 });
+  }
+  // Higher-rarity items cost more of the same mats
+  if (rarityRank >= 3) {
+    for (const m of list) m.qty = Math.ceil(m.qty * 1.5);
+  }
+  return list;
+}
+
+// Apply enchant multiplier to a weapon's base power for an equipped hero.
+export function enchantedWeaponPower(hero: Hero): number {
+  const id = hero.equipment.weapon;
+  if (!id) return 0;
+  const base = ITEMS[id]?.weaponPower ?? 0;
+  return Math.floor(base * enchantMultiplier(enchantTier(hero, 'weapon')));
+}
+
+// Apply enchant multiplier to each equipped armor slot.
+export function enchantedArmor(hero: Hero): number {
+  let arm = 0;
+  for (const slot of Object.keys(hero.equipment) as Array<keyof typeof hero.equipment>) {
+    const id = hero.equipment[slot];
+    if (!id) continue;
+    const item = ITEMS[id];
+    if (!item?.armor) continue;
+    arm += Math.floor(item.armor * enchantMultiplier(enchantTier(hero, slot as EquipSlot)));
+  }
+  return arm;
+}
+
+// ============ Blessings ============
+
+export function blessingLevel(state: GameState, id: BlessingId): number {
+  return state.blessings?.[id] ?? 0;
+}
+
+// Cost to buy the next level of a blessing.
+export function blessingCost(level: number): number {
+  return Math.floor(5 + Math.pow(level + 1, 1.9) * 4);
+}
+
+// Blessing effect multipliers (consumed by engine).
+export function blessingBonus(state: GameState | undefined, id: BlessingId): number {
+  if (!state) return 0;
+  const lvl = blessingLevel(state, id);
+  // Each level = +3% for combat ones, +4% for gold/xp, +2% luck/vigor cap
+  switch (id) {
+    case 'might': return lvl * 0.03;
+    case 'warding': return lvl * 0.03;
+    case 'fortune': return lvl * 0.04;
+    case 'wisdom': return lvl * 0.04;
+    case 'luck': return lvl * 0.02;
+    case 'vigor': return lvl * 0.025;
+  }
+}
 
 // ============ IDs / RNG ============
 
@@ -57,20 +159,11 @@ export function effectiveStats(hero: Hero): Stats {
 }
 
 export function totalArmor(hero: Hero): number {
-  let armor = 0;
-  for (const slot of Object.keys(hero.equipment) as Array<keyof typeof hero.equipment>) {
-    const itemId = hero.equipment[slot];
-    if (!itemId) continue;
-    const item = ITEMS[itemId];
-    if (item?.armor) armor += item.armor;
-  }
-  return armor;
+  return enchantedArmor(hero);
 }
 
 export function weaponPower(hero: Hero): number {
-  const w = hero.equipment.weapon;
-  if (!w) return 0;
-  return ITEMS[w]?.weaponPower ?? 0;
+  return enchantedWeaponPower(hero);
 }
 
 export function heroAttackIntervalMs(hero: Hero): number {
@@ -96,9 +189,10 @@ export function maxMpFor(classId: Hero['classId'], level: number, intStat: numbe
   return Math.floor(c.baseMP + (level - 1) * c.mpPerLevel + intStat * 1.5);
 }
 
-export function recomputeHeroMaxHPMP(hero: Hero): void {
+export function recomputeHeroMaxHPMP(hero: Hero, state?: GameState): void {
   const stats = effectiveStats(hero);
-  const newMaxHp = maxHpFor(hero.classId, hero.level, stats.con);
+  const vigor = blessingBonus(state, 'vigor');
+  const newMaxHp = Math.floor(maxHpFor(hero.classId, hero.level, stats.con) * (1 + vigor));
   const newMaxMp = maxMpFor(hero.classId, hero.level, stats.int);
   // preserve ratio to avoid snapping
   const ratio = hero.maxHp > 0 ? hero.hp / hero.maxHp : 1;

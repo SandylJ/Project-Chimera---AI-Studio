@@ -7,31 +7,75 @@ interface Props {
   state: GameState;
   sellItem: (itemId: string, qty: number) => void;
   setAutoSell: (r: Rarity, on: boolean) => void;
+  useScroll?: (itemId: string) => void;
 }
 
-type Filter = 'all' | 'weapon' | 'armor' | 'trinket' | 'potion' | 'material';
+type Filter = 'all' | 'weapon' | 'armor' | 'trinket' | 'potion' | 'consumable' | 'material';
+type Sort = 'rarity' | 'value' | 'name' | 'qty';
 
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'celestial'];
 
-export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell }) => {
+export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useScroll }) => {
   const [filter, setFilter] = useState<Filter>('all');
   const [rarityFilter, setRarityFilter] = useState<Rarity | 'all'>('all');
+  const [sort, setSort] = useState<Sort>('rarity');
 
   const items = useMemo(() => {
     const list = Object.entries(state.stash.items)
       .map(([id, qty]) => ({ id, qty, item: ITEMS[id] }))
       .filter(e => e.item);
-    return list
-      .filter(e => filter === 'all' || e.item.type === filter || (filter === 'armor' && (e.item.type === 'armor' || e.item.slot === 'offhand')))
-      .filter(e => rarityFilter === 'all' || e.item.rarity === rarityFilter)
-      .sort((a, b) => {
-        const rdiff = RARITIES.indexOf(b.item.rarity) - RARITIES.indexOf(a.item.rarity);
-        if (rdiff !== 0) return rdiff;
-        return b.item.value - a.item.value;
-      });
-  }, [state.stash.items, filter, rarityFilter]);
+    const typed = list
+      .filter(e => filter === 'all'
+        || e.item.type === filter
+        || (filter === 'armor' && (e.item.type === 'armor' || e.item.slot === 'offhand')))
+      .filter(e => rarityFilter === 'all' || e.item.rarity === rarityFilter);
+    const sorted = [...typed].sort((a, b) => {
+      switch (sort) {
+        case 'value': return b.item.value * b.qty - a.item.value * a.qty;
+        case 'name':  return a.item.name.localeCompare(b.item.name);
+        case 'qty':   return b.qty - a.qty;
+        case 'rarity':
+        default: {
+          const rdiff = RARITIES.indexOf(b.item.rarity) - RARITIES.indexOf(a.item.rarity);
+          if (rdiff !== 0) return rdiff;
+          return b.item.value - a.item.value;
+        }
+      }
+    });
+    return sorted;
+  }, [state.stash.items, filter, rarityFilter, sort]);
 
   const totalValue = items.reduce((a, e) => a + sellValue(e.id, e.qty), 0);
+
+  // Per-rarity bulk sell totals (only non-equipment + non-potion)
+  const bulkByRarity = useMemo(() => {
+    const sums: Record<Rarity, { gold: number; count: number; ids: string[] }> = {
+      common:    { gold: 0, count: 0, ids: [] },
+      uncommon:  { gold: 0, count: 0, ids: [] },
+      rare:      { gold: 0, count: 0, ids: [] },
+      epic:      { gold: 0, count: 0, ids: [] },
+      legendary: { gold: 0, count: 0, ids: [] },
+      celestial: { gold: 0, count: 0, ids: [] },
+    };
+    for (const [id, qty] of Object.entries(state.stash.items)) {
+      const it = ITEMS[id];
+      if (!it) continue;
+      if (it.slot) continue; // keep equipment
+      if (it.type === 'potion' || it.type === 'consumable') continue; // keep utility
+      sums[it.rarity].gold += Math.floor(it.value * qty * 0.5);
+      sums[it.rarity].count += qty;
+      sums[it.rarity].ids.push(id);
+    }
+    return sums;
+  }, [state.stash.items]);
+
+  const bulkSellRarity = (r: Rarity) => {
+    const { ids } = bulkByRarity[r];
+    for (const id of ids) {
+      const qty = state.stash.items[id] ?? 0;
+      if (qty > 0) sellItem(id, qty);
+    }
+  };
 
   return (
     <div className="p-4 h-full overflow-hidden flex flex-col">
@@ -48,7 +92,7 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell }) => 
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        {(['all', 'weapon', 'armor', 'trinket', 'potion', 'material'] as Filter[]).map(f => (
+        {(['all', 'weapon', 'armor', 'trinket', 'potion', 'consumable', 'material'] as Filter[]).map(f => (
           <button key={f} onClick={() => setFilter(f)}
                   className={`px-3 py-1 text-[10px] uppercase tracking-widest rounded ${filter === f ? 'bg-[#D4A943] text-black' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16]'}`}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
@@ -67,6 +111,17 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell }) => 
             {r}
           </button>
         ))}
+        <div className="w-px bg-[#3D3328]" />
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-[#7A6E60] uppercase"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}>Sort</span>
+          {(['rarity', 'value', 'qty', 'name'] as Sort[]).map(s => (
+            <button key={s} onClick={() => setSort(s)}
+                    className={`px-2 py-1 text-[10px] rounded ${sort === s ? 'bg-[#6EA9E4] text-black font-bold' : 'bg-[#14100C] text-[#B8A890]'}`}>
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -93,7 +148,14 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell }) => 
               </div>
             )}
             {e.item.description && <div className="text-[10px] text-[#7A6E60] italic mt-1">{e.item.description}</div>}
-            <div className="flex gap-1 mt-2">
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {/* Use-scroll shortcut */}
+              {useScroll && e.item.type === 'consumable' && e.id.startsWith('scroll_') && (
+                <button onClick={() => useScroll(e.id)}
+                        className="flex-1 text-[10px] py-1 rounded bg-[#6EA9E4] text-black font-bold hover:bg-[#8ac0ef]">
+                  Use
+                </button>
+              )}
               <button onClick={() => sellItem(e.id, 1)}
                       className="flex-1 text-[10px] py-1 rounded bg-[#1E1A16] hover:bg-[#2B231B] text-[#D4A943]">
                 Sell 1 ({sellValue(e.id, 1)})
@@ -115,20 +177,41 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell }) => 
       </div>
 
       <div className="mt-3 p-2 bg-[#14100C] rounded border border-[#3D3328]">
-        <div className="text-[10px] uppercase tracking-widest text-[#7A6E60] mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          Auto-sell rarities
+        <div className="flex items-baseline justify-between mb-2">
+          <div className="text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            Bulk sell by rarity (materials & trinkets only — safe)
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-1.5 mb-2">
           {RARITIES.map(r => {
-            const on = state.autoSellRarities.includes(r);
+            const { gold, count } = bulkByRarity[r];
+            const disabled = gold === 0;
             return (
-              <button key={r} onClick={() => setAutoSell(r, !on)}
-                      className={`px-3 py-1 text-[10px] rounded border ${on ? 'border-[#D4A943] bg-[#D4A943]/20' : 'border-[#3D3328] bg-[#1E1A16]'}`}
-                      style={{ color: rarityColor(r) }}>
-                {on ? '✓ ' : ''}{r}
+              <button key={r} onClick={() => !disabled && bulkSellRarity(r)}
+                      disabled={disabled}
+                      className={`px-2 py-1 text-[10px] rounded border ${disabled ? 'border-[#1E1A16] bg-[#0a0806] text-[#3D3328] cursor-not-allowed' : 'border-[#D4A943] bg-[#D4A943]/10 hover:bg-[#D4A943]/25'}`}
+                      style={{ color: disabled ? '#3D3328' : rarityColor(r), fontFamily: "'JetBrains Mono', monospace" }}>
+                <span className="font-bold">{r}</span> ×{count} → +{gold}g
               </button>
             );
           })}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            Auto-sell new drops:
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {RARITIES.map(r => {
+              const on = state.autoSellRarities.includes(r);
+              return (
+                <button key={r} onClick={() => setAutoSell(r, !on)}
+                        className={`px-2 py-0.5 text-[10px] rounded border ${on ? 'border-[#D4A943] bg-[#D4A943]/20' : 'border-[#3D3328] bg-[#1E1A16]'}`}
+                        style={{ color: rarityColor(r) }}>
+                  {on ? '✓ ' : ''}{r}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

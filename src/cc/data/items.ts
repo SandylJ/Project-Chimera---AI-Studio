@@ -62,6 +62,16 @@ export const ITEMS: Record<string, Item> = {
   kite_shield: mk({ id: 'kite_shield', name: 'Kite Shield', icon: '🛡️', rarity: 'uncommon', type: 'armor', slot: 'offhand', armor: 8, stats: { con: 3 }, value: 110, classReq: ['knight'] }),
   bulwark_shield: mk({ id: 'bulwark_shield', name: 'Bulwark Shield', icon: '🛡️', rarity: 'epic', type: 'armor', slot: 'offhand', armor: 20, stats: { con: 10, str: 4 }, value: 2100, levelReq: 18, classReq: ['knight'] }),
 
+  // ========== SCROLLS (consumables with party-wide effects) ==========
+  scroll_town_portal: mk({ id: 'scroll_town_portal', name: 'Scroll of Town Portal', icon: '🌀', rarity: 'uncommon', type: 'consumable', value: 120, description: 'Instantly retreat to town from inside a dungeon.' }),
+  scroll_identify:    mk({ id: 'scroll_identify', name: 'Scroll of Identify', icon: '📜', rarity: 'uncommon', type: 'consumable', value: 60, description: 'Reveals 2 random unrevealed tiles in the current dungeon.' }),
+  scroll_xp:          mk({ id: 'scroll_xp', name: 'Scroll of Insight', icon: '📖', rarity: 'rare', type: 'consumable', value: 250, description: 'Grants the active party 500 XP each.' }),
+  scroll_bless:       mk({ id: 'scroll_bless', name: 'Scroll of Blessing', icon: '📃', rarity: 'rare', type: 'consumable', value: 300, description: 'Buffs all party stats +25% for 60s.' }),
+  scroll_haste:       mk({ id: 'scroll_haste', name: 'Scroll of Haste', icon: '⚡', rarity: 'rare', type: 'consumable', value: 220, description: 'Double movement + attack speed for 45s.' }),
+
+  // ========== POTION BUNDLES (virtual — purchased only) ==========
+  // The shop "bundle" buttons don't need a real item row; see bundle code in Town.
+
   // ========== TRINKETS ==========
   lucky_charm: mk({ id: 'lucky_charm', name: 'Lucky Charm', icon: '🍀', rarity: 'uncommon', type: 'trinket', slot: 'neck', stats: { luck: 4 }, value: 120 }),
   ring_of_power: mk({ id: 'ring_of_power', name: 'Ring of Power', icon: '💍', rarity: 'rare', type: 'trinket', slot: 'ring', stats: { str: 4, int: 4 }, value: 500 }),

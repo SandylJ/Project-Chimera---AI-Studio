@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ClassId, EquipSlot, GameState, Hero, Rarity } from './types';
+import { BlessingId, ClassId, EquipSlot, GameState, Hero, Rarity, ShopRotation } from './types';
 import { CLASSES } from './data/classes';
 import { ABILITIES } from './data/abilities';
 import { DUNGEON_DEFS } from './data/dungeons';
@@ -8,6 +8,7 @@ import { randomNameFor } from './data/names';
 import { tickGame } from './engine/tick';
 import {
   mkId, pushLog, recomputeHeroMaxHPMP, effectiveStats, canEquip,
+  enchantCost, enchantTier, blessingLevel, blessingCost, MAX_ENCHANT,
 } from './engine/util';
 import { applyDamageToMonster } from './engine/combat';
 import { generateDungeon } from './engine/dungeonGen';
@@ -35,6 +36,7 @@ function createHero(classId: ClassId, usedNames: Set<string>): Hero {
     maxMp: c.baseMP,
     baseStats: stats,
     equipment: {},
+    enchants: {},
     abilities: [...c.startingAbilities],
     cooldowns: {},
     attackTimer: 1000,
@@ -79,6 +81,8 @@ function createInitialState(): GameState {
     killCombo: 0,
     lastKillAt: 0,
     bestKillCombo: 0,
+    blessings: {},
+    shopRotation: rollShopRotation(dayIndex()),
   };
   // starter consumables
   state.stash.items['healing_potion'] = 3;
@@ -133,6 +137,10 @@ function migrate(s: Partial<GameState>): GameState {
     killCombo: s.killCombo ?? 0,
     lastKillAt: s.lastKillAt ?? 0,
     bestKillCombo: s.bestKillCombo ?? 0,
+    blessings: s.blessings ?? {},
+    shopRotation: s.shopRotation && s.shopRotation.day === dayIndex()
+      ? s.shopRotation
+      : rollShopRotation(dayIndex()),
   };
   // Validate activeDungeon shape — if it's malformed, drop it to send the
   // player back to the town picker rather than crashing BattleView.
@@ -159,6 +167,7 @@ function migrateHero(h: Partial<Hero> & { id: string }): Hero {
     maxMp: h.maxMp ?? 0,
     baseStats: h.baseStats ?? { str: 1, dex: 1, int: 1, con: 1, spd: 1, luck: 1 },
     equipment: h.equipment ?? {},
+    enchants: h.enchants ?? {},
     abilities: h.abilities ?? [],
     cooldowns: h.cooldowns ?? {},
     attackTimer: h.attackTimer ?? 1000,
@@ -167,6 +176,54 @@ function migrateHero(h: Partial<Hero> & { id: string }): Hero {
     abilityPoints: h.abilityPoints ?? 0,
     shield: h.shield ?? 0,
     buffs: h.buffs ?? [],
+  };
+}
+
+function dayIndex(): number {
+  return Math.floor(Date.now() / 86_400_000);
+}
+
+// Deterministic rotation from a day seed so "today's shop" is stable.
+function rollShopRotation(day: number): ShopRotation {
+  const rng = mulberry32(day ^ 0x9E37);
+  const allEquip = Object.values(ITEMS).filter(i => i.slot && !i.classReq);
+  const scrolls = ['scroll_town_portal', 'scroll_identify', 'scroll_xp', 'scroll_bless', 'scroll_haste'];
+  const pool = [...allEquip].sort((a, b) => a.value - b.value);
+  // Three tiers of featured gear — pull from a shared pool so ids are unique.
+  const used = new Set<string>();
+  const pick = (tier: 'low' | 'mid' | 'high'): string[] => {
+    const slice = (tier === 'low' ? pool.slice(0, 12)
+                : tier === 'mid' ? pool.slice(6, 22)
+                : pool.slice(18)).filter(i => !used.has(i.id));
+    const out: string[] = [];
+    for (let i = 0; i < 4 && slice.length; i++) {
+      const idx = Math.floor(rng() * slice.length);
+      const chosen = slice[idx];
+      out.push(chosen.id);
+      used.add(chosen.id);
+      slice.splice(idx, 1);
+    }
+    return out;
+  };
+  return {
+    day,
+    featured: [...pick('low'), ...pick('mid'), ...pick('high')],
+    scrolls,
+    bundles: [
+      { id: 'bundle_heal_small', label: 'Healer Pouch', items: [['healing_potion', 5], ['mana_potion', 3]], price: 180 },
+      { id: 'bundle_heal_big',   label: 'Crusader Pack', items: [['greater_healing_potion', 4], ['mana_potion', 4], ['scroll_town_portal', 1]], price: 500 },
+      { id: 'bundle_explore',    label: 'Dungeoneer Kit', items: [['scroll_identify', 3], ['scroll_xp', 1], ['healing_potion', 4]], price: 700 },
+    ],
+  };
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
@@ -269,7 +326,9 @@ export function useCcGame() {
       }
       removeFromStash(s, itemId, 1);
       hero.equipment[item.slot] = itemId;
-      recomputeHeroMaxHPMP(hero);
+      // Enchants are tied to the specific equipped item — reset on swap.
+      if (hero.enchants) delete hero.enchants[item.slot];
+      recomputeHeroMaxHPMP(hero, s);
     });
   }, [mutate]);
 
@@ -281,7 +340,8 @@ export function useCcGame() {
       if (!itemId) return;
       s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) + 1;
       delete hero.equipment[slot];
-      recomputeHeroMaxHPMP(hero);
+      if (hero.enchants) delete hero.enchants[slot];
+      recomputeHeroMaxHPMP(hero, s);
     });
   }, [mutate]);
 
@@ -559,6 +619,140 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Upgrade the enchant on a hero's equipped slot. Costs gold + materials.
+  const upgradeEquip = useCallback((heroId: string, slot: EquipSlot) => {
+    mutate(s => {
+      const hero = s.heroes.find(h => h.id === heroId);
+      if (!hero) return;
+      const cost = enchantCost(hero, slot);
+      if (!cost) {
+        pushLog(s, 'system', '❌ Nothing to upgrade in that slot.');
+        return;
+      }
+      if (s.stash.gold < cost.gold) {
+        pushLog(s, 'system', `❌ Need ${cost.gold}g for this enchant.`);
+        return;
+      }
+      for (const m of cost.materials) {
+        if ((s.stash.items[m.id] ?? 0) < m.qty) {
+          pushLog(s, 'system', `❌ Need ${m.qty}× ${ITEMS[m.id]?.name ?? m.id}.`);
+          return;
+        }
+      }
+      s.stash.gold -= cost.gold;
+      for (const m of cost.materials) {
+        s.stash.items[m.id] = (s.stash.items[m.id] ?? 0) - m.qty;
+        if (s.stash.items[m.id] <= 0) delete s.stash.items[m.id];
+      }
+      hero.enchants ||= {};
+      const newTier = enchantTier(hero, slot) + 1;
+      hero.enchants[slot] = newTier;
+      recomputeHeroMaxHPMP(hero, s);
+      const itemName = ITEMS[hero.equipment[slot]!]?.name ?? 'gear';
+      pushLog(s, 'loot', `🔨 ${hero.name}'s ${itemName} enchanted to +${newTier}!`, newTier >= 5 ? 'epic' : 'rare');
+    });
+  }, [mutate]);
+
+  // Spend essence for a permanent party-wide blessing level.
+  const buyBlessing = useCallback((id: BlessingId) => {
+    mutate(s => {
+      const lvl = blessingLevel(s, id);
+      const cost = blessingCost(lvl);
+      if (s.stash.essence < cost) {
+        pushLog(s, 'system', `❌ Need ${cost}⟡ essence.`);
+        return;
+      }
+      s.stash.essence -= cost;
+      s.blessings ||= {};
+      s.blessings[id] = lvl + 1;
+      // vigor changes maxHp — recompute
+      if (id === 'vigor') {
+        for (const h of s.heroes) recomputeHeroMaxHPMP(h, s);
+      }
+      pushLog(s, 'victory', `✨ Shrine blessing: ${id} → Lv${lvl + 1}`, 'legendary');
+    });
+  }, [mutate]);
+
+  // Consume a scroll. Effects depend on id.
+  const useScroll = useCallback((itemId: string) => {
+    mutate(s => {
+      if ((s.stash.items[itemId] ?? 0) < 1) return;
+      const it = ITEMS[itemId];
+      if (!it) return;
+      switch (itemId) {
+        case 'scroll_town_portal': {
+          if (!s.activeDungeon) {
+            pushLog(s, 'system', 'Not in a dungeon.');
+            return;
+          }
+          s.activeDungeon = undefined;
+          for (const h of s.heroes) {
+            if (h.state === 'alive') { h.hp = h.maxHp; h.mp = h.maxMp; }
+          }
+          pushLog(s, 'retreat', '🌀 Town Portal whisks the party home!', 'rare');
+          break;
+        }
+        case 'scroll_identify': {
+          if (!s.activeDungeon) { pushLog(s, 'system', 'Only in dungeons.'); return; }
+          const d = s.activeDungeon;
+          const hidden = d.tiles.filter(t => !t.revealed);
+          let revealed = 0;
+          for (let i = 0; i < 2 && hidden.length; i++) {
+            const t = hidden.splice(Math.floor(Math.random() * hidden.length), 1)[0];
+            t.revealed = true;
+            revealed++;
+          }
+          pushLog(s, 'system', `📜 Scroll of Identify reveals ${revealed} tiles.`);
+          break;
+        }
+        case 'scroll_xp': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) { h.xp += 500; }
+          pushLog(s, 'level', `📖 Insight grants +500 XP to each hero.`, 'rare');
+          break;
+        }
+        case 'scroll_bless': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) {
+            for (const stat of ['str','dex','int','con','spd','luck'] as const) {
+              h.buffs.push({ id: mkId('buff'), stat, power: 0.25, remaining: 60000 });
+            }
+          }
+          pushLog(s, 'heal', '📃 Party blessed — +25% all stats 60s.', 'rare');
+          break;
+        }
+        case 'scroll_haste': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) {
+            h.buffs.push({ id: mkId('buff'), stat: 'spd', power: 1.0, remaining: 45000 });
+          }
+          pushLog(s, 'heal', '⚡ Haste! Double speed 45s.', 'rare');
+          break;
+        }
+        default: break;
+      }
+      s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) - 1;
+      if (s.stash.items[itemId] <= 0) delete s.stash.items[itemId];
+    });
+  }, [mutate]);
+
+  // Buy a shop bundle — spend gold, add bundled items.
+  const buyShopBundle = useCallback((bundleId: string) => {
+    mutate(s => {
+      const rot = s.shopRotation;
+      if (!rot) return;
+      const b = rot.bundles.find(x => x.id === bundleId);
+      if (!b) return;
+      if (s.stash.gold < b.price) {
+        pushLog(s, 'system', `❌ Need ${b.price}g for ${b.label}.`);
+        return;
+      }
+      s.stash.gold -= b.price;
+      for (const [id, qty] of b.items) addToStash(s, id, qty);
+      pushLog(s, 'loot', `🛒 Bought ${b.label}.`, 'uncommon');
+    });
+  }, [mutate]);
+
   // Click monster → bonus damage (classic CC2 interaction)
   const clickMonster = useCallback((monsterId: string) => {
     mutate(s => {
@@ -609,5 +803,9 @@ export function useCcGame() {
     autoEquipBest,
     quickHealParty,
     sellJunk,
+    upgradeEquip,
+    buyBlessing,
+    useScroll,
+    buyShopBundle,
   };
 }

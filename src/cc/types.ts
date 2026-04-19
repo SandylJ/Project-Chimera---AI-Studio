@@ -108,6 +108,9 @@ export interface Hero {
   maxMp: number;
   baseStats: Stats;
   equipment: Partial<Record<EquipSlot, string>>;
+  // Enchant tier per equipped slot (0 if unenchanted). Resets when the slot
+  // empties. +N grants +15% power/armor per tier.
+  enchants: Partial<Record<EquipSlot, number>>;
   abilities: string[];
   cooldowns: Record<string, number>;
   attackTimer: number;
@@ -118,6 +121,8 @@ export interface Hero {
   buffs: Array<{ id: string; stat: StatKey; power: number; remaining: number; }>;
   // Transient: visual hint of the most-recent action (drives projectile / attack fx)
   lastAction?: { targetId: string; kind: AttackVisual; abilityId?: string; at: number };
+  // Transient: last time this hero took damage, for hit-flash UI
+  lastHitAt?: number;
 }
 
 export interface Monster {
@@ -244,6 +249,24 @@ export interface Stash {
   bountyMarks: number;
 }
 
+// Permanent party-wide bonuses purchased with essence at the Shrine.
+// Level is stored; cost scales with level. Applied globally in combat/loot.
+export type BlessingId =
+  | 'might'         // +dmg
+  | 'warding'       // +armor
+  | 'fortune'       // +gold
+  | 'wisdom'        // +xp
+  | 'luck'          // +crit/drops
+  | 'vigor';        // +max HP %
+
+export interface ShopRotation {
+  // Unix day index (floor(Date.now() / 86400000)) used to seed stock.
+  day: number;
+  featured: string[];
+  scrolls: string[]; // scroll ids (consumables with special effects)
+  bundles: Array<{ id: string; label: string; items: Array<[string, number]>; price: number }>;
+}
+
 export interface OfflineReport {
   duration: number; // ms
   tilesCleared: number;
@@ -278,4 +301,8 @@ export interface GameState {
   killCombo: number;
   lastKillAt: number;
   bestKillCombo: number;
+  // Permanent party-wide bonuses purchased with essence at the Shrine.
+  blessings: Partial<Record<BlessingId, number>>;
+  // Rotating daily shop stock / scrolls / bundles (regenerated each day).
+  shopRotation?: ShopRotation;
 }

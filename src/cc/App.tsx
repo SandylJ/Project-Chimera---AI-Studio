@@ -94,15 +94,19 @@ export default function CcApp() {
           {tab === 'stash' && (
             <StashView state={state}
                        sellItem={g.sellItem}
-                       setAutoSell={g.setAutoSell} />
+                       setAutoSell={g.setAutoSell}
+                       useScroll={g.useScroll} />
           )}
           {tab === 'town' && (
             <TownView state={state}
                       recruitHero={g.recruitHero}
                       buyShopItem={g.buyShopItem}
+                      buyShopBundle={g.buyShopBundle}
                       reviveHero={g.reviveHero}
                       healParty={g.healParty}
-                      resetGame={g.resetGame} />
+                      resetGame={g.resetGame}
+                      upgradeEquip={g.upgradeEquip}
+                      buyBlessing={g.buyBlessing} />
           )}
           {tab === 'log' && <CombatLog state={state} />}
         </div>
