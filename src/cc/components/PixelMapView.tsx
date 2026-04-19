@@ -614,11 +614,26 @@ const DamageFloat: React.FC<{ float: Float; x: number; y: number; now: number }>
 // ============ Mini Map ============
 
 const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, theme }) => {
-  const CELL = 6;
+  const CELL = 10;
   const W = dungeon.width * CELL;
   const H = dungeon.height * CELL;
+  const iconFor = (kind: string): string => {
+    switch (kind) {
+      case 'boss': return '👑';
+      case 'chest': return '📦';
+      case 'trap': return '⚠';
+      case 'shrine': return '⛩';
+      case 'fountain': return '⛲';
+      case 'fork': return '🛤';
+      case 'merchant': return '🧳';
+      case 'entrance': return '🚪';
+      case 'exit': return '🚪';
+      case 'monster': return '•';
+      default: return '';
+    }
+  };
   return (
-    <div className="absolute top-2 right-2 z-20 p-1.5 bg-black/70 rounded-lg border border-[#3D3328]">
+    <div className="absolute top-2 right-2 z-20 p-1.5 bg-black/75 rounded-lg border border-[#3D3328]">
       <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest mb-1 text-center"
            style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         Map · F{dungeon.floor}
@@ -631,17 +646,29 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
           const color =
             isHere           ? theme.accentColor :
             t.kind === 'boss'? '#ff4040' :
-            t.cleared        ? '#5a5040' :
-                               '#B8A890';
+            t.cleared        ? '#4a4034' :
+                               '#7A6E60';
+          const icon = iconFor(t.kind);
           return (
             <div key={`${t.x},${t.y}`}
-                 className="absolute rounded-sm"
+                 className="absolute flex items-center justify-center text-[8px] leading-none"
                  style={{
                    left: t.x * CELL, top: t.y * CELL,
                    width: CELL - 1, height: CELL - 1,
-                   background: color,
+                   background: color + (t.cleared && !isHere ? 'aa' : 'dd'),
+                   border: isHere ? `1px solid ${theme.accentColor}` : undefined,
                    boxShadow: isHere ? `0 0 6px ${theme.accentColor}` : undefined,
-                 }} />
+                   borderRadius: 2,
+                   opacity: t.revealed || isHere ? 1 : 0.55,
+                 }}>
+              {icon && (
+                <span style={{
+                  fontSize: icon === '•' ? 8 : 7,
+                  opacity: 0.9,
+                  filter: isHere ? 'drop-shadow(0 0 1px #000)' : undefined,
+                }}>{icon}</span>
+              )}
+            </div>
           );
         })}
       </div>

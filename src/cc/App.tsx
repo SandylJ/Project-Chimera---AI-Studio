@@ -18,6 +18,7 @@ export default function CcApp() {
   const [tab, setTabRaw] = useState<string>('dungeon');
   const [focusHeroId, setFocusHeroId] = useState<string | null>(null);
   const [levelBurst, setLevelBurst] = useState<{ id: string; heroName: string; level: number; bornAt: number } | null>(null);
+  const [dropBanner, setDropBanner] = useState<{ id: string; text: string; rarity: string; bornAt: number } | null>(null);
   const setTab = (t: string) => { playTabClick(); setTabRaw(t); };
   const focusHero = (id: string) => { setFocusHeroId(id); setTab('party'); };
   const { state } = g;
@@ -45,6 +46,10 @@ export default function CcApp() {
         case 'legendary': playLegendaryDrop(); break;
         case 'celestial': playCelestialDrop(); break;
         default: break;
+      }
+      if (['rare', 'epic', 'legendary', 'celestial'].includes(latest.rarity)) {
+        setDropBanner({ id: latest.id, text: latest.text, rarity: latest.rarity, bornAt: Date.now() });
+        window.setTimeout(() => setDropBanner(cur => cur?.id === latest.id ? null : cur), 1800);
       }
     }
   }, [state.currentLog]);
@@ -118,9 +123,43 @@ export default function CcApp() {
         <OfflineOverlay report={state.pendingOfflineReport} dismiss={g.dismissOfflineReport} />
       )}
       {levelBurst && <LevelUpBurst burst={levelBurst} />}
+      {dropBanner && <RareDropBanner banner={dropBanner} />}
     </div>
   );
 }
+
+const RareDropBanner: React.FC<{ banner: { id: string; text: string; rarity: string; bornAt: number } }> = ({ banner }) => {
+  const color =
+    banner.rarity === 'rare'      ? '#6EA9E4' :
+    banner.rarity === 'epic'      ? '#C58BE8' :
+    banner.rarity === 'legendary' ? '#F2B84B' :
+                                    '#22D3EE';
+  return (
+    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[70] pointer-events-none"
+         style={{ animation: 'bossEntrance 0.55s ease-out forwards' }}>
+      <div className="text-center">
+        <div className="text-[10px] font-bold uppercase tracking-[0.4em] mb-1"
+             style={{ color, fontFamily: "'JetBrains Mono', monospace", textShadow: `0 0 10px ${color}` }}>
+          ★ {banner.rarity.toUpperCase()} DROP ★
+        </div>
+        <div className="text-lg font-bold px-5 py-1 rounded-md"
+             style={{
+               fontFamily: "'Cinzel', serif",
+               color: '#fff3c8',
+               background: `linear-gradient(90deg, ${color}40 0%, ${color}80 50%, ${color}40 100%)`,
+               backgroundSize: '200% 100%',
+               animation: 'shimmer 2s infinite linear',
+               border: `1px solid ${color}`,
+               textShadow: `0 0 8px ${color}, 1px 1px 0 #000`,
+               letterSpacing: '0.06em',
+               boxShadow: `0 0 20px ${color}80, inset 0 0 10px #00000040`,
+             }}>
+          {banner.text.replace(/^[^a-zA-Z]*/, '').slice(0, 60)}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const LevelUpBurst: React.FC<{ burst: { id: string; heroName: string; level: number; bornAt: number } }> = ({ burst }) => {
   // Find hero's class color if possible
