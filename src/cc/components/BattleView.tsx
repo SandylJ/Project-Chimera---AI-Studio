@@ -484,6 +484,11 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
               <ComboBanner combo={state.killCombo} lastKillAt={state.lastKillAt} nowTick={nowTick} />
             )}
 
+            {/* Victory overlay — fires on dungeon clear */}
+            {dungeon.status === 'victory' && dungeon.victoryAt && (
+              <VictoryCelebration dungeon={dungeon} nowTick={nowTick} />
+            )}
+
             {/* Boss banner — overlay above the iso stage, flat */}
             {bossBanner && (
               <div className="absolute left-1/2 top-[18%] -translate-x-1/2 z-50 pointer-events-none"
@@ -1291,6 +1296,72 @@ const FloorLoot: React.FC<{ loot: DroppedLoot; nowTick: number }> = ({ loot, now
         fontSize: 28,
         filter: `drop-shadow(0 0 10px ${glow}) drop-shadow(0 4px 6px rgba(0,0,0,0.9))`,
       }}>{icon}</div>
+    </div>
+  );
+};
+
+// ============ Victory Celebration ============
+
+const VictoryCelebration: React.FC<{ dungeon: any; nowTick: number }> = ({ dungeon, nowTick }) => {
+  const age = nowTick - (dungeon.victoryAt ?? nowTick);
+  if (age > 2500 || age < 0) return null;
+  const t = Math.min(1, age / 2500);
+  // Preallocate 50 confetti coins
+  const coins = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+    x: Math.random() * 100,
+    delay: Math.random() * 300,
+    speed: 0.7 + Math.random() * 0.8,
+    angle: (Math.random() - 0.5) * 60,
+    emoji: Math.random() > 0.7 ? '💎' : Math.random() > 0.5 ? '✨' : '🪙',
+    size: 20 + Math.random() * 16,
+  })), [dungeon.victoryAt]);
+  return (
+    <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+      {/* Gold shower */}
+      {coins.map((c, i) => {
+        const local = Math.max(0, age - c.delay) * c.speed;
+        const y = -20 + (local / 2500) * 140;
+        const r = local * 0.6 + c.angle;
+        const op = local < 300 ? local / 300 : 1 - Math.max(0, (local - 2100) / 400);
+        return (
+          <span key={i} className="absolute"
+                style={{
+                  left: `${c.x}%`, top: `${y}%`,
+                  fontSize: c.size,
+                  transform: `rotate(${r}deg)`,
+                  opacity: Math.max(0, Math.min(1, op)),
+                  filter: 'drop-shadow(0 0 8px #f2c846) drop-shadow(0 0 16px #f2c846aa)',
+                }}>{c.emoji}</span>
+        );
+      })}
+      {/* Radial gold halo */}
+      <div className="absolute inset-0"
+           style={{
+             background: `radial-gradient(circle at 50% 40%, rgba(242, 200, 70, ${0.35 * (1 - t * 0.7)}) 0%, transparent 55%)`,
+             mixBlendMode: 'screen',
+           }} />
+      {/* VICTORY banner */}
+      <div className="absolute left-1/2 top-[28%] -translate-x-1/2 text-center"
+           style={{ animation: 'bossEntrance 0.9s ease-out forwards' }}>
+        <div className="text-[11px] font-bold uppercase tracking-[0.5em] text-[#f2e08a] mb-2"
+             style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 12px #f2c846' }}>
+          🏆 DUNGEON CLEARED 🏆
+        </div>
+        <div className="text-6xl font-black px-8 py-3 rounded-lg"
+             style={{
+               fontFamily: "'Cinzel', serif",
+               color: '#fff3c8',
+               background: 'linear-gradient(90deg, #5a3a08 0%, #d4a943 50%, #5a3a08 100%)',
+               backgroundSize: '200% 100%',
+               animation: 'shimmer 2s infinite linear',
+               border: '3px solid #f2e08a',
+               textShadow: '0 0 18px #f2c846, 3px 3px 0 #2a1800',
+               boxShadow: '0 0 50px #d4a94380, inset 0 0 20px #00000040',
+               letterSpacing: '0.12em',
+             }}>
+          VICTORY
+        </div>
+      </div>
     </div>
   );
 };

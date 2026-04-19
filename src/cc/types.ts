@@ -190,6 +190,9 @@ export interface Dungeon {
   monsterPool: string[];
   bossId: string;
   entryTime: number;
+  // When victory fires, engine sets this and defers the town return by ~2.5s
+  // so the UI can play a celebration before the dungeon disappears.
+  victoryAt?: number;
 }
 
 export interface DungeonDef {

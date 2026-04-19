@@ -11,7 +11,15 @@ const BASE_MOVE_MS = 3500;
 
 export function tickExploration(state: GameState, dt: number): void {
   const dungeon = state.activeDungeon;
-  if (!dungeon || dungeon.status !== 'active') return;
+  if (!dungeon) return;
+  // Victory celebration in progress — wait out the ~2.5s then return to town.
+  if (dungeon.status === 'victory') {
+    if (dungeon.victoryAt && Date.now() - dungeon.victoryAt > 2500) {
+      onReturnToTown(state);
+    }
+    return;
+  }
+  if (dungeon.status !== 'active') return;
   const tile = currentTile(state);
   if (!tile) return;
 
@@ -159,13 +167,6 @@ export function onDungeonVictory(state: GameState): void {
   const def = DUNGEON_DEFS[d.defId];
   pushLog(state, 'victory', `🏆 ${def.name} cleared (floor ${d.floor})!`, 'legendary');
   state.dungeonsCompleted[d.defId] = Math.max(state.dungeonsCompleted[d.defId] ?? 0, d.floor);
-  // Boss loot (resolved in combat.onMonsterKilled was basic; add guaranteed + essence here)
-  // We look up the boss monster def to award essence + guaranteed loot.
-  // (Basic loot already rolled on kill.)
-  // Small bump: add guaranteed item & essence.
-  const monsterDef = { id: def.bossId } as any;
-  // Just use rollBossLoot with zero rolls for loot (basic was already done), but we want essence + guaranteed.
-  // Implementation: call rollBossLoot but note it also adds its own rolls — so we'll just do essence + guaranteed directly.
   state.stash.essence += def.rewards.essenceOnBoss;
   if (def.rewards.guaranteedLoot) {
     const itemId = def.rewards.guaranteedLoot;
@@ -173,9 +174,13 @@ export function onDungeonVictory(state: GameState): void {
     if (!state.collectionLog.includes(itemId)) state.collectionLog.push(itemId);
     pushLog(state, 'loot', `🎖 Guaranteed drop: ${itemId}`, 'rare');
   }
-  // Unlock next dungeon
   unlockNextDungeon(state, def.id);
-  onReturnToTown(state);
+  // Defer the town return so the UI can play a celebration.
+  d.victoryAt = Date.now();
+  // Fully heal party now so victory feels clean
+  for (const h of state.heroes) {
+    if (h.state === 'alive') { h.hp = h.maxHp; h.mp = h.maxMp; }
+  }
 }
 
 export function onPartyWipe(state: GameState): void {
