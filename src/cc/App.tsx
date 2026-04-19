@@ -17,6 +17,7 @@ export default function CcApp() {
   const g = useCcGame();
   const [tab, setTabRaw] = useState<string>('dungeon');
   const [focusHeroId, setFocusHeroId] = useState<string | null>(null);
+  const [levelBurst, setLevelBurst] = useState<{ id: string; heroName: string; level: number; bornAt: number } | null>(null);
   const setTab = (t: string) => { playTabClick(); setTabRaw(t); };
   const focusHero = (id: string) => { setFocusHeroId(id); setTab('party'); };
   const { state } = g;
@@ -27,7 +28,15 @@ export default function CcApp() {
     const latest = state.currentLog[0];
     if (!latest || latest.id === lastLogIdRef.current) return;
     lastLogIdRef.current = latest.id;
-    if (latest.kind === 'level') playLevelUp();
+    if (latest.kind === 'level') {
+      playLevelUp();
+      // Parse "⬆ NAME reached level N!" — show a brief burst overlay
+      const m = latest.text.match(/⬆\s+(.+?)\s+reached level\s+(\d+)/i);
+      if (m) {
+        setLevelBurst({ id: latest.id, heroName: m[1], level: Number(m[2]), bornAt: Date.now() });
+        window.setTimeout(() => setLevelBurst(cur => cur?.id === latest.id ? null : cur), 1600);
+      }
+    }
     else if (latest.kind === 'victory') playLegendaryDrop();
     else if (latest.kind === 'loot' && latest.rarity) {
       switch (latest.rarity) {
@@ -102,9 +111,48 @@ export default function CcApp() {
       {state.pendingOfflineReport && (
         <OfflineOverlay report={state.pendingOfflineReport} dismiss={g.dismissOfflineReport} />
       )}
+      {levelBurst && <LevelUpBurst burst={levelBurst} />}
     </div>
   );
 }
+
+const LevelUpBurst: React.FC<{ burst: { id: string; heroName: string; level: number; bornAt: number } }> = ({ burst }) => {
+  // Find hero's class color if possible
+  return (
+    <div className="fixed inset-0 z-[80] pointer-events-none flex items-center justify-center"
+         style={{ animation: 'fadeIn 0.18s' }}>
+      <div className="absolute inset-0"
+           style={{
+             background: `radial-gradient(circle at 50% 40%, rgba(242, 230, 168, 0.4) 0%, transparent 55%)`,
+             mixBlendMode: 'screen',
+             animation: 'fadeIn 0.2s',
+           }} />
+      <div className="text-center" style={{ animation: 'bossEntrance 0.7s ease-out forwards' }}>
+        <div className="text-[11px] font-bold uppercase tracking-[0.4em] text-[#f2e08a] mb-1"
+             style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 10px #f2c846' }}>
+          ⬆ LEVEL UP
+        </div>
+        <div className="text-5xl font-black px-6 py-2 rounded"
+             style={{
+               fontFamily: "'Cinzel', serif",
+               color: '#fff3c8',
+               background: 'linear-gradient(90deg, #5a3a08 0%, #d4a943 50%, #5a3a08 100%)',
+               backgroundSize: '200% 100%',
+               animation: 'shimmer 2s infinite linear',
+               border: '2px solid #f2e08a',
+               textShadow: '0 0 14px #f2c846, 2px 2px 0 #2a1800',
+               letterSpacing: '0.08em',
+             }}>
+          {burst.heroName}
+        </div>
+        <div className="mt-2 text-3xl font-black text-[#f2e08a]"
+             style={{ textShadow: '0 0 12px #f2c846' }}>
+          LVL {burst.level}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ========== Top tab bar (CC2-style) ==========
 

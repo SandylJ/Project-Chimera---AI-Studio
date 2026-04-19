@@ -362,14 +362,25 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
                 // Tile-change walk-in: heroes slide in from the left, enemies from the right
                 const entryAge = nowTick - tileChangedAtRef.current;
                 const entryT = entryAge < 500 ? entryAge / 500 : 1;
+                // Walk-out: when about to advance to the next tile (final 400ms of moveTimer),
+                // heroes slide rightward toward the forward doorway.
+                const isWalkingOut =
+                  s.kind === 'hero' &&
+                  !tile.encounter &&
+                  tile.cleared &&
+                  dungeon.status === 'active' &&
+                  dungeon.moveTimer > 0 && dungeon.moveTimer < 400;
+                const walkOutT = isWalkingOut ? 1 - dungeon.moveTimer / 400 : 0;
+                const walkOutX = walkOutT * 60;
                 const walkInX = entryT < 1
                   ? (1 - entryT) * (s.kind === 'hero' ? -40 : 40)
                   : 0;
+                const totalX = walkInX + walkOutX;
                 const entryOpacity = Math.min(1, entryT * 2);
                 const commonStyle: React.CSSProperties = {
                   position: 'absolute',
                   left: `${s.x}%`, top: `${s.y}%`,
-                  transform: `translate(calc(-50% + ${walkInX}px), -100%) rotateX(-58deg)`,
+                  transform: `translate(calc(-50% + ${totalX}px), -100%) rotateX(-58deg)`,
                   transformOrigin: '50% 100%',
                   transformStyle: 'preserve-3d',
                   pointerEvents: 'auto',
