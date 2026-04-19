@@ -3,6 +3,7 @@ import { useCcGame } from './useGame';
 import { DungeonView } from './components/DungeonView';
 import { ClassSprite } from './visuals/sprites';
 import { CLASSES } from './data/classes';
+import { xpToNext } from './engine/util';
 import { PartyView } from './components/PartyView';
 import { StashView } from './components/StashView';
 import { TownView } from './components/TownView';
@@ -274,6 +275,14 @@ const TopTabBar: React.FC<{
                     <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc' }} />
                   </div>
                 )}
+                {/* XP bar */}
+                <div className="relative h-[2px] mt-[1px] bg-black rounded-sm overflow-hidden">
+                  <div className="h-full"
+                       style={{
+                         width: Math.min(100, (h.xp / Math.max(1, xpToNext(h))) * 100) + '%',
+                         background: 'linear-gradient(90deg, #9a8030 0%, #ffe080 100%)',
+                       }} />
+                </div>
               </div>
               {h.abilityPoints > 0 && (
                 <span className="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#D4A943] text-black text-[8px] font-black animate-pulse"

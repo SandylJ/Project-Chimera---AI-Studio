@@ -133,6 +133,9 @@ export const BattleView: React.FC<Props> = ({
             <ComboBanner combo={state.killCombo} lastKillAt={state.lastKillAt} nowTick={nowTick} />
           )}
 
+          {/* Compact floating log strip bottom-left */}
+          <CompactLogStrip state={state} nowTick={nowTick} />
+
           {/* Low-HP red pulse overlay */}
           {lowHP && (
             <div className="absolute inset-0 pointer-events-none z-10"
@@ -160,6 +163,68 @@ export const BattleView: React.FC<Props> = ({
     </div>
   );
 };
+
+/* ============ Compact log strip ============ */
+
+const LOG_STRIP_MS = 6000;
+
+const CompactLogStrip: React.FC<{ state: GameState; nowTick: number }> = ({ state, nowTick }) => {
+  // Show the 3 most recent log entries that are "interesting" (not move/system).
+  const recent = state.currentLog
+    .filter(e => e.kind !== 'move' && e.kind !== 'system')
+    .slice(0, 3)
+    .filter(e => nowTick - e.t < LOG_STRIP_MS);
+  if (recent.length === 0) return null;
+  return (
+    <div className="absolute left-3 bottom-3 z-20 pointer-events-none space-y-0.5">
+      {recent.map(e => {
+        const age = nowTick - e.t;
+        const t = age / LOG_STRIP_MS;
+        const opacity = 1 - t;
+        const color = e.rarity ? rarityLineColor(e.rarity) : kindLineColor(e.kind);
+        return (
+          <div key={e.id}
+               className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm"
+               style={{
+                 background: 'rgba(0,0,0,0.72)',
+                 borderLeft: `2px solid ${color}`,
+                 opacity,
+                 transform: `translateY(${(1 - opacity) * -6}px)`,
+                 fontFamily: "'JetBrains Mono', monospace",
+                 transition: 'opacity 0.2s, transform 0.2s',
+               }}>
+            <span className="text-[11px]" style={{ color }}>{e.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+function kindLineColor(k: string): string {
+  switch (k) {
+    case 'combat': return '#E8E0D4';
+    case 'loot': return '#D4A943';
+    case 'level': return '#F2E6A8';
+    case 'decision': return '#B485E8';
+    case 'death': return '#E86E6E';
+    case 'heal': return '#7FE2A0';
+    case 'victory': return '#F2B84B';
+    case 'retreat': return '#B8A890';
+    default: return '#B8A890';
+  }
+}
+
+function rarityLineColor(r: string): string {
+  switch (r) {
+    case 'uncommon': return '#7FE2A0';
+    case 'rare': return '#6EA9E4';
+    case 'epic': return '#C58BE8';
+    case 'legendary': return '#F2B84B';
+    case 'celestial': return '#FF6EE6';
+    default: return '#E8E0D4';
+  }
+}
 
 /* ============ Combo banner ============ */
 
@@ -448,6 +513,9 @@ const RightPanel: React.FC<{
           />
         </div>
 
+        {/* Recent loot ticker */}
+        <RecentLootTicker state={state} />
+
         {state.killCombo >= 3 && (
           <div className="rounded-md border px-1.5 py-1 flex items-center gap-1.5"
                style={{
@@ -660,6 +728,40 @@ const FlashingStat: React.FC<{ label: string; value: number; color: string }> = 
       <span className="text-sm font-black tabular-nums leading-none" style={{ color, textShadow: `0 0 6px ${color}40` }}>
         {displayed.toLocaleString()}
       </span>
+    </div>
+  );
+};
+
+const RecentLootTicker: React.FC<{ state: GameState }> = ({ state }) => {
+  const loot = state.currentLog
+    .filter(e => e.kind === 'loot' && e.rarity && e.rarity !== 'common')
+    .slice(0, 4);
+  if (loot.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <SectionLabel color="#D4A943">Recent Loot</SectionLabel>
+      <div className="space-y-0.5">
+        {loot.map(e => {
+          const color =
+            e.rarity === 'uncommon'  ? '#7FE2A0' :
+            e.rarity === 'rare'      ? '#6EA9E4' :
+            e.rarity === 'epic'      ? '#C58BE8' :
+            e.rarity === 'legendary' ? '#F2B84B' :
+                                       '#FF6EE6';
+          return (
+            <div key={e.id}
+                 className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border"
+                 style={{
+                   background: `linear-gradient(90deg, ${color}18 0%, transparent 100%)`,
+                   borderColor: color + '50',
+                 }}>
+              <span className="text-[10px] truncate" style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
+                {e.text}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
