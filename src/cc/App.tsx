@@ -85,7 +85,10 @@ export default function CcApp() {
                          quickHealParty={g.quickHealParty}
                          reviveHero={g.reviveHero}
                          sellJunk={g.sellJunk}
-                         useScroll={g.useScroll} />
+                         useScroll={g.useScroll}
+                         spendAllAP={g.spendAllAP}
+                         autoEnchantCheapest={g.autoEnchantCheapest}
+                         quickHealHero={g.quickHealHero} />
           )}
           {tab === 'party' && (
             <PartyView state={state}
@@ -215,14 +218,14 @@ const TopTabBar: React.FC<{
   ];
   const dungeon = state.activeDungeon;
   return (
-    <div className="shrink-0 bg-[#0A0806] border-b-2 border-[#3D3328] flex items-center gap-1 px-2 py-1"
+    <div className="shrink-0 bg-[#0A0806] border-b-2 border-[#3D3328] flex items-center gap-1.5 px-2 py-1.5"
          style={{ backgroundImage: 'linear-gradient(180deg, #1a1410 0%, #0a0806 100%)' }}>
       {/* Tabs */}
-      <div className="flex items-center gap-0.5">
-        {/* Main 'Game' tab = Dungeon when inactive, Party when the game is visible */}
+      <div className="flex items-center gap-1">
+        {/* Main 'Game' tab — always takes you to dungeon view (picker or battle) */}
         <button onClick={() => setTab('dungeon')}
-                className={`px-3 py-1 text-xs rounded transition-all ${
-                  tab === 'dungeon' ? 'bg-[#6EA9E4] text-[#0a0806] font-bold' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
+                className={`px-3 py-1.5 text-xs rounded transition-all font-bold ${
+                  tab === 'dungeon' ? 'bg-[#6EA9E4] text-[#0a0806]' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
                 }`}>
           <span className="mr-1">⚔</span>Game
         </button>
@@ -230,24 +233,55 @@ const TopTabBar: React.FC<{
         {/* Per-hero tabs (clicking opens the Party view focused on that hero) */}
         {state.heroes.filter(h => !h.bench).map(h => {
           const cls = CLASSES[h.classId];
+          const hpPct = Math.max(0, (h.hp / Math.max(1, h.maxHp)) * 100);
+          const mpPct = h.maxMp > 0 ? Math.max(0, (h.mp / h.maxMp) * 100) : 0;
+          const hpColor = hpPct > 66 ? '#55d86b' : hpPct > 33 ? '#e9cc3a' : '#e04040';
+          const lowHp = hpPct < 30 && h.state === 'alive';
+          const downed = h.state !== 'alive';
           return (
             <button key={h.id}
                     onClick={() => focusHero(h.id)}
-                    className="relative flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-all bg-[#14100C] hover:bg-[#1E1A16]"
+                    className="relative flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-all hover:bg-[#1E1A16] hover:scale-[1.03]"
                     style={{
-                      color: cls.color,
-                      border: `1px solid ${cls.color}40`,
+                      background: downed ? '#2a1010' : 'linear-gradient(180deg, #1a1410 0%, #0d0a08 100%)',
+                      border: `1px solid ${downed ? '#E86E6E' : cls.color + '55'}`,
                       fontFamily: "'Nunito', sans-serif",
+                      boxShadow: lowHp ? '0 0 6px #E86E6E88' : undefined,
+                      animation: lowHp ? 'ambientFloat 1.4s ease-in-out infinite alternate' : undefined,
                     }}
-                    title={`${h.name} — ${cls.name}`}>
-              <span className="shrink-0" style={{ width: 22, height: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                <ClassSprite classId={h.classId} size={22} />
+                    title={`${h.name} — ${cls.name}\nHP ${Math.ceil(h.hp)}/${h.maxHp} · MP ${Math.ceil(h.mp)}/${h.maxMp}`}>
+              <span className="shrink-0" style={{ width: 24, height: 28, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <ClassSprite classId={h.classId} size={24} />
               </span>
-              <span className="font-bold" style={{ fontSize: '10px' }}>
-                {cls.name} {h.level}
-              </span>
+              <div className="flex flex-col min-w-0" style={{ width: 62 }}>
+                <div className="flex items-baseline gap-1 leading-none">
+                  <span className="font-black truncate"
+                        style={{ color: cls.color, fontSize: '10px', textShadow: '0 1px 0 #000' }}>
+                    {h.name.slice(0, 8)}
+                  </span>
+                  <span className="text-[9px] text-[#f2e08a] font-bold shrink-0"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    L{h.level}
+                  </span>
+                </div>
+                {/* HP bar */}
+                <div className="relative h-[4px] mt-0.5 bg-black rounded-sm overflow-hidden">
+                  <div className="h-full" style={{ width: hpPct + '%', background: hpColor, transition: 'width 180ms' }} />
+                </div>
+                {/* MP bar */}
+                {h.maxMp > 0 && (
+                  <div className="relative h-[2px] mt-[1px] bg-black rounded-sm overflow-hidden">
+                    <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc' }} />
+                  </div>
+                )}
+              </div>
               {h.abilityPoints > 0 && (
-                <span className="w-2 h-2 rounded-full bg-[#D4A943] animate-pulse" />
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#D4A943] text-black text-[8px] font-black animate-pulse"
+                      style={{ boxShadow: '0 0 4px #D4A943' }}>+</span>
+              )}
+              {downed && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[7px] font-black bg-black px-1 rounded text-[#E86E6E] border border-[#E86E6E]/70"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>DOWN</span>
               )}
             </button>
           );
@@ -255,16 +289,30 @@ const TopTabBar: React.FC<{
 
         {TABS.slice(1).map(t => {
           const active = tab === t.id;
+          // Bounty pulse indicator
+          const bountyAlert = t.id === 'town' && state.bountyBoard?.bounties.some(b => {
+            const prog =
+              b.kind === 'kill_count' ? Math.max(0, state.totalMonstersKilled - state.bountyBoard!.snapshot.totalMonstersKilled) :
+              b.kind === 'earn_gold'  ? Math.max(0, state.totalGoldEarned - state.bountyBoard!.snapshot.totalGoldEarned) :
+              b.kind === 'find_items' ? (state.bountyBoard?.itemsCollected ?? 0) :
+              b.kind === 'best_combo' ? state.bestKillCombo :
+              Object.values(state.bountyBoard?.dungeonClearCount ?? {}).reduce((a, v) => a + (v as number), 0);
+            return !b.claimed && prog >= b.target;
+          });
           return (
             <button key={t.id}
                     onClick={() => setTab(t.id)}
-                    className={`relative px-3 py-1 text-xs rounded transition-all ${
+                    className={`relative px-3 py-1.5 text-xs rounded transition-all font-bold ${
                       active
-                        ? 'bg-[#6EA9E4] text-[#0a0806] font-bold'
+                        ? 'bg-[#6EA9E4] text-[#0a0806]'
                         : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
                     }`}
                     style={{ fontFamily: "'Nunito', sans-serif" }}>
               <span className="mr-1">{t.icon}</span>{t.label}
+              {bountyAlert && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#7FE2A0] animate-pulse"
+                      style={{ boxShadow: '0 0 6px #7FE2A0' }} />
+              )}
             </button>
           );
         })}

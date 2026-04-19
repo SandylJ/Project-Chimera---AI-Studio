@@ -24,9 +24,15 @@ interface Props {
   reviveHero?: (heroId: string) => void;
   sellJunk?: () => void;
   useScroll?: (itemId: string) => void;
+  spendAllAP?: () => void;
+  autoEnchantCheapest?: () => void;
+  quickHealHero?: (heroId: string) => void;
 }
 
-export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll }) => {
+export const BattleView: React.FC<Props> = ({
+  state, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll,
+  spendAllAP, autoEnchantCheapest, quickHealHero,
+}) => {
   const dungeon = state.activeDungeon!;
   const tile = dungeon.tiles.find(t => t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y)!;
   const heroes = state.heroes.filter(h => !h.bench);
@@ -143,7 +149,10 @@ export const BattleView: React.FC<Props> = ({ state, clickMonster, autoEquipBest
                     quickHealParty={quickHealParty}
                     reviveHero={reviveHero}
                     sellJunk={sellJunk}
-                    useScroll={useScroll} />
+                    useScroll={useScroll}
+                    spendAllAP={spendAllAP}
+                    autoEnchantCheapest={autoEnchantCheapest}
+                    quickHealHero={quickHealHero} />
       </div>
 
       {/* BOTTOM PANEL */}
@@ -258,7 +267,10 @@ const RightPanel: React.FC<{
   reviveHero?: (heroId: string) => void;
   sellJunk?: () => void;
   useScroll?: (itemId: string) => void;
-}> = ({ state, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll }) => {
+  spendAllAP?: () => void;
+  autoEnchantCheapest?: () => void;
+  quickHealHero?: (heroId: string) => void;
+}> = ({ state, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll, spendAllAP, autoEnchantCheapest, quickHealHero }) => {
   const dead = state.heroes.filter(h => h.state !== 'alive');
   const xpTotal = state.heroes.reduce((a, h) => a + h.xp + h.level * 1000, 0);
   const healingPotions = Object.entries(state.stash.items)
@@ -284,78 +296,178 @@ const RightPanel: React.FC<{
   const avgHpPct = active.length ? active.reduce((a, h) => a + h.hp / h.maxHp, 0) / active.length : 1;
   const partyNeedsHeal = avgHpPct < 0.7;
 
+  // AP available across active roster
+  const apAvailable = state.heroes.reduce((a, h) => a + (h.bench ? 0 : h.abilityPoints), 0);
+
+  // Cheapest affordable enchant (hero+slot) right now
+  const cheapestEnchant = (() => {
+    let best: { label: string; gold: number } | null = null;
+    const slots: Array<'weapon'|'offhand'|'head'|'body'|'legs'|'feet'|'neck'|'ring'> =
+      ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
+    for (const h of state.heroes) {
+      if (h.bench) continue;
+      for (const slot of slots) {
+        if (!h.equipment[slot]) continue;
+        const tier = (h.enchants?.[slot] ?? 0);
+        if (tier >= 10) continue;
+        const item = ITEMS[h.equipment[slot]!];
+        if (!item) continue;
+        const nextTier = tier + 1;
+        const gold = Math.floor(item.value * 0.6 * Math.pow(1.8, nextTier));
+        // naive — doesn't check materials, but enough for a "cheapest" hint
+        if (state.stash.gold >= gold && (!best || gold < best.gold)) {
+          best = { label: `${h.name.slice(0,8)}·${slot}+${nextTier}`, gold };
+        }
+      }
+    }
+    return best;
+  })();
+
   return (
     <aside className="w-72 shrink-0 bg-[#0B0807] border-l-2 border-[#3D3328] flex flex-col overflow-hidden">
-      {/* Totals */}
-      <div className="p-2 border-b border-[#3D3328] space-y-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+      {/* Totals — 2x2 grid for tighter layout */}
+      <div className="p-2 border-b border-[#3D3328] grid grid-cols-2 gap-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
         <FlashingStat label="🪙 GOLD" value={state.stash.gold} color="#D4A943" />
         <FlashingStat label="⟡ ESS"  value={state.stash.essence} color="#B485E8" />
         <FlashingStat label="⚔ KILLS" value={state.totalMonstersKilled} color="#7FE2A0" />
         <FlashingStat label="XP" value={xpTotal} color="#F2E6A8" />
       </div>
 
+      {/* Party status: per-hero mini portraits with click-to-heal */}
+      <div className="px-2 pt-2 pb-1 border-b border-[#3D3328]/70">
+        <SectionLabel>Party Status</SectionLabel>
+        <div className="grid grid-cols-2 gap-1 mt-1">
+          {active.map(h => {
+            const cls = CLASSES[h.classId];
+            const hpPct = (h.hp / h.maxHp) * 100;
+            const mpPct = h.maxMp > 0 ? (h.mp / h.maxMp) * 100 : 0;
+            const color = hpPct > 66 ? '#55d86b' : hpPct > 33 ? '#e9cc3a' : '#e04040';
+            const low = hpPct < 50;
+            return (
+              <button key={h.id}
+                      onClick={() => quickHealHero && quickHealHero(h.id)}
+                      title={low ? 'Heal this hero' : 'Fully healthy'}
+                      disabled={!low || healingPotions === 0}
+                      className={`group flex items-center gap-1.5 px-1.5 py-1 rounded border text-left transition-all ${
+                        low && healingPotions > 0
+                          ? 'cursor-pointer hover:scale-[1.02] hover:border-[#7FE2A0]'
+                          : 'cursor-default'
+                      }`}
+                      style={{
+                        background: 'rgba(10,8,6,0.75)',
+                        borderColor: low ? '#E86E6E' : cls.color + '50',
+                        animation: low ? 'ambientFloat 1.4s ease-in-out infinite alternate' : undefined,
+                      }}>
+                <span style={{ width: 24, height: 28, display: 'inline-flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <ClassSprite classId={h.classId} size={24} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[9px] font-bold truncate leading-none"
+                       style={{ color: cls.color, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {h.name.slice(0, 8)}
+                  </div>
+                  <div className="relative h-[4px] mt-0.5 rounded-sm overflow-hidden bg-black/80">
+                    <div className="h-full" style={{ width: hpPct + '%', background: color, transition: 'width 200ms' }} />
+                  </div>
+                  {h.maxMp > 0 && (
+                    <div className="relative h-[2px] mt-0.5 rounded-sm overflow-hidden bg-black/80">
+                      <div className="h-full" style={{ width: mpPct + '%', background: '#2060dc' }} />
+                    </div>
+                  )}
+                </div>
+                {low && healingPotions > 0 && (
+                  <span className="text-sm shrink-0" style={{ filter: 'drop-shadow(0 0 3px #7FE2A0)' }}>🧪</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Quick actions */}
       <div className="p-2 space-y-1.5 flex-1 overflow-y-auto">
-        <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold px-1"
-             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          Quick Actions
+        <SectionLabel>Quick Actions</SectionLabel>
+
+        <div className="grid grid-cols-2 gap-1.5">
+          <MiniAction
+            icon="🧪"
+            title="Heal Party"
+            right={partyNeedsHeal ? `${Math.round(avgHpPct * 100)}%` : 'OK'}
+            subtitle={`${healingPotions + manaPotions} potions`}
+            onClick={quickHealParty}
+            color="#7FE2A0"
+            pulse={partyNeedsHeal && healingPotions > 0}
+            disabled={healingPotions + manaPotions === 0 || !partyNeedsHeal}
+          />
+          <MiniAction
+            icon="🛡"
+            title="Equip Best"
+            right={upgradeCount > 0 ? `+${upgradeCount}` : '—'}
+            subtitle={upgradeCount > 0 ? 'Swap upgrades' : 'No new gear'}
+            onClick={autoEquipBest}
+            color="#D4A943"
+            pulse={upgradeCount > 3}
+            disabled={upgradeCount === 0}
+          />
+          <MiniAction
+            icon="💰"
+            title="Sell Junk"
+            right={junkGold > 0 ? `+${junkGold}g` : '—'}
+            subtitle={junkGold > 0 ? `${junkCount} items` : 'No junk'}
+            onClick={sellJunk}
+            color="#F2B84B"
+            pulse={junkGold > 200}
+            disabled={junkGold === 0}
+          />
+          <MiniAction
+            icon="⭐"
+            title="Spend AP"
+            right={apAvailable > 0 ? `${apAvailable}` : '—'}
+            subtitle={apAvailable > 0 ? 'Auto-learn abilities' : 'No points'}
+            onClick={spendAllAP}
+            color="#B485E8"
+            pulse={apAvailable >= 2}
+            disabled={apAvailable === 0}
+          />
+          <MiniAction
+            icon="🔨"
+            title="Enchant"
+            right={cheapestEnchant ? `${cheapestEnchant.gold}g` : '—'}
+            subtitle={cheapestEnchant ? cheapestEnchant.label : 'Can\'t afford'}
+            onClick={autoEnchantCheapest}
+            color="#E86E6E"
+            disabled={!cheapestEnchant}
+          />
+          <MiniAction
+            icon="⟡"
+            title="Essence"
+            right={state.stash.essence > 0 ? `${state.stash.essence}` : '—'}
+            subtitle="Burn at Shrine"
+            disabled={true}
+            color="#B485E8"
+          />
         </div>
 
-        <UpgradeCard
-          icon="🛡"
-          title="Equip Upgrades"
-          right={upgradeCount > 0 ? `+${upgradeCount}` : '—'}
-          subtitle={upgradeCount > 0 ? 'Swap in best gear' : 'No new gear in stash'}
-          onClick={autoEquipBest}
-          color="#D4A943"
-          pulse={upgradeCount > 3}
-          disabled={upgradeCount === 0}
-        />
-
-        <UpgradeCard
-          icon="🧪"
-          title="Heal Party"
-          right={partyNeedsHeal ? `!${Math.round((1 - avgHpPct) * 100)}%` : 'OK'}
-          subtitle={`${healingPotions} heal · ${manaPotions} mana`}
-          onClick={quickHealParty}
-          color="#7FE2A0"
-          pulse={partyNeedsHeal && healingPotions > 0}
-          disabled={healingPotions + manaPotions === 0 || !partyNeedsHeal}
-        />
-
-        <UpgradeCard
-          icon="💰"
-          title="Collect Item Sales"
-          right={junkGold > 0 ? `+${junkGold.toLocaleString()}g` : '—'}
-          subtitle={junkGold > 0 ? `Sell ${junkCount} junk item${junkCount === 1 ? '' : 's'}` : 'No junk to sell'}
-          onClick={sellJunk}
-          color="#F2B84B"
-          pulse={junkGold > 200}
-          disabled={junkGold === 0}
-        />
-
         {state.killCombo >= 3 && (
-          <div className="rounded-lg border-2 px-2 py-2"
+          <div className="rounded-md border px-1.5 py-1 flex items-center gap-1.5"
                style={{
                  background: 'linear-gradient(90deg, #3a0808 0%, #1a0404 100%)',
                  borderColor: '#ff6060',
-                 boxShadow: '0 0 12px #ff606060',
+                 boxShadow: '0 0 10px #ff606060',
                }}>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🔥</span>
-              <div className="flex-1">
-                <div className="text-[11px] font-black uppercase tracking-widest text-[#ff8a5a]"
-                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  Combo Streak
-                </div>
-                <div className="text-[9px] text-[#B8A890]">
-                  +{Math.min(100, (state.killCombo - 1) * 5)}% gold/xp bonus
-                </div>
+            <span className="text-xl">🔥</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-black uppercase tracking-widest text-[#ff8a5a] leading-none"
+                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Combo Streak
               </div>
-              <div className="text-xl font-black text-[#ff8a5a]"
-                   style={{ textShadow: '0 0 8px #ff6060' }}>
-                ×{state.killCombo}
+              <div className="text-[9px] text-[#B8A890] leading-none mt-0.5">
+                +{Math.min(100, (state.killCombo - 1) * 5)}% gold/xp
               </div>
+            </div>
+            <div className="text-lg font-black text-[#ff8a5a] leading-none"
+                 style={{ textShadow: '0 0 8px #ff6060' }}>
+              ×{state.killCombo}
             </div>
           </div>
         )}
@@ -369,27 +481,25 @@ const RightPanel: React.FC<{
           if (scrolls.length === 0) return null;
           return (
             <div>
-              <div className="text-[9px] text-[#6EA9E4] uppercase tracking-widest font-bold px-1"
-                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                Scrolls
-              </div>
-              <div className="grid grid-cols-2 gap-1 mt-1">
+              <SectionLabel color="#6EA9E4">Scrolls</SectionLabel>
+              <div className="grid grid-cols-2 gap-1">
                 {scrolls.map(s => (
                   <button key={s.id}
                           onClick={() => useScroll(s.id)}
-                          className="group px-2 py-1.5 rounded border text-left transition-all hover:scale-[1.02] hover:border-[#6EA9E4]"
+                          className="group px-1.5 py-1 rounded border text-left transition-all hover:scale-[1.04] hover:border-[#6EA9E4] cursor-pointer"
                           style={{
-                            background: 'linear-gradient(90deg, #0e1a2a 0%, #050a14 100%)',
-                            borderColor: '#2b486e',
+                            background: 'linear-gradient(140deg, #6EA9E424 0%, #6EA9E408 60%, transparent 100%)',
+                            borderColor: '#6EA9E460',
                           }}
                           title={s.item.description}>
                     <div className="flex items-center gap-1">
-                      <span className="text-lg shrink-0">{s.item.icon}</span>
+                      <span className="text-base shrink-0" style={{ filter: 'drop-shadow(0 0 3px #6EA9E4)' }}>{s.item.icon}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-[10px] font-bold text-[#9bc9ff] truncate">
-                          {s.item.name.replace(/^Scroll of /, '')}
+                        <div className="text-[9px] font-black text-[#9bc9ff] truncate leading-none tracking-wide">
+                          {s.item.name.replace(/^Scroll of /, '').toUpperCase()}
                         </div>
-                        <div className="text-[9px] text-[#5e8aba]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        <div className="text-[9px] text-[#5e8aba] leading-none mt-0.5"
+                             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                           ×{s.qty}
                         </div>
                       </div>
@@ -403,10 +513,7 @@ const RightPanel: React.FC<{
 
         {dead.length > 0 && (
           <div className="space-y-1">
-            <div className="text-[9px] text-[#E86E6E] uppercase tracking-widest font-bold px-1"
-                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              Downed Heroes
-            </div>
+            <SectionLabel color="#E86E6E">Downed Heroes</SectionLabel>
             {dead.map(h => {
               const c = CLASSES[h.classId];
               const cost = 100 + h.level * 20;
@@ -437,10 +544,7 @@ const RightPanel: React.FC<{
         {/* Daily bounties (compact) */}
         {state.bountyBoard && (
           <div className="mt-2">
-            <div className="text-[9px] text-[#F2E6A8] uppercase tracking-widest font-bold px-1"
-                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              Daily Bounties
-            </div>
+            <SectionLabel color="#F2E6A8">Daily Bounties</SectionLabel>
             <div className="bg-black/40 rounded border border-[#D4A943]/40 p-2 space-y-1.5">
               {state.bountyBoard.bounties.map(b => {
                 const prog = bountyProgress(state, b);
@@ -472,10 +576,7 @@ const RightPanel: React.FC<{
         {/* Blessing summary */}
         {Object.values(state.blessings ?? {}).some(v => v && v > 0) && (
           <div className="mt-2">
-            <div className="text-[9px] text-[#B485E8] uppercase tracking-widest font-bold px-1"
-                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              Shrine Blessings
-            </div>
+            <SectionLabel color="#B485E8">Shrine Blessings</SectionLabel>
             <div className="bg-black/40 rounded border border-[#B485E8]/40 p-2 text-[10px] space-y-0.5"
                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
               {Object.entries(state.blessings ?? {}).map(([id, lvl]) => (
@@ -490,10 +591,7 @@ const RightPanel: React.FC<{
           </div>
         )}
 
-        <div className="mt-2 text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold px-1"
-             style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          Collection
-        </div>
+        <div className="mt-2"><SectionLabel>Collection</SectionLabel></div>
         <div className="bg-black/40 rounded border border-[#3D3328] p-2 text-[10px]"
              style={{ fontFamily: "'JetBrains Mono', monospace" }}>
           <div className="flex justify-between text-[#B8A890]">
@@ -552,17 +650,66 @@ const FlashingStat: React.FC<{ label: string; value: number; color: string }> = 
   }, [value]);
   return (
     <div key={flashKey}
-         className="flex items-center justify-between px-2 py-1 rounded border"
+         className="relative flex flex-col px-1.5 py-1 rounded border overflow-hidden"
          style={{
-           background: 'rgba(0,0,0,0.4)',
-           borderColor: color + '30',
+           background: `linear-gradient(140deg, ${color}18 0%, rgba(0,0,0,0.55) 100%)`,
+           borderColor: color + '40',
            animation: flashKey > 0 ? 'goldCounterFlash 0.45s ease-out' : undefined,
          }}>
-      <span className="text-xs font-bold flex items-center gap-1" style={{ color }}>{label}</span>
-      <span className="text-sm font-black" style={{ color }}>{displayed.toLocaleString()}</span>
+      <span className="text-[9px] font-black tracking-widest" style={{ color, opacity: 0.85 }}>{label}</span>
+      <span className="text-sm font-black tabular-nums leading-none" style={{ color, textShadow: `0 0 6px ${color}40` }}>
+        {displayed.toLocaleString()}
+      </span>
     </div>
   );
 };
+
+const SectionLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({ children, color }) => (
+  <div className="text-[9px] uppercase tracking-widest font-bold px-1 pb-1"
+       style={{
+         color: color ?? '#7A6E60',
+         fontFamily: "'JetBrains Mono', monospace",
+         letterSpacing: '0.18em',
+       }}>
+    {children}
+  </div>
+);
+
+const MiniAction: React.FC<{
+  icon: string; title: string; right?: string; subtitle: string;
+  onClick?: () => void; color: string; disabled?: boolean; pulse?: boolean;
+}> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => (
+  <button disabled={disabled || !onClick}
+          onClick={onClick}
+          className={`relative w-full rounded-md border px-1.5 py-1.5 text-left transition-all overflow-hidden ${
+            disabled
+              ? 'bg-[#0a0706] border-[#1E1A16] opacity-45 cursor-not-allowed'
+              : 'hover:scale-[1.04] hover:border-[color:var(--card)] cursor-pointer active:scale-[0.97]'
+          }`}
+          style={{
+            ['--card' as any]: color,
+            background: disabled ? undefined : `linear-gradient(140deg, ${color}24 0%, ${color}08 60%, transparent 100%)`,
+            borderColor: disabled ? undefined : color + '60',
+            boxShadow: !disabled && pulse ? `0 0 8px ${color}80, inset 0 0 6px ${color}30` : undefined,
+            animation: !disabled && pulse ? 'ambientFloat 1.8s ease-in-out infinite alternate' : undefined,
+          }}>
+    <div className="flex items-center gap-1.5">
+      <span className="text-lg shrink-0 leading-none" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-1">
+          <div className="text-[10px] font-black truncate tracking-wide" style={{ color }}>{title}</div>
+          {right && (
+            <div className="text-[10px] font-black tabular-nums shrink-0"
+                 style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
+              {right}
+            </div>
+          )}
+        </div>
+        <div className="text-[9px] text-[#8a7f72] truncate leading-tight">{subtitle}</div>
+      </div>
+    </div>
+  </button>
+);
 
 const UpgradeCard: React.FC<{
   icon: string; title: string; right?: string; subtitle: string;

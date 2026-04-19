@@ -863,6 +863,89 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Auto-spend ability points: for each hero with points, learn the
+  // cheapest next ability they qualify for (lowest levelReq, not yet owned).
+  const spendAllAP = useCallback(() => {
+    mutate(s => {
+      let learned = 0;
+      for (const h of s.heroes) {
+        while (h.abilityPoints > 0) {
+          const tree = (ABILITIES ? Object.values(ABILITIES) : []).filter(a => a.classId === h.classId);
+          const pool = tree
+            .filter(a => !h.abilities.includes(a.id) && h.level >= a.levelReq)
+            .sort((a, b) => a.levelReq - b.levelReq);
+          if (pool.length === 0) break;
+          h.abilityPoints--;
+          h.abilities.push(pool[0].id);
+          learned++;
+          pushLog(s, 'level', `⭐ ${h.name} learned ${pool[0].name}!`);
+        }
+      }
+      if (learned === 0) pushLog(s, 'system', 'No eligible abilities to learn.');
+    });
+  }, [mutate]);
+
+  // Auto-enchant: pick the equipped slot with the cheapest next-tier cost
+  // that we can afford, and enchant it. Great as a one-click sink.
+  const autoEnchantCheapest = useCallback(() => {
+    mutate(s => {
+      const slots: EquipSlot[] = ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
+      type Option = { hero: Hero; slot: EquipSlot; gold: number };
+      const options: Option[] = [];
+      for (const h of s.heroes) {
+        if (h.bench) continue;
+        for (const slot of slots) {
+          if (!h.equipment[slot]) continue;
+          const cost = enchantCost(h, slot);
+          if (!cost) continue;
+          if (s.stash.gold < cost.gold) continue;
+          if (!cost.materials.every(m => (s.stash.items[m.id] ?? 0) >= m.qty)) continue;
+          options.push({ hero: h, slot, gold: cost.gold });
+        }
+      }
+      if (options.length === 0) {
+        pushLog(s, 'system', 'No affordable enchants right now.');
+        return;
+      }
+      options.sort((a, b) => a.gold - b.gold);
+      const best = options[0];
+      const cost = enchantCost(best.hero, best.slot)!;
+      s.stash.gold -= cost.gold;
+      for (const m of cost.materials) {
+        s.stash.items[m.id] = (s.stash.items[m.id] ?? 0) - m.qty;
+        if (s.stash.items[m.id] <= 0) delete s.stash.items[m.id];
+      }
+      best.hero.enchants ||= {};
+      const newTier = enchantTier(best.hero, best.slot) + 1;
+      best.hero.enchants[best.slot] = newTier;
+      recomputeHeroMaxHPMP(best.hero, s);
+      const itemName = ITEMS[best.hero.equipment[best.slot]!]?.name ?? 'gear';
+      pushLog(s, 'loot', `🔨 ${best.hero.name}'s ${itemName} enchanted to +${newTier}!`, newTier >= 5 ? 'epic' : 'rare');
+    });
+  }, [mutate]);
+
+  // Heal one specific hero using the best available potion.
+  const quickHealHero = useCallback((heroId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      if (!h || h.state !== 'alive') return;
+      if (h.hp >= h.maxHp) return;
+      const order = ['elixir_of_life', 'greater_healing_potion', 'healing_potion'];
+      for (const pid of order) {
+        if ((s.stash.items[pid] ?? 0) <= 0) continue;
+        const pot = ITEMS[pid];
+        if (!pot) continue;
+        h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
+        if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
+        s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
+        if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+        pushLog(s, 'heal', `🧪 ${h.name} drinks ${pot.name}.`);
+        return;
+      }
+      pushLog(s, 'system', `No healing potions for ${h.name}.`);
+    });
+  }, [mutate]);
+
   // Claim a completed daily bounty
   const claimBounty = useCallback((bountyId: string) => {
     mutate(s => {
@@ -941,5 +1024,8 @@ export function useCcGame() {
     useScroll,
     buyShopBundle,
     claimBounty,
+    spendAllAP,
+    autoEnchantCheapest,
+    quickHealHero,
   };
 }
