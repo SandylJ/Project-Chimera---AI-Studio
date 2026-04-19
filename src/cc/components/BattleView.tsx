@@ -1817,13 +1817,14 @@ const RosterPanel: React.FC<{ heroes: Hero[] }> = ({ heroes }) => {
               const arm = totalArmor(h);
               return (
                 <tr key={h.id} className={`border-b border-[#1E1A16] ${h.state !== 'alive' ? 'opacity-50' : ''}`}>
-                  <td className="px-1 py-1 w-10 text-center">
-                    <div className="inline-flex items-center justify-center w-8 h-8 rounded"
+                  <td className="px-1 py-1 w-12 text-center align-middle">
+                    <div className="inline-flex items-end justify-center rounded"
                          style={{
-                           background: `radial-gradient(circle, ${cls.color}55, transparent)`,
-                           border: `1px solid ${cls.color}`,
+                           width: 38, height: 44,
+                           background: `linear-gradient(180deg, ${cls.color}22 0%, #00000000 100%)`,
+                           border: `1px solid ${cls.color}70`,
                          }}>
-                      <span className="text-base">{cls.icon}</span>
+                      <ClassSprite classId={h.classId} size={34} />
                     </div>
                   </td>
                   <td className="px-1 py-1">

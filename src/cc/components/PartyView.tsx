@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, Hero, EquipSlot } from '../types';
 import { CLASSES } from '../data/classes';
 import { ABILITIES, CLASS_ABILITY_TREE } from '../data/abilities';
 import { ITEMS } from '../data/items';
 import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower } from '../engine/util';
+import { ClassSprite } from '../visuals/sprites';
 
 interface Props {
   state: GameState;
@@ -13,12 +14,17 @@ interface Props {
   reviveHero: (heroId: string) => void;
   useConsumable: (heroId: string, itemId: string) => void;
   equipItem: (heroId: string, itemId: string) => void;
+  focusHeroId?: string | null;
 }
 
 const ALL_SLOTS: EquipSlot[] = ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
 
-export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, buyAbility, reviveHero, useConsumable, equipItem }) => {
-  const [selectedId, setSelectedId] = useState<string | null>(state.heroes[0]?.id ?? null);
+export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, buyAbility, reviveHero, useConsumable, equipItem, focusHeroId }) => {
+  const [selectedId, setSelectedId] = useState<string | null>(focusHeroId ?? state.heroes[0]?.id ?? null);
+  useEffect(() => {
+    if (focusHeroId && focusHeroId !== selectedId) setSelectedId(focusHeroId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusHeroId]);
   const selected = state.heroes.find(h => h.id === selectedId) ?? state.heroes[0];
 
   return (
@@ -36,10 +42,17 @@ export const PartyView: React.FC<Props> = ({ state, unequipItem, toggleBench, bu
             <button
               key={h.id}
               onClick={() => setSelectedId(h.id)}
-              className={`w-full text-left p-3 border-b border-[#1E1A16] flex items-center gap-2 transition-all
-                ${isSel ? 'bg-[#2B231B]' : 'hover:bg-[#1E1A16]'}`}
+              className={`w-full text-left p-2 border-b border-[#1E1A16] flex items-center gap-2 transition-all
+                ${isSel ? 'bg-[#2B231B] border-l-2 border-l-[#D4A943]' : 'hover:bg-[#1E1A16] border-l-2 border-l-transparent'}`}
             >
-              <span className="text-lg">{cls.icon}</span>
+              <div className="shrink-0 flex items-end justify-center rounded"
+                   style={{
+                     width: 42, height: 48,
+                     background: `linear-gradient(180deg, ${cls.color}22 0%, #00000000 100%)`,
+                     border: `1px solid ${cls.color}60`,
+                   }}>
+                <ClassSprite classId={h.classId} size={40} />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold truncate" style={{ color: cls.color }}>{h.name}</div>
                 <div className="text-[9px] text-[#7A6E60]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>

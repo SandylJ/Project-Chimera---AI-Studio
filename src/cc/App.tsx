@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCcGame } from './useGame';
 import { DungeonView } from './components/DungeonView';
+import { ClassSprite } from './visuals/sprites';
+import { CLASSES } from './data/classes';
 import { PartyView } from './components/PartyView';
 import { StashView } from './components/StashView';
 import { TownView } from './components/TownView';
@@ -14,7 +16,9 @@ import {
 export default function CcApp() {
   const g = useCcGame();
   const [tab, setTabRaw] = useState<string>('dungeon');
+  const [focusHeroId, setFocusHeroId] = useState<string | null>(null);
   const setTab = (t: string) => { playTabClick(); setTabRaw(t); };
+  const focusHero = (id: string) => { setFocusHeroId(id); setTab('party'); };
   const { state } = g;
 
   // Play sounds for new log entries
@@ -55,7 +59,8 @@ export default function CcApp() {
       <TopTabBar tab={tab} setTab={setTab} state={state}
                  setSpeed={g.setSpeed}
                  togglePause={g.togglePause}
-                 retreatToTown={g.retreatToTown} />
+                 retreatToTown={g.retreatToTown}
+                 focusHero={focusHero} />
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 overflow-hidden">
           {tab === 'dungeon' && (
@@ -74,7 +79,8 @@ export default function CcApp() {
                        buyAbility={g.buyAbility}
                        reviveHero={g.reviveHero}
                        useConsumable={g.useConsumable}
-                       equipItem={g.equipItem} />
+                       equipItem={g.equipItem}
+                       focusHeroId={focusHeroId} />
           )}
           {tab === 'stash' && (
             <StashView state={state}
@@ -105,7 +111,8 @@ export default function CcApp() {
 const TopTabBar: React.FC<{
   tab: string; setTab: (t: string) => void; state: ReturnType<typeof useCcGame>['state'];
   setSpeed: (s: 1|2|4) => void; togglePause: () => void; retreatToTown: () => void;
-}> = ({ tab, setTab, state, setSpeed, togglePause, retreatToTown }) => {
+  focusHero: (heroId: string) => void;
+}> = ({ tab, setTab, state, setSpeed, togglePause, retreatToTown, focusHero }) => {
   const TABS = [
     { id: 'dungeon', label: 'Dungeon', icon: '⚔' },
     { id: 'party',   label: 'Party',   icon: '👥' },
@@ -119,9 +126,42 @@ const TopTabBar: React.FC<{
          style={{ backgroundImage: 'linear-gradient(180deg, #1a1410 0%, #0a0806 100%)' }}>
       {/* Tabs */}
       <div className="flex items-center gap-0.5">
-        {TABS.map(t => {
+        {/* Main 'Game' tab = Dungeon when inactive, Party when the game is visible */}
+        <button onClick={() => setTab('dungeon')}
+                className={`px-3 py-1 text-xs rounded transition-all ${
+                  tab === 'dungeon' ? 'bg-[#6EA9E4] text-[#0a0806] font-bold' : 'bg-[#14100C] text-[#B8A890] hover:bg-[#1E1A16] hover:text-[#E8E0D4]'
+                }`}>
+          <span className="mr-1">⚔</span>Game
+        </button>
+
+        {/* Per-hero tabs (clicking opens the Party view focused on that hero) */}
+        {state.heroes.filter(h => !h.bench).map(h => {
+          const cls = CLASSES[h.classId];
+          return (
+            <button key={h.id}
+                    onClick={() => focusHero(h.id)}
+                    className="relative flex items-center gap-1 px-2 py-0.5 text-xs rounded transition-all bg-[#14100C] hover:bg-[#1E1A16]"
+                    style={{
+                      color: cls.color,
+                      border: `1px solid ${cls.color}40`,
+                      fontFamily: "'Nunito', sans-serif",
+                    }}
+                    title={`${h.name} — ${cls.name}`}>
+              <span className="shrink-0" style={{ width: 22, height: 26, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                <ClassSprite classId={h.classId} size={22} />
+              </span>
+              <span className="font-bold" style={{ fontSize: '10px' }}>
+                {cls.name} {h.level}
+              </span>
+              {h.abilityPoints > 0 && (
+                <span className="w-2 h-2 rounded-full bg-[#D4A943] animate-pulse" />
+              )}
+            </button>
+          );
+        })}
+
+        {TABS.slice(1).map(t => {
           const active = tab === t.id;
-          const needsAttention = t.id === 'party' && state.heroes.some(h => h.abilityPoints > 0);
           return (
             <button key={t.id}
                     onClick={() => setTab(t.id)}
@@ -132,9 +172,6 @@ const TopTabBar: React.FC<{
                     }`}
                     style={{ fontFamily: "'Nunito', sans-serif" }}>
               <span className="mr-1">{t.icon}</span>{t.label}
-              {needsAttention && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#D4A943] animate-pulse" />
-              )}
             </button>
           );
         })}
