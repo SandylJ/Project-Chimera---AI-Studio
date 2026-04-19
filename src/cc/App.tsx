@@ -247,8 +247,9 @@ const TopTabBar: React.FC<{
                       background: downed ? '#2a1010' : 'linear-gradient(180deg, #1a1410 0%, #0d0a08 100%)',
                       border: `1px solid ${downed ? '#E86E6E' : cls.color + '55'}`,
                       fontFamily: "'Nunito', sans-serif",
-                      boxShadow: lowHp ? '0 0 6px #E86E6E88' : undefined,
-                      animation: lowHp ? 'ambientFloat 1.4s ease-in-out infinite alternate' : undefined,
+                      boxShadow: lowHp ? '0 0 8px #E86E6Eaa' : undefined,
+                      animation: lowHp ? 'glowPulse 1.4s ease-in-out infinite' : undefined,
+                      ['--glow' as any]: '#E86E6Ecc',
                     }}
                     title={`${h.name} — ${cls.name}\nHP ${Math.ceil(h.hp)}/${h.maxHp} · MP ${Math.ceil(h.mp)}/${h.maxMp}`}>
               <span className="shrink-0" style={{ width: 24, height: 28, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>

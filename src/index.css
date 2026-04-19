@@ -73,6 +73,16 @@
   40%  { box-shadow: 0 0 8px 4px #ffe080aa; }
   100% { box-shadow: 0 0 0 0 #ffe08000; }
 }
+/* In-place attention glow — no transform so buttons don't dodge clicks. */
+@keyframes glowPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 transparent; }
+  50%      { filter: brightness(1.15); box-shadow: 0 0 10px 1px var(--glow, #ffffff40); }
+}
+/* Low-HP vignette breath — no movement, just opacity pulse. */
+@keyframes lowHpPulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
 
 /* ============================================================
    IMPERIAL IDLE — Master Stylesheet

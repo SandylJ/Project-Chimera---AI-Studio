@@ -141,7 +141,7 @@ export const BattleView: React.FC<Props> = ({
             <div className="absolute inset-0 pointer-events-none z-10"
                  style={{
                    boxShadow: 'inset 0 0 120px rgba(255, 40, 40, 0.55)',
-                   animation: 'ambientFloat 1.2s ease-in-out infinite alternate',
+                   animation: 'lowHpPulse 1.2s ease-in-out infinite',
                  }} />
           )}
         </div>
@@ -364,6 +364,26 @@ const RightPanel: React.FC<{
   // AP available across active roster
   const apAvailable = state.heroes.reduce((a, h) => a + (h.bench ? 0 : h.abilityPoints), 0);
 
+  // Aggregate owned scroll count + best scroll to auto-pick
+  const ownedScrolls = Object.entries(state.stash.items)
+    .filter(([id, q]) => q > 0 && id.startsWith('scroll_'))
+    .map(([id, q]) => ({ id, qty: q }));
+  const scrollCount = ownedScrolls.reduce((a, s) => a + s.qty, 0);
+  const smartScrollId = (() => {
+    if (!state.activeDungeon) return undefined;
+    const tile = state.activeDungeon.tiles.find(t => t.x === state.activeDungeon!.partyPos.x && t.y === state.activeDungeon!.partyPos.y);
+    const inCombat = !!tile?.encounter && (tile.encounter.monsters.length > 0);
+    const heroes = state.heroes.filter(h => !h.bench && h.state === 'alive');
+    const avgHp = heroes.length ? heroes.reduce((a, h) => a + h.hp / h.maxHp, 0) / heroes.length : 1;
+    const has = (id: string) => ownedScrolls.some(s => s.id === id);
+    if (avgHp < 0.3 && has('scroll_town_portal')) return 'scroll_town_portal';
+    if (inCombat && has('scroll_haste')) return 'scroll_haste';
+    if (inCombat && has('scroll_bless')) return 'scroll_bless';
+    if (!inCombat && has('scroll_identify')) return 'scroll_identify';
+    if (has('scroll_xp')) return 'scroll_xp';
+    return ownedScrolls[0]?.id;
+  })();
+
   // Cheapest affordable enchant (hero+slot) right now
   const cheapestEnchant = (() => {
     let best: { label: string; gold: number } | null = null;
@@ -410,18 +430,20 @@ const RightPanel: React.FC<{
             const low = hpPct < 50;
             return (
               <button key={h.id}
+                      type="button"
                       onClick={() => quickHealHero && quickHealHero(h.id)}
                       title={low ? 'Heal this hero' : 'Fully healthy'}
                       disabled={!low || healingPotions === 0}
-                      className={`group flex items-center gap-1.5 px-1.5 py-1 rounded border text-left transition-all ${
+                      className={`group flex items-center gap-1.5 px-1.5 py-1 rounded border text-left transition-colors ${
                         low && healingPotions > 0
-                          ? 'cursor-pointer hover:scale-[1.02] hover:border-[#7FE2A0]'
+                          ? 'cursor-pointer hover:brightness-110 hover:border-[#7FE2A0]'
                           : 'cursor-default'
                       }`}
                       style={{
                         background: 'rgba(10,8,6,0.75)',
                         borderColor: low ? '#E86E6E' : cls.color + '50',
-                        animation: low ? 'ambientFloat 1.4s ease-in-out infinite alternate' : undefined,
+                        animation: low && healingPotions > 0 ? 'glowPulse 1.4s ease-in-out infinite' : undefined,
+                        ['--glow' as any]: '#E86E6Eaa',
                       }}>
                 <span style={{ width: 24, height: 28, display: 'inline-flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                   <ClassSprite classId={h.classId} size={24} />
@@ -504,12 +526,14 @@ const RightPanel: React.FC<{
             disabled={!cheapestEnchant}
           />
           <MiniAction
-            icon="⟡"
-            title="Essence"
-            right={state.stash.essence > 0 ? `${state.stash.essence}` : '—'}
-            subtitle="Burn at Shrine"
-            disabled={true}
-            color="#B485E8"
+            icon="📜"
+            title="Smart Scroll"
+            right={scrollCount > 0 ? `${scrollCount}` : '—'}
+            subtitle={smartScrollId ? ITEMS[smartScrollId]?.name.replace(/^Scroll of /, '') ?? 'Use best' : 'No scrolls'}
+            onClick={smartScrollId && useScroll ? () => useScroll(smartScrollId) : undefined}
+            color="#6EA9E4"
+            disabled={!smartScrollId}
+            pulse={scrollCount > 0 && smartScrollId === 'scroll_town_portal'}
           />
         </div>
 
@@ -780,73 +804,43 @@ const SectionLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({
 const MiniAction: React.FC<{
   icon: string; title: string; right?: string; subtitle: string;
   onClick?: () => void; color: string; disabled?: boolean; pulse?: boolean;
-}> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => (
-  <button disabled={disabled || !onClick}
-          onClick={onClick}
-          className={`relative w-full rounded-md border px-1.5 py-1.5 text-left transition-all overflow-hidden ${
-            disabled
-              ? 'bg-[#0a0706] border-[#1E1A16] opacity-45 cursor-not-allowed'
-              : 'hover:scale-[1.04] hover:border-[color:var(--card)] cursor-pointer active:scale-[0.97]'
-          }`}
-          style={{
-            ['--card' as any]: color,
-            background: disabled ? undefined : `linear-gradient(140deg, ${color}24 0%, ${color}08 60%, transparent 100%)`,
-            borderColor: disabled ? undefined : color + '60',
-            boxShadow: !disabled && pulse ? `0 0 8px ${color}80, inset 0 0 6px ${color}30` : undefined,
-            animation: !disabled && pulse ? 'ambientFloat 1.8s ease-in-out infinite alternate' : undefined,
-          }}>
-    <div className="flex items-center gap-1.5">
-      <span className="text-lg shrink-0 leading-none" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline justify-between gap-1">
-          <div className="text-[10px] font-black truncate tracking-wide" style={{ color }}>{title}</div>
-          {right && (
-            <div className="text-[10px] font-black tabular-nums shrink-0"
-                 style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
-              {right}
-            </div>
-          )}
+}> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => {
+  const clickable = !!onClick && !disabled;
+  return (
+    <button type="button"
+            disabled={!clickable}
+            onClick={clickable ? onClick : undefined}
+            className={`relative w-full rounded-md border px-1.5 py-1.5 text-left transition-colors ${
+              disabled
+                ? 'bg-[#0a0706] border-[#1E1A16] opacity-45 cursor-not-allowed'
+                : 'cursor-pointer hover:brightness-110 active:brightness-95'
+            }`}
+            style={{
+              background: disabled ? undefined : `linear-gradient(140deg, ${color}24 0%, ${color}08 60%, transparent 100%)`,
+              borderColor: disabled ? undefined : (pulse ? color : color + '60'),
+              boxShadow: !disabled && pulse ? `0 0 8px ${color}80, inset 0 0 6px ${color}30` : undefined,
+              // in-place glow pulse — no translate/scale, so the button never dodges the cursor
+              animation: !disabled && pulse ? 'glowPulse 1.6s ease-in-out infinite' : undefined,
+              ['--glow' as any]: color + 'aa',
+            }}>
+      <div className="flex items-center gap-1.5 pointer-events-none">
+        <span className="text-lg shrink-0 leading-none" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-1">
+            <div className="text-[10px] font-black truncate tracking-wide" style={{ color }}>{title}</div>
+            {right && (
+              <div className="text-[10px] font-black tabular-nums shrink-0"
+                   style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
+                {right}
+              </div>
+            )}
+          </div>
+          <div className="text-[9px] text-[#8a7f72] truncate leading-tight">{subtitle}</div>
         </div>
-        <div className="text-[9px] text-[#8a7f72] truncate leading-tight">{subtitle}</div>
       </div>
-    </div>
-  </button>
-);
-
-const UpgradeCard: React.FC<{
-  icon: string; title: string; right?: string; subtitle: string;
-  onClick?: () => void; color: string; disabled?: boolean; pulse?: boolean;
-}> = ({ icon, title, right, subtitle, onClick, color, disabled, pulse }) => (
-  <button disabled={disabled || !onClick}
-          onClick={onClick}
-          className={`w-full rounded-lg border-2 px-2 py-1.5 text-left transition-all ${
-            disabled
-              ? 'bg-[#0a0706] border-[#1E1A16] opacity-40 cursor-not-allowed'
-              : 'hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
-          }`}
-          style={{
-            background: disabled ? undefined : `linear-gradient(90deg, ${color}22 0%, transparent 100%)`,
-            borderColor: disabled ? undefined : color + '70',
-            boxShadow: !disabled && pulse ? `0 0 10px ${color}aa` : undefined,
-            animation: !disabled && pulse ? 'ambientFloat 2s ease-in-out infinite alternate' : undefined,
-          }}>
-    <div className="flex items-center gap-2">
-      <span className="text-xl shrink-0" style={{ filter: 'drop-shadow(0 1px 1px #000)' }}>{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-1">
-          <div className="text-xs font-bold truncate" style={{ color }}>{title}</div>
-          {right && (
-            <div className="text-xs font-black tabular-nums"
-                 style={{ color, fontFamily: "'JetBrains Mono', monospace" }}>
-              {right}
-            </div>
-          )}
-        </div>
-        <div className="text-[10px] text-[#B8A890] truncate leading-tight">{subtitle}</div>
-      </div>
-    </div>
-  </button>
-);
+    </button>
+  );
+};
 
 /* ============ Bottom panel ============ */
 
