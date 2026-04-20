@@ -126,8 +126,7 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
     for (const h of state.heroes) next[h.id] = h.hp;
     for (const m of enemies) next[m.id] = m.hp;
     prevHpRef.current = next;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  });
   useEffect(() => {
     const id = window.setInterval(() => {
       const nw = Date.now();
@@ -1245,8 +1244,9 @@ const AttackFxLayer: React.FC<{
       });
     });
     if (newFx.length) setFx(f => [...f.slice(-40), ...newFx]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes, enemies]);
+    // Poll every render — lastAction.at is mutated on stable refs so deps
+    // can't detect changes reliably.
+  });
 
   // Cull
   useEffect(() => {
@@ -1468,10 +1468,10 @@ const DeathFxLayer: React.FC<{
       }
       prevRef.current[m.id] = { hp: m.hp, maxHp: m.maxHp };
     }
-    // Also catch any monster that was in prev list but is gone (hp<=0 filtered out of array)
+    // Catch any monster that was in prev list but is gone (hp<=0 filtered out of array).
+    // Only fire if it WASN'T marked dead on a previous frame.
     for (const id of Object.keys(prevRef.current)) {
       if (!seen.has(id)) {
-        // Was tracked, now gone. If we didn't already fire death on it, fire now
         const already = newDeaths.find(d => d.id.startsWith(`d_${id}_`));
         if (!already && prevRef.current[id].hp > 0) {
           // We don't have a position anymore — place at party center
@@ -1499,7 +1499,9 @@ const DeathFxLayer: React.FC<{
       }
     }
     if (newDeaths.length) setDeaths(d => [...d.slice(-20), ...newDeaths]);
-  }, [enemies, enemyPositions, partyX, partyY]);
+    // Poll every render — deps check isn't reliable because enemies ref is
+    // often stable (mutated in place inside engine).
+  });
 
   // Cull
   useEffect(() => {
@@ -1653,8 +1655,8 @@ const AbilityCastAnnouncer: React.FC<{
       });
     });
     if (newCasts.length) setCasts(c => [...c.slice(-15), ...newCasts]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes]);
+    // Poll every render — hero.lastAction is mutated in place.
+  });
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -1719,6 +1721,9 @@ const TileResolveFxLayer: React.FC<{ dungeon: any; now: number }> = ({ dungeon, 
   const prevClearedRef = useRef<Record<string, boolean>>({});
   const [fx, setFx] = useState<TileResolveFx[]>([]);
 
+  // Poll tiles each render so we catch cleared-flag flips regardless of
+  // reference equality. Safe because the check is shallow and doesn't
+  // actually call setFx unless a transition occurred.
   useEffect(() => {
     const newFx: TileResolveFx[] = [];
     for (const t of dungeon.tiles) {
@@ -1726,7 +1731,6 @@ const TileResolveFxLayer: React.FC<{ dungeon: any; now: number }> = ({ dungeon, 
       const was = prevClearedRef.current[key] ?? false;
       const now2 = !!t.cleared;
       if (!was && now2) {
-        // Just cleared — fire FX for reward tiles
         if (['chest', 'shrine', 'fountain', 'trap', 'merchant', 'fork'].includes(t.kind)) {
           newFx.push({
             id: `r_${key}_${Date.now()}`,
@@ -1740,7 +1744,7 @@ const TileResolveFxLayer: React.FC<{ dungeon: any; now: number }> = ({ dungeon, 
       prevClearedRef.current[key] = now2;
     }
     if (newFx.length) setFx(f => [...f.slice(-15), ...newFx]);
-  }, [dungeon.tiles, dungeon.pathIndex]);
+  });
 
   // Cull
   useEffect(() => {
