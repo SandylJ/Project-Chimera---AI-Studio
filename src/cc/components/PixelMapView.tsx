@@ -712,17 +712,33 @@ const MonsterOnTile: React.FC<{
     hpPct > 66 ? '#d83232' :
     hpPct > 33 ? '#ff6e3e' :
                  '#ffc048';
+  // Attack telegraph: glow red when about to strike (last ~300ms of cooldown)
+  const telegraphing = !stunned && !dying && monster.attackTimer > 0 && monster.attackTimer < 300;
   return (
     <div className={`absolute ${onClick ? 'cursor-crosshair' : ''}`}
          onClick={onClick}
          style={{
            left: lx, top: ly,
            transform: `translate(-50%, -100%) translate(${lungeX + driftX}px, ${bob}px)`,
-           filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
+           filter: telegraphing
+             ? 'drop-shadow(0 0 8px #ff4040) drop-shadow(0 2px 3px rgba(0,0,0,0.85))'
+             : 'drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
            transition: lungeT > 0 ? 'transform 110ms ease-out' : 'transform 120ms ease-out',
            animation: dying ? 'fadeOut 0.5s forwards' : 'popIn 0.45s ease-out',
            zIndex: 20,
          }}>
+      {telegraphing && (
+        <div className="absolute pointer-events-none"
+             style={{
+               left: '50%', bottom: -4,
+               width: size * 0.9, height: size * 0.35,
+               transform: 'translate(-50%, 0)',
+               background: `radial-gradient(ellipse, #ff404088 0%, transparent 70%)`,
+               filter: 'blur(2px)',
+               animation: 'glowPulse 0.3s ease-in-out infinite',
+               ['--glow' as any]: '#ff4040',
+             }} />
+      )}
       {/* Big nameplate + HP bar (rendered in world orientation so not mirrored) */}
       <div className="absolute left-1/2 -translate-x-1/2"
            style={{ bottom: 'calc(100% + 2px)', minWidth: isBoss ? 90 : 60, pointerEvents: 'none' }}>
