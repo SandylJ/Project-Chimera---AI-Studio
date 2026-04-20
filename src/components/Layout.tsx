@@ -32,7 +32,8 @@ import {
   BookOpen,
   Trophy,
   Volume2,
-  VolumeX
+  VolumeX,
+  Map
 } from 'lucide-react';
 import { SkillId } from '../types';
 import { playTabClick, isAudioEnabled, setAudioEnabled } from '../sounds';
@@ -141,6 +142,10 @@ export function Layout({ children, activeTab, setActiveTab, gp, bountyMarks, sho
           <button onClick={() => handleTabChange('achievements')} className={navButtonClass('achievements')}>
             <Trophy size={18} />
             Achievements
+          </button>
+          <button onClick={() => handleTabChange('world-v2')} className={navButtonClass('world-v2')}>
+            <Map size={18} />
+            World v2
           </button>
 
           <div className="pt-4 pb-2 px-3 text-[10px] uppercase tracking-widest text-[#7A6E60]" style={{ fontFamily: "'Cinzel', serif" }}>
