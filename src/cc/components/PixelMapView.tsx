@@ -81,9 +81,10 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
     }
   }, [dungeon.partyPos.x, dungeon.partyPos.y]);
 
-  // Interpolate current party x/y
+  // Interpolate current party x/y. Walk takes a visibly-meaningful chunk of
+  // the idle move cycle so the party actually looks like it's journeying.
   const anim = posAnimRef.current;
-  const WALK_MS = 500;
+  const WALK_MS = 720;
   const partyX = anim && (now - anim.startAt) < WALK_MS
     ? anim.fromX + (anim.toX - anim.fromX) * easeOut((now - anim.startAt) / WALK_MS)
     : dungeon.partyPos.x;
@@ -191,16 +192,50 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
           <TileCell key={`${t.x},${t.y}`} tile={t} theme={theme} dungeon={dungeon} />
         ))}
 
-        {/* Path connectors — highlight visited path with a subtle golden glow */}
-        {dungeon.path.slice(0, dungeon.pathIndex + 1).map((p, i) => (
-          <div key={`p${i}`}
-               className="absolute pointer-events-none"
-               style={{
-                 left: p.x * TILE, top: p.y * TILE,
-                 width: TILE, height: TILE,
-                 background: `radial-gradient(circle, ${theme.accentColor}18 0%, transparent 60%)`,
-               }} />
-        ))}
+        {/* Path connectors — highlight visited path with a subtle golden glow.
+            Tiles visited more recently glow slightly brighter. */}
+        {dungeon.path.slice(0, dungeon.pathIndex + 1).map((p, i) => {
+          const recency = dungeon.pathIndex - i;
+          const strength = recency === 0 ? 30 : recency === 1 ? 22 : 14;
+          return (
+            <div key={`p${i}`}
+                 className="absolute pointer-events-none"
+                 style={{
+                   left: p.x * TILE, top: p.y * TILE,
+                   width: TILE, height: TILE,
+                   background: `radial-gradient(circle, ${theme.accentColor}${strength.toString(16).padStart(2, '0')} 0%, transparent 65%)`,
+                 }} />
+          );
+        })}
+
+        {/* Tiny footprint marks on visited path tiles (last 4) */}
+        {dungeon.path.slice(Math.max(0, dungeon.pathIndex - 3), dungeon.pathIndex + 1).map((p, idx, arr) => {
+          const age = arr.length - 1 - idx; // 0 = current, higher = older
+          if (age === 0) return null; // current tile gets the party, no prints
+          const opacity = Math.max(0, 0.25 - age * 0.05);
+          return (
+            <React.Fragment key={`fp${p.x}_${p.y}`}>
+              <span className="absolute pointer-events-none"
+                    style={{
+                      left: p.x * TILE + TILE * 0.32,
+                      top:  p.y * TILE + TILE * 0.62,
+                      fontSize: 10,
+                      opacity,
+                      filter: `drop-shadow(0 0 2px ${theme.accentColor})`,
+                      color: theme.accentColor,
+                    }}>•</span>
+              <span className="absolute pointer-events-none"
+                    style={{
+                      left: p.x * TILE + TILE * 0.58,
+                      top:  p.y * TILE + TILE * 0.55,
+                      fontSize: 10,
+                      opacity,
+                      filter: `drop-shadow(0 0 2px ${theme.accentColor})`,
+                      color: theme.accentColor,
+                    }}>•</span>
+            </React.Fragment>
+          );
+        })}
 
         {/* Monsters on the current tile */}
         {enemies.map(m => {
@@ -1381,6 +1416,8 @@ interface DeathFx {
   bornAt: number;
   coins: Array<{ id: string; tx: number; ty: number; dr: number; emoji: string; delay: number }>;
   boss: boolean;
+  xpGain: number;
+  goldGain: number;
 }
 
 const DeathFxLayer: React.FC<{
@@ -1424,6 +1461,8 @@ const DeathFxLayer: React.FC<{
             bornAt: Date.now(),
             coins,
             boss,
+            xpGain: def.xpReward,
+            goldGain: Math.floor((def.goldReward[0] + def.goldReward[1]) / 2),
           });
         }
       }
@@ -1452,6 +1491,8 @@ const DeathFxLayer: React.FC<{
               delay: i * 40,
             })),
             boss: false,
+            xpGain: 0,
+            goldGain: 0,
           });
         }
         delete prevRef.current[id];
@@ -1519,6 +1560,43 @@ const DeathFxLayer: React.FC<{
                 {c.emoji}
               </span>
             ))}
+            {/* Reward floats — XP + gold */}
+            {d.xpGain > 0 && age < 1100 && (
+              <div key={`${d.id}_xp`} className="absolute pointer-events-none"
+                   style={{
+                     left: d.x - 4, top: d.y - 28,
+                     transform: `translate(-50%, ${-age * 0.04}px)`,
+                     opacity: Math.max(0, 1 - age / 1000),
+                     zIndex: 32,
+                   }}>
+                <span className="text-[11px] font-black"
+                      style={{
+                        color: '#f2e08a',
+                        textShadow: '0 0 4px #d4a943, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}>
+                  +{d.xpGain} XP
+                </span>
+              </div>
+            )}
+            {d.goldGain > 0 && age < 1100 && (
+              <div key={`${d.id}_gp`} className="absolute pointer-events-none"
+                   style={{
+                     left: d.x + 4, top: d.y - 14,
+                     transform: `translate(-50%, ${-age * 0.03}px)`,
+                     opacity: Math.max(0, 1 - age / 1000),
+                     zIndex: 32,
+                   }}>
+                <span className="text-[10px] font-black"
+                      style={{
+                        color: '#ffd860',
+                        textShadow: '0 0 4px #d4a943, 1px 1px 0 #000, -1px 1px 0 #000',
+                        fontFamily: "'JetBrains Mono', monospace",
+                      }}>
+                  +{d.goldGain}g
+                </span>
+              </div>
+            )}
           </React.Fragment>
         );
       })}

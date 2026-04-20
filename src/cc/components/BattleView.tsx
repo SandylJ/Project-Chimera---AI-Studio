@@ -66,9 +66,12 @@ export const BattleView: React.FC<Props> = ({
   }, [bossBanner]);
 
   // Light screen-shake trigger: any time a hero takes damage, briefly shake.
-  // Driven by the max `lastHitAt` across active heroes.
+  // Driven by the max `lastHitAt` across active heroes + kill-combo bumps.
   const [shakeUntil, setShakeUntil] = useState<number>(0);
+  const [killFlashUntil, setKillFlashUntil] = useState<number>(0);
   const prevMaxHitRef = useRef<number>(0);
+  const prevKillAtRef = useRef<number>(0);
+  const prevKillCountRef = useRef<number>(0);
   useEffect(() => {
     let maxHit = 0;
     for (const h of heroes) {
@@ -77,6 +80,16 @@ export const BattleView: React.FC<Props> = ({
     if (maxHit > prevMaxHitRef.current) {
       setShakeUntil(Date.now() + 180);
       prevMaxHitRef.current = maxHit;
+    }
+    // Kill-combo-based shake
+    if (state.lastKillAt > prevKillAtRef.current && state.totalMonstersKilled > prevKillCountRef.current) {
+      // Small shake per kill, bigger one on streak
+      const extra = state.killCombo >= 5 ? 160 : state.killCombo >= 3 ? 90 : 0;
+      if (extra > 0) setShakeUntil(u => Math.max(u, Date.now() + extra));
+      // Green kill-flash briefly on screen
+      setKillFlashUntil(Date.now() + 120);
+      prevKillAtRef.current = state.lastKillAt;
+      prevKillCountRef.current = state.totalMonstersKilled;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -126,6 +139,14 @@ export const BattleView: React.FC<Props> = ({
           {Date.now() < shakeUntil && (
             <div className="absolute inset-0 pointer-events-none z-40"
                  style={{ background: 'rgba(255, 60, 60, 0.18)' }} />
+          )}
+
+          {/* Green kill flash — brief positive pop */}
+          {Date.now() < killFlashUntil && (
+            <div className="absolute inset-0 pointer-events-none z-40"
+                 style={{
+                   background: 'radial-gradient(circle at 50% 50%, rgba(127, 226, 160, 0.22) 0%, transparent 60%)',
+                 }} />
           )}
 
           {/* Combo streak banner bottom-right */}
