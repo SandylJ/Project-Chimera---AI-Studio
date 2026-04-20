@@ -335,6 +335,9 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
         </div>
       </div>
 
+      {/* Stash / gold drop target — loot arcs visibly land here */}
+      <StashIndicator gold={state.stash.gold} essence={state.stash.essence} />
+
       {/* Mini-map top-right */}
       <MiniMap dungeon={dungeon} theme={theme} />
 
@@ -812,6 +815,43 @@ const DamageFloat: React.FC<{ float: Float; x: number; y: number; now: number }>
   );
 };
 
+// ============ Stash Indicator ============
+
+const StashIndicator: React.FC<{ gold: number; essence: number }> = ({ gold, essence }) => {
+  const [bumpKey, setBumpKey] = useState(0);
+  const prevGoldRef = useRef(gold);
+  const prevEssenceRef = useRef(essence);
+  useEffect(() => {
+    if (gold > prevGoldRef.current || essence > prevEssenceRef.current) {
+      setBumpKey(k => k + 1);
+    }
+    prevGoldRef.current = gold;
+    prevEssenceRef.current = essence;
+  }, [gold, essence]);
+  return (
+    <div className="absolute z-20"
+         style={{
+           right: 164, top: 6,
+           pointerEvents: 'none',
+         }}>
+      <div key={bumpKey}
+           className="flex items-center gap-1 px-2 py-0.5 rounded-md"
+           style={{
+             background: 'rgba(20,16,12,0.85)',
+             border: '1px solid #D4A943',
+             boxShadow: '0 0 8px #D4A94360',
+             animation: 'goldCounterFlash 0.6s ease-out',
+           }}>
+        <span className="text-base" style={{ filter: 'drop-shadow(0 0 3px #f2c846)' }}>💰</span>
+        <span className="text-xs font-black tabular-nums text-[#F2E6A8]"
+              style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 4px #d4a943' }}>
+          {gold.toLocaleString()}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 // ============ Mini Map ============
 
 const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, theme }) => {
@@ -845,6 +885,7 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
           if (!inPath && !t.revealed) return null;
           const isHere = t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y;
           const liveEncounter = !!(t.encounter && t.encounter.monsters.length > 0);
+          const encounterCount = liveEncounter ? t.encounter.monsters.filter((m: any) => m.hp > 0).length : 0;
           const color =
             isHere             ? theme.accentColor :
             t.kind === 'boss'  ? '#ff4040' :
@@ -867,13 +908,18 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
                    animation: liveEncounter && !isHere ? 'glowPulse 1.6s ease-in-out infinite' : undefined,
                    ['--glow' as any]: '#ff4040',
                  }}>
-              {icon && (
+              {encounterCount > 0 && !isHere ? (
+                <span className="text-[7px] font-black text-white leading-none"
+                      style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000' }}>
+                  {encounterCount}
+                </span>
+              ) : icon ? (
                 <span style={{
                   fontSize: icon === '•' ? 8 : 7,
                   opacity: 0.9,
                   filter: isHere ? 'drop-shadow(0 0 1px #000)' : undefined,
                 }}>{icon}</span>
-              )}
+              ) : null}
             </div>
           );
         })}
