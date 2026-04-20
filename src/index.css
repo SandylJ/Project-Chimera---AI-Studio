@@ -85,6 +85,147 @@
 }
 
 /* ============================================================
+   Combat & world FX — attack projectiles, slashes, death poofs,
+   loot fly-outs, walking dust, tile arrival pulse.
+   ============================================================ */
+
+/* Projectile zips from source to target along a straight line.
+   --dx/--dy in px. */
+@keyframes projectileZip {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(0.7); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--dx, 0), var(--dy, 0)) scale(1); opacity: 1; }
+}
+
+/* Slash arc — short-lived rotated streak. Uses --angle. */
+@keyframes slashArc {
+  0%   { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scaleX(0) scaleY(1);   opacity: 0.0; }
+  30%  { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scaleX(1.2) scaleY(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) scaleX(1.4) scaleY(0.4); opacity: 0; }
+}
+
+/* Radial explosion (spell impact) */
+@keyframes spellBurst {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0.95; }
+  70%  { transform: translate(-50%, -50%) scale(1.8); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+/* Rising healing sparkle above ally */
+@keyframes healRise {
+  0%   { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+  20%  { transform: translate(-50%, -6px) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -38px) scale(0.9); opacity: 0; }
+}
+
+/* Buff-self ring pulse */
+@keyframes buffRing {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
+
+/* Monster death poof — scale up + fade; used on a smoke puff over the corpse */
+@keyframes deathPoof {
+  0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 0.95; }
+  60%  { transform: translate(-50%, -50%) scale(1.5) rotate(25deg); opacity: 0.75; }
+  100% { transform: translate(-50%, -80%) scale(2.2) rotate(-15deg); opacity: 0; }
+}
+
+/* Monster corpse flies backward + spins while fading. --dx/--dy direction. */
+@keyframes corpseFlyoff {
+  0%   { transform: translate(-50%, -100%) translate(0, 0) rotate(0deg); opacity: 1; filter: grayscale(0); }
+  100% { transform: translate(-50%, -100%) translate(var(--dx, 0), var(--dy, -18px)) rotate(var(--dr, 180deg)); opacity: 0; filter: grayscale(1) brightness(0.55); }
+}
+
+/* Item/gold flies in an arc from source toward top-right (stash).
+   Two-stage: first pop up, then fly to target. --tx/--ty = target offset. */
+@keyframes lootArc {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(0.5) rotate(0deg); opacity: 0; }
+  15%  { transform: translate(-50%, -50%) translate(0, -18px) scale(1.1) rotate(20deg); opacity: 1; }
+  75%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) translate(var(--tx, 0), var(--ty, -200px)) scale(0.6) rotate(var(--dr, 540deg)); opacity: 0; }
+}
+
+/* Tiny walking dust puff behind party */
+@keyframes walkDust {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(1.6) translateY(4px); opacity: 0; }
+}
+
+/* Tile arrival flash — ring that expands and fades on the just-entered tile */
+@keyframes tileArriveRing {
+  0%   { transform: scale(0.1); opacity: 0; border-width: 3px; }
+  30%  { opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0; border-width: 1px; }
+}
+
+/* Encounter entrance — monster slides in from edge while scaling */
+@keyframes monsterApproach {
+  0%   { transform: translate(-50%, -100%) translate(var(--fromX, 0), var(--fromY, 0)) scale(0.4); opacity: 0; }
+  100% { transform: translate(-50%, -100%) translate(0, 0) scale(1); opacity: 1; }
+}
+
+/* Subtle ambient pulse on loot tiles (chest/shrine etc) — bright radial */
+@keyframes tileBeacon {
+  0%, 100% { box-shadow: 0 0 14px 2px var(--beacon, #D4A943) inset; }
+  50%      { box-shadow: 0 0 26px 6px var(--beacon, #D4A943) inset; }
+}
+
+/* Aggro stun-stars bounce */
+@keyframes stunStar {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-2px) rotate(20deg); }
+}
+
+/* Blood splat on crit — quick shudder */
+@keyframes critSplat {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+}
+
+/* Theme-specific ambient particle motions */
+@keyframes snowFall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translate(40px, 102vh) rotate(360deg); opacity: 0; }
+}
+@keyframes emberRise {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(var(--wobble, 30px), -110vh) scale(0.5); opacity: 0; }
+}
+@keyframes bubbleRise {
+  0%   { transform: translate(0, 0) scale(0.8); opacity: 0; }
+  15%  { opacity: 0.7; }
+  100% { transform: translate(20px, -110vh) scale(1.2); opacity: 0; }
+}
+@keyframes sparkTwinkle {
+  0%   { opacity: 0.2; transform: scale(0.8) rotate(0deg); }
+  50%  { opacity: 1;   transform: scale(1.2) rotate(180deg); }
+  100% { opacity: 0.4; transform: scale(0.9) rotate(360deg); }
+}
+@keyframes leafFall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translate(80px, 102vh) rotate(720deg); opacity: 0; }
+}
+/* Idle chest wiggle — small left/right rock */
+@keyframes chestWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-4deg); }
+  50%      { transform: rotate(0deg); }
+  75%      { transform: rotate(4deg); }
+}
+/* Fountain gentle vertical bob */
+@keyframes fountainBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* ============================================================
    IMPERIAL IDLE — Master Stylesheet
    Aesthetic: Stardew Valley warmth + mechanical keyboard tactile + collector dopamine
    ============================================================ */

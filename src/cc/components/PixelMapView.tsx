@@ -3,6 +3,7 @@ import { GameState, Tile, MonsterInstance, Hero, Rarity } from '../types';
 import { CLASSES } from '../data/classes';
 import { MONSTERS } from '../data/monsters';
 import { ITEMS } from '../data/items';
+import { ABILITIES } from '../data/abilities';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
 import { MonsterSpriteArt } from '../visuals/monsterSprites';
@@ -15,6 +16,22 @@ import { MonsterSpriteArt } from '../visuals/monsterSprites';
    ============================================================ */
 
 const TILE = 64;
+
+// 2x2 hero cluster offsets inside a tile. Shared between party render and FX.
+const HERO_OFFSETS: Array<{ dx: number; dy: number }> = [
+  { dx: -18, dy: -8 },
+  { dx:  18, dy: -8 },
+  { dx: -18, dy: 12 },
+  { dx:  18, dy: 12 },
+];
+
+function heroWorldPos(i: number, partyTileX: number, partyTileY: number): { x: number; y: number } {
+  const o = HERO_OFFSETS[i] ?? { dx: 0, dy: 0 };
+  return {
+    x: partyTileX * TILE + TILE / 2 + o.dx,
+    y: partyTileY * TILE + TILE / 2 + o.dy,
+  };
+}
 
 interface Props {
   state: GameState;
@@ -213,6 +230,44 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
           walkDir={walkDir}
         />
 
+        {/* Walking dust kicked up behind party */}
+        {walking && (
+          <WalkingDust partyX={partyX} partyY={partyY} walkDir={walkDir} now={now} />
+        )}
+
+        {/* Tile arrival pulse */}
+        <TileArriveRing
+          tileX={dungeon.partyPos.x}
+          tileY={dungeon.partyPos.y}
+          arriveAt={prevPosRef.current.at}
+          now={now}
+        />
+
+        {/* Attack FX — projectiles / slashes / spells driven by hero.lastAction + monster.lastAttack */}
+        <AttackFxLayer
+          heroes={heroes}
+          enemies={enemies}
+          enemyPositions={enemyPositions}
+          partyX={partyX}
+          partyY={partyY}
+          now={now}
+        />
+
+        {/* Death FX — flying corpses + loot arcs when monsters die */}
+        <DeathFxLayer
+          enemies={enemies}
+          enemyPositions={enemyPositions}
+          partyX={partyX}
+          partyY={partyY}
+          now={now}
+        />
+
+        {/* Tile-resolve FX — chests/shrines/fountains burst when cleared */}
+        <TileResolveFxLayer dungeon={dungeon} now={now} />
+
+        {/* Ability cast announcer */}
+        <AbilityCastAnnouncer heroes={heroes} partyX={partyX} partyY={partyY} now={now} />
+
         {/* Damage / heal floats */}
         {floats.map(f => {
           // find target (hero or enemy) position
@@ -299,6 +354,10 @@ const TileCell: React.FC<{ tile: Tile; theme: DungeonTheme; dungeon: any }> = ({
                radial-gradient(circle at 40% 80%, ${theme.wallDark}50 0.6px, transparent 2px)
              `,
            }} />
+      {/* Persistent flavor doodad — seeded by tile coords so stable across frames */}
+      {tile.kind === 'empty' && !tile.cleared && (
+        <TileFlavor tile={tile} theme={theme} />
+      )}
       {/* Kind-specific decoration */}
       <TileDecor tile={tile} theme={theme} />
       {/* Fog of war on tiles not yet revealed */}
@@ -311,31 +370,82 @@ const TileCell: React.FC<{ tile: Tile; theme: DungeonTheme; dungeon: any }> = ({
 
 const TileDecor: React.FC<{ tile: Tile; theme: DungeonTheme }> = ({ tile, theme }) => {
   if (tile.cleared && tile.kind !== 'entrance' && tile.kind !== 'boss') {
-    // Subtle marker on cleared tiles
+    // Subtle marker on cleared tiles — small footprint
     return (
-      <div className="absolute inset-0 flex items-center justify-center opacity-30 text-2xl">
-        ·
+      <div className="absolute inset-0 flex items-center justify-center opacity-25 text-xl"
+           style={{ color: theme.accentColor }}>
+        ◦
       </div>
     );
   }
-  const map: Partial<Record<Tile['kind'], { icon: string; color: string }>> = {
+  const map: Partial<Record<Tile['kind'], { icon: string; color: string; anim?: string }>> = {
     entrance: { icon: '🚪', color: '#B8A890' },
-    boss:     { icon: '👑', color: '#ff5050' },
-    chest:    { icon: '📦', color: '#D4A943' },
+    boss:     { icon: '👑', color: '#ff5050', anim: 'glowPulse 1.2s ease-in-out infinite' },
+    chest:    { icon: '📦', color: '#D4A943', anim: 'chestWiggle 2.2s ease-in-out infinite' },
     trap:     { icon: '⚠',  color: '#ff6060' },
-    shrine:   { icon: '⛩',  color: '#7FE2A0' },
-    fountain: { icon: '⛲',  color: '#6EA9E4' },
+    shrine:   { icon: '⛩',  color: '#7FE2A0', anim: 'glowPulse 2.4s ease-in-out infinite' },
+    fountain: { icon: '⛲',  color: '#6EA9E4', anim: 'fountainBob 2.5s ease-in-out infinite' },
     fork:     { icon: '🛤',  color: '#F2E6A8' },
-    merchant: { icon: '🧳',  color: '#F2B84B' },
+    merchant: { icon: '🧳',  color: '#F2B84B', anim: 'chestWiggle 3s ease-in-out infinite' },
     exit:     { icon: '🚪', color: '#B8A890' },
   };
   const d = map[tile.kind];
   if (!d) return null;
+  // Boss or high-value tiles also get an outward beacon glow
+  const beacon = (tile.kind === 'boss' || tile.kind === 'chest' || tile.kind === 'shrine' || tile.kind === 'fountain' || tile.kind === 'merchant');
   return (
-    <div className="absolute inset-0 flex items-center justify-center"
-         style={{ filter: `drop-shadow(0 0 6px ${d.color}) drop-shadow(0 2px 2px rgba(0,0,0,0.8))` }}>
-      <span style={{ fontSize: 34 }}>{d.icon}</span>
-    </div>
+    <>
+      {beacon && !tile.cleared && (
+        <div className="absolute inset-0 pointer-events-none"
+             style={{
+               borderRadius: 4,
+               background: `radial-gradient(circle, ${d.color}20 0%, transparent 65%)`,
+               animation: 'glowPulse 2.2s ease-in-out infinite',
+               ['--glow' as any]: d.color,
+             }} />
+      )}
+      <div className="absolute inset-0 flex items-center justify-center"
+           style={{
+             filter: `drop-shadow(0 0 6px ${d.color}) drop-shadow(0 2px 2px rgba(0,0,0,0.8))`,
+             animation: d.anim,
+             ['--glow' as any]: d.color,
+           }}>
+        <span style={{ fontSize: 34 }}>{d.icon}</span>
+      </div>
+    </>
+  );
+};
+
+// ============ Tile flavor (small persistent decoration) ============
+
+function seededRand(x: number, y: number, salt: number): number {
+  const n = Math.sin((x + 1) * 12.9898 + (y + 1) * 78.233 + salt * 37.719) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+const TileFlavor: React.FC<{ tile: Tile; theme: DungeonTheme }> = ({ tile, theme }) => {
+  // Emit nothing most of the time; ~30% tiles get a flavor doodad
+  const roll = seededRand(tile.x, tile.y, 1);
+  if (roll > 0.33) return null;
+  // Pick a bgEmoji from the theme at random (stable)
+  const list = theme.bgEmoji;
+  const emoji = list[Math.floor(seededRand(tile.x, tile.y, 7) * list.length)];
+  // Position within the tile
+  const px = 8 + seededRand(tile.x, tile.y, 2) * (TILE - 20);
+  const py = 8 + seededRand(tile.x, tile.y, 3) * (TILE - 22);
+  const size = 10 + seededRand(tile.x, tile.y, 4) * 10;
+  const rot = (seededRand(tile.x, tile.y, 5) - 0.5) * 30;
+  return (
+    <span className="absolute pointer-events-none select-none"
+          style={{
+            left: px, top: py,
+            fontSize: size,
+            opacity: 0.5,
+            transform: `rotate(${rot}deg)`,
+            filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.7))',
+          }}>
+      {emoji}
+    </span>
   );
 };
 
@@ -344,21 +454,22 @@ const TileDecor: React.FC<{ tile: Tile; theme: DungeonTheme }> = ({ tile, theme 
 const PartyOnTile: React.FC<{
   heroes: Hero[]; tileX: number; tileY: number; now: number; walking: boolean; walkDir: string;
 }> = ({ heroes, tileX, tileY, now, walking }) => {
-  // 4-hero 2x2 cluster within the tile — spread a bit wider so each plate has room.
-  const offsets = [
-    { dx: -18, dy: -8 },
-    { dx:  18, dy: -8 },
-    { dx: -18, dy: 12 },
-    { dx:  18, dy: 12 },
-  ];
   return (
     <>
       {heroes.slice(0, 4).map((h, i) => {
-        const o = offsets[i];
+        const o = HERO_OFFSETS[i];
         const bob = walking ? Math.sin((now / 120) + i) * 3 : Math.sin((now / 500) + i) * 1.2;
-        const lx = tileX * TILE + TILE / 2 + o.dx;
-        const ly = tileY * TILE + TILE / 2 + o.dy + bob;
+        // Attack lunge: when this hero has just attacked, lunge toward target side
+        const actAge = h.lastAction ? now - h.lastAction.at : Infinity;
+        const lungeT = actAge < 260 ? 1 - actAge / 260 : 0;
+        // Ranged/spell: no physical lunge (they stay put and fire). Melee lunges forward.
+        const isMelee = h.lastAction?.kind === 'melee';
+        const lungeX = isMelee ? Math.sin(lungeT * Math.PI) * 10 : 0;
+        const lungeY = isMelee ? -Math.sin(lungeT * Math.PI) * 2 : 0;
+        const lx = tileX * TILE + TILE / 2 + o.dx + lungeX;
+        const ly = tileY * TILE + TILE / 2 + o.dy + bob + lungeY;
         const cls = CLASSES[h.classId];
+        const hasBuff = h.buffs.length > 0;
         const hpPct = Math.max(0, (h.hp / Math.max(1, h.maxHp)) * 100);
         const mpPct = h.maxMp > 0 ? Math.max(0, (h.mp / h.maxMp) * 100) : 0;
         // Hit flash: if hero took damage within ~260ms, tint red
@@ -454,6 +565,43 @@ const PartyOnTile: React.FC<{
                      animation: 'ambientFloat 1.4s ease-in-out infinite alternate',
                    }} />
             )}
+            {/* Active buff glow */}
+            {hasBuff && (
+              <div className="absolute pointer-events-none"
+                   style={{
+                     left: '50%', top: '50%',
+                     width: 46, height: 46,
+                     borderRadius: '50%',
+                     transform: 'translate(-50%, -50%)',
+                     boxShadow: '0 0 12px #f2e08a80, inset 0 0 8px #f2e08a60',
+                     animation: 'glowPulse 1.8s ease-in-out infinite',
+                     ['--glow' as any]: '#f2e08a',
+                   }} />
+            )}
+            {/* Status icons bubble — shield / buffs / low-hp */}
+            {(h.shield > 0 || hasBuff || lowHp) && !downed && (
+              <div className="absolute flex gap-0.5 pointer-events-none"
+                   style={{
+                     left: '100%', top: -4,
+                     transform: 'translate(-20%, 0)',
+                   }}>
+                {h.shield > 0 && (
+                  <span className="text-[10px] leading-none px-0.5 rounded-sm bg-black/80 border border-[#6EA9E4]"
+                        style={{ color: '#6EA9E4', textShadow: '0 0 3px #6EA9E4' }}
+                        title={`Shield ${Math.ceil(h.shield)}`}>🛡</span>
+                )}
+                {hasBuff && (
+                  <span className="text-[10px] leading-none px-0.5 rounded-sm bg-black/80 border border-[#f2e08a]"
+                        style={{ color: '#f2e08a', textShadow: '0 0 3px #f2c846' }}
+                        title={`${h.buffs.length} buff(s)`}>⬆</span>
+                )}
+                {lowHp && (
+                  <span className="text-[10px] leading-none px-0.5 rounded-sm bg-black/80 border border-[#E86E6E] animate-pulse"
+                        style={{ color: '#E86E6E', textShadow: '0 0 3px #E86E6E' }}
+                        title="Low HP">⚠</span>
+                )}
+              </div>
+            )}
             {/* Hit overlay tint */}
             {flashT > 0 && (
               <div className="absolute inset-0 pointer-events-none"
@@ -508,7 +656,10 @@ const MonsterOnTile: React.FC<{
 }> = ({ monster, tileX, tileY, dx, dy, now, onClick }) => {
   const def = MONSTERS[monster.monsterId];
   if (!def) return null;
-  const bob = Math.sin((now / 400) + hashHue(monster.id)) * 2;
+  const hue = hashHue(monster.id);
+  const bob = Math.sin((now / 400) + hue) * 2;
+  // Idle drift — tiny lateral sway (not a lunge). Faster for lower-level minions.
+  const driftX = Math.sin((now / 700) + hue * 2) * 3;
   const isBoss = def.boss;
   const attackAge = monster.lastAttack ? now - monster.lastAttack.at : Infinity;
   const lungeT = attackAge < 260 ? 1 - attackAge / 260 : 0;
@@ -529,7 +680,7 @@ const MonsterOnTile: React.FC<{
          onClick={onClick}
          style={{
            left: lx, top: ly,
-           transform: `translate(-50%, -100%) translate(${lungeX}px, ${bob}px)`,
+           transform: `translate(-50%, -100%) translate(${lungeX + driftX}px, ${bob}px)`,
            filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
            transition: lungeT > 0 ? 'transform 110ms ease-out' : 'transform 120ms ease-out',
            animation: dying ? 'fadeOut 0.5s forwards' : 'popIn 0.45s ease-out',
@@ -573,8 +724,24 @@ const MonsterOnTile: React.FC<{
         <MonsterSpriteArt monsterId={monster.monsterId} icon={def.icon} size={size} level={def.level} />
         {stunned && (
           <div className="absolute -top-4 left-1/2 text-[8px] font-black bg-black/80 px-1 rounded text-[#F2E6A8] border border-[#F2E6A8]/60"
-               style={{ transform: 'translateX(-50%) scaleX(-1)', fontFamily: "'JetBrains Mono', monospace" }}>
-            STUNNED!
+               style={{
+                 transform: 'translateX(-50%) scaleX(-1)',
+                 fontFamily: "'JetBrains Mono', monospace",
+                 animation: 'stunStar 0.5s ease-in-out infinite alternate',
+               }}>
+            💫 STUN
+          </div>
+        )}
+        {/* DoT indicator — green bubbles if poisoned */}
+        {monster.dots.length > 0 && (
+          <div className="absolute -top-4 right-0 text-[10px] font-black bg-black/80 px-0.5 rounded border border-[#7FE2A0]/60"
+               style={{
+                 transform: 'scaleX(-1)',
+                 color: '#7FE2A0',
+                 fontFamily: "'JetBrains Mono', monospace",
+                 textShadow: '0 0 3px #7FE2A0',
+               }}>
+            ☠
           </div>
         )}
       </div>
@@ -643,11 +810,13 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
           const inPath = dungeon.path.some((p: any) => p.x === t.x && p.y === t.y);
           if (!inPath && !t.revealed) return null;
           const isHere = t.x === dungeon.partyPos.x && t.y === dungeon.partyPos.y;
+          const liveEncounter = !!(t.encounter && t.encounter.monsters.length > 0);
           const color =
-            isHere           ? theme.accentColor :
-            t.kind === 'boss'? '#ff4040' :
-            t.cleared        ? '#4a4034' :
-                               '#7A6E60';
+            isHere             ? theme.accentColor :
+            t.kind === 'boss'  ? '#ff4040' :
+            liveEncounter      ? '#d84040' :
+            t.cleared          ? '#4a4034' :
+                                 '#7A6E60';
           const icon = iconFor(t.kind);
           return (
             <div key={`${t.x},${t.y}`}
@@ -657,9 +826,12 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
                    width: CELL - 1, height: CELL - 1,
                    background: color + (t.cleared && !isHere ? 'aa' : 'dd'),
                    border: isHere ? `1px solid ${theme.accentColor}` : undefined,
-                   boxShadow: isHere ? `0 0 6px ${theme.accentColor}` : undefined,
+                   boxShadow: isHere ? `0 0 6px ${theme.accentColor}` :
+                              (liveEncounter && !isHere ? '0 0 3px #ff604080' : undefined),
                    borderRadius: 2,
                    opacity: t.revealed || isHere ? 1 : 0.55,
+                   animation: liveEncounter && !isHere ? 'glowPulse 1.6s ease-in-out infinite' : undefined,
+                   ['--glow' as any]: '#ff4040',
                  }}>
               {icon && (
                 <span style={{
@@ -671,6 +843,20 @@ const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, the
             </div>
           );
         })}
+        {/* Path next-tile indicator: faint dot on upcoming path */}
+        {dungeon.path[dungeon.pathIndex + 1] && (() => {
+          const n = dungeon.path[dungeon.pathIndex + 1];
+          return (
+            <div className="absolute pointer-events-none"
+                 style={{
+                   left: n.x * CELL, top: n.y * CELL,
+                   width: CELL - 1, height: CELL - 1,
+                   border: `1px dashed ${theme.accentColor}`,
+                   borderRadius: 2,
+                   opacity: 0.55,
+                 }} />
+          );
+        })()}
       </div>
     </div>
   );
@@ -741,24 +927,832 @@ const AdvancingRing: React.FC<{ moveTimer: number; color: string }> = ({ moveTim
 // ============ Ambient overlay ============
 
 const AmbientOverlay: React.FC<{ theme: DungeonTheme }> = ({ theme }) => {
-  const particles = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
-    id: i, x: Math.random() * 100, y: Math.random() * 100,
-    size: 3 + Math.random() * 8, dur: 3 + Math.random() * 5,
-  })), [theme]);
+  // Theme-aware particle counts and styling
+  const kind = theme.ambientKind;
+  const count = kind === 'snow' ? 45 : kind === 'embers' ? 40 : kind === 'stars' ? 60 : 30;
+  const particles = useMemo(() => Array.from({ length: count }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: 3 + Math.random() * 8,
+    dur: 3 + Math.random() * 5,
+    delay: Math.random() * 4,
+  })), [theme, count]);
+
+  // Atmosphere layer — subtle color wash
+  const washColor = theme.fogColor;
+
   return (
-    <div className="absolute inset-0 pointer-events-none z-10">
-      {particles.map(p => (
-        <div key={p.id} className="absolute rounded-full"
+    <>
+      {/* Colored fog wash */}
+      <div className="absolute inset-0 pointer-events-none z-[5]"
+           style={{ background: `radial-gradient(ellipse at 50% 40%, ${washColor} 0%, transparent 75%)` }} />
+
+      {/* Theme-specific particles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+        {particles.map(p => {
+          if (kind === 'snow') {
+            return (
+              <span key={p.id} className="absolute"
+                    style={{
+                      left: `${p.x}%`, top: `-2%`,
+                      fontSize: 8 + p.size / 2,
+                      color: '#e0f4ff',
+                      opacity: 0.75,
+                      filter: 'drop-shadow(0 0 2px #fff)',
+                      animation: `snowFall ${8 + p.dur}s linear infinite`,
+                      animationDelay: `${p.delay}s`,
+                    }}>❄</span>
+            );
+          }
+          if (kind === 'embers') {
+            return (
+              <div key={p.id} className="absolute rounded-full"
+                   style={{
+                     left: `${p.x}%`, top: `${80 + Math.random() * 20}%`,
+                     width: p.size * 0.7, height: p.size * 0.7,
+                     background: `radial-gradient(circle, #ffdc60 0%, #ff6030 60%, transparent 90%)`,
+                     boxShadow: '0 0 6px #ff6030',
+                     animation: `emberRise ${p.dur + 4}s ease-out infinite`,
+                     animationDelay: `${p.delay}s`,
+                   }} />
+            );
+          }
+          if (kind === 'bubbles') {
+            return (
+              <div key={p.id} className="absolute rounded-full"
+                   style={{
+                     left: `${p.x}%`, top: `${90 + Math.random() * 10}%`,
+                     width: p.size, height: p.size,
+                     background: `radial-gradient(circle at 30% 30%, #ffffff80 0%, ${theme.accentColor}30 60%, transparent 90%)`,
+                     border: `1px solid ${theme.accentColor}60`,
+                     animation: `bubbleRise ${p.dur + 6}s ease-in-out infinite`,
+                     animationDelay: `${p.delay}s`,
+                   }} />
+            );
+          }
+          if (kind === 'sparks') {
+            return (
+              <span key={p.id} className="absolute"
+                    style={{
+                      left: `${p.x}%`, top: `${p.y}%`,
+                      fontSize: p.size / 2 + 6,
+                      color: theme.accentColor,
+                      filter: `drop-shadow(0 0 6px ${theme.accentColor})`,
+                      animation: `sparkTwinkle ${p.dur}s ease-in-out infinite alternate`,
+                      animationDelay: `${p.delay}s`,
+                    }}>✦</span>
+            );
+          }
+          if (kind === 'shadow') {
+            return (
+              <div key={p.id} className="absolute rounded-full"
+                   style={{
+                     left: `${p.x}%`, top: `${p.y}%`,
+                     width: p.size * 1.5, height: p.size * 1.5,
+                     background: `radial-gradient(circle, ${theme.accentColor}25 0%, transparent 70%)`,
+                     filter: 'blur(3px)',
+                     animation: `ambientFloat ${p.dur + 2}s ease-in-out infinite alternate`,
+                     animationDelay: `${p.delay}s`,
+                   }} />
+            );
+          }
+          if (kind === 'stars') {
+            return (
+              <span key={p.id} className="absolute"
+                    style={{
+                      left: `${p.x}%`, top: `${p.y}%`,
+                      fontSize: 6 + p.size / 3,
+                      color: theme.accentColor,
+                      filter: `drop-shadow(0 0 4px ${theme.accentColor})`,
+                      animation: `sparkTwinkle ${p.dur * 1.5}s ease-in-out infinite alternate`,
+                      animationDelay: `${p.delay}s`,
+                    }}>·</span>
+            );
+          }
+          if (kind === 'leaves') {
+            return (
+              <span key={p.id} className="absolute"
+                    style={{
+                      left: `${p.x}%`, top: `-2%`,
+                      fontSize: 10,
+                      color: theme.accentColor,
+                      animation: `leafFall ${10 + p.dur}s linear infinite`,
+                      animationDelay: `${p.delay}s`,
+                    }}>🍂</span>
+            );
+          }
+          if (kind === 'webs') {
+            return (
+              <span key={p.id} className="absolute"
+                    style={{
+                      left: `${p.x}%`, top: `${p.y}%`,
+                      fontSize: 6 + p.size / 2,
+                      color: theme.accentColor,
+                      opacity: 0.28,
+                      filter: `drop-shadow(0 0 2px ${theme.accentColor})`,
+                      animation: `ambientFloat ${p.dur + 3}s ease-in-out infinite alternate`,
+                      animationDelay: `${p.delay}s`,
+                    }}>·</span>
+            );
+          }
+          // fallback: generic floating motes
+          return (
+            <div key={p.id} className="absolute rounded-full"
+                 style={{
+                   left: `${p.x}%`, top: `${p.y}%`,
+                   width: p.size, height: p.size,
+                   background: theme.accentColor,
+                   opacity: 0.1,
+                   animation: `ambientFloat ${p.dur}s ease-in-out infinite alternate`,
+                   animationDelay: `${p.delay}s`,
+                   filter: 'blur(1px)',
+                 }} />
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+// ============ Walking dust ============
+
+const WalkingDust: React.FC<{ partyX: number; partyY: number; walkDir: string; now: number }> = ({ partyX, partyY, walkDir, now }) => {
+  // Spawn a new dust puff every ~90ms while walking.
+  const dusts = useRef<Array<{ id: number; bornAt: number; x: number; y: number }>>([]);
+  const lastSpawnRef = useRef(0);
+  if (now - lastSpawnRef.current > 90) {
+    lastSpawnRef.current = now;
+    // Spawn behind the party's walk direction
+    const behindX = walkDir === 'right' ? -10 : walkDir === 'left' ? 10 : (Math.random() - 0.5) * 10;
+    const behindY = walkDir === 'down' ? -10 : walkDir === 'up' ? 10 : 10;
+    dusts.current.push({
+      id: now,
+      bornAt: now,
+      x: partyX * TILE + TILE / 2 + behindX + (Math.random() - 0.5) * 8,
+      y: partyY * TILE + TILE / 2 + behindY + (Math.random() - 0.5) * 4,
+    });
+    // Keep last 12
+    if (dusts.current.length > 12) dusts.current.splice(0, dusts.current.length - 12);
+  }
+  // Cull old
+  dusts.current = dusts.current.filter(d => now - d.bornAt < 600);
+  return (
+    <>
+      {dusts.current.map(d => (
+        <div key={d.id} className="absolute pointer-events-none"
              style={{
-               left: `${p.x}%`, top: `${p.y}%`,
-               width: p.size, height: p.size,
-               background: theme.accentColor,
-               opacity: 0.08,
-               animation: `ambientFloat ${p.dur}s ease-in-out infinite alternate`,
-               filter: 'blur(1px)',
+               left: d.x, top: d.y,
+               width: 14, height: 10,
+               background: 'radial-gradient(ellipse, rgba(160,140,100,0.55) 0%, transparent 75%)',
+               animation: 'walkDust 0.55s ease-out forwards',
+               zIndex: 5,
              }} />
       ))}
-    </div>
+    </>
+  );
+};
+
+// ============ Tile arrive ring ============
+
+const TileArriveRing: React.FC<{ tileX: number; tileY: number; arriveAt: number; now: number }> = ({ tileX, tileY, arriveAt, now }) => {
+  const age = now - arriveAt;
+  if (arriveAt === 0 || age > 650) return null;
+  return (
+    <div className="absolute pointer-events-none"
+         style={{
+           left: tileX * TILE, top: tileY * TILE,
+           width: TILE, height: TILE,
+           border: '2px solid #F2E6A8',
+           borderRadius: 4,
+           animation: 'tileArriveRing 0.6s ease-out forwards',
+           boxShadow: '0 0 12px #F2E6A880',
+           zIndex: 8,
+         }} />
+  );
+};
+
+// ============ Attack FX Layer ============
+
+interface AttackFx {
+  id: string;
+  kind: 'melee' | 'ranged' | 'spell_fire' | 'spell_frost' | 'spell_heal' | 'spell_light' | 'spell_shadow' | 'spell_aoe' | 'buff_self';
+  sourceX: number; sourceY: number;
+  targetX: number; targetY: number;
+  bornAt: number;
+  duration: number;
+}
+
+const AttackFxLayer: React.FC<{
+  heroes: Hero[]; enemies: MonsterInstance[];
+  enemyPositions: Array<{ id: string; dx: number; dy: number }>;
+  partyX: number; partyY: number; now: number;
+}> = ({ heroes, enemies, enemyPositions, partyX, partyY, now }) => {
+  // Track last-seen attack timestamps to detect new events
+  const lastHeroActRef = useRef<Record<string, number>>({});
+  const lastMonAtkRef = useRef<Record<string, number>>({});
+  const [fx, setFx] = useState<AttackFx[]>([]);
+
+  // Detect new hero attacks
+  useEffect(() => {
+    const nw = Date.now();
+    const newFx: AttackFx[] = [];
+    heroes.forEach((h, i) => {
+      if (!h.lastAction) return;
+      const prev = lastHeroActRef.current[h.id] ?? 0;
+      if (h.lastAction.at <= prev) return;
+      lastHeroActRef.current[h.id] = h.lastAction.at;
+      // Source = hero position
+      const src = heroWorldPos(i, partyX, partyY);
+      // Target: find enemy or ally
+      let tgtX = src.x, tgtY = src.y - 20;
+      const enemyPos = enemyPositions.find(p => p.id === h.lastAction!.targetId);
+      if (enemyPos) {
+        tgtX = partyX * TILE + TILE / 2 + enemyPos.dx;
+        tgtY = partyY * TILE + TILE / 2 + enemyPos.dy;
+      } else {
+        const allyIdx = heroes.findIndex(x => x.id === h.lastAction!.targetId);
+        if (allyIdx >= 0) {
+          const ap = heroWorldPos(allyIdx, partyX, partyY);
+          tgtX = ap.x; tgtY = ap.y;
+        }
+      }
+      const kind = h.lastAction.kind as AttackFx['kind'];
+      const dur = kind === 'melee' ? 260 :
+                  kind === 'spell_heal' ? 700 :
+                  kind === 'spell_aoe' ? 520 :
+                  kind === 'buff_self' ? 600 : 380;
+      newFx.push({
+        id: `hfx_${h.id}_${h.lastAction.at}`,
+        kind, sourceX: src.x, sourceY: src.y - 22,
+        targetX: tgtX, targetY: tgtY - 6,
+        bornAt: nw, duration: dur,
+      });
+    });
+    // Detect new monster attacks
+    enemies.forEach(m => {
+      if (!m.lastAttack) return;
+      const prev = lastMonAtkRef.current[m.id] ?? 0;
+      if (m.lastAttack.at <= prev) return;
+      lastMonAtkRef.current[m.id] = m.lastAttack.at;
+      const ePos = enemyPositions.find(p => p.id === m.id);
+      if (!ePos) return;
+      const src = { x: partyX * TILE + TILE / 2 + ePos.dx, y: partyY * TILE + TILE / 2 + ePos.dy };
+      const heroIdx = heroes.findIndex(h => h.id === m.lastAttack!.targetHeroId);
+      if (heroIdx < 0) return;
+      const tgt = heroWorldPos(heroIdx, partyX, partyY);
+      newFx.push({
+        id: `mfx_${m.id}_${m.lastAttack.at}`,
+        kind: 'melee',
+        sourceX: src.x, sourceY: src.y - 14,
+        targetX: tgt.x, targetY: tgt.y - 6,
+        bornAt: nw, duration: 260,
+      });
+    });
+    if (newFx.length) setFx(f => [...f.slice(-40), ...newFx]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroes, enemies]);
+
+  // Cull
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const nw = Date.now();
+      setFx(list => list.filter(e => nw - e.bornAt < e.duration + 80));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      {fx.map(e => <AttackFxDraw key={e.id} e={e} now={now} />)}
+    </>
+  );
+};
+
+const AttackFxDraw: React.FC<{ e: AttackFx; now: number }> = ({ e, now }) => {
+  const age = now - e.bornAt;
+  if (age > e.duration) return null;
+  const dx = e.targetX - e.sourceX;
+  const dy = e.targetY - e.sourceY;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const dist = Math.hypot(dx, dy);
+
+  if (e.kind === 'melee') {
+    // Slash arc at target
+    return (
+      <>
+        <div className="absolute pointer-events-none"
+             style={{
+               left: e.targetX, top: e.targetY,
+               width: 44, height: 6,
+               background: 'linear-gradient(90deg, transparent 0%, #ffffffcc 50%, transparent 100%)',
+               filter: 'drop-shadow(0 0 4px #fff)',
+               animation: `slashArc ${e.duration}ms ease-out forwards`,
+               ['--angle' as any]: `${angle - 18}deg`,
+               zIndex: 35,
+             }} />
+        <div className="absolute pointer-events-none"
+             style={{
+               left: e.targetX, top: e.targetY,
+               width: 44, height: 5,
+               background: 'linear-gradient(90deg, transparent 0%, #ffb848dd 50%, transparent 100%)',
+               filter: 'drop-shadow(0 0 3px #ffa050)',
+               animation: `slashArc ${e.duration}ms ease-out forwards`,
+               animationDelay: '30ms',
+               ['--angle' as any]: `${angle + 18}deg`,
+               zIndex: 35,
+             }} />
+      </>
+    );
+  }
+
+  if (e.kind === 'ranged') {
+    // Arrow projectile traveling
+    return (
+      <div className="absolute pointer-events-none"
+           style={{
+             left: e.sourceX, top: e.sourceY,
+             width: 16, height: 3,
+             background: 'linear-gradient(90deg, transparent 0%, #f0d8b0 40%, #ffffff 80%, #8a6838 100%)',
+             transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+             filter: 'drop-shadow(0 0 2px #000)',
+             animation: `projectileZip ${e.duration}ms ease-out forwards`,
+             ['--dx' as any]: `${dx}px`,
+             ['--dy' as any]: `${dy}px`,
+             zIndex: 35,
+           }} />
+    );
+  }
+
+  const spellColor =
+    e.kind === 'spell_fire' ? '#ff8030' :
+    e.kind === 'spell_frost' ? '#7be0ff' :
+    e.kind === 'spell_heal' ? '#9aff9a' :
+    e.kind === 'spell_light' ? '#ffe580' :
+    e.kind === 'spell_shadow' ? '#b06ee0' :
+    e.kind === 'spell_aoe' ? '#c070ff' :
+    '#ffd060';
+
+  if (e.kind === 'spell_heal') {
+    return (
+      <div className="absolute pointer-events-none"
+           style={{
+             left: e.targetX, top: e.targetY,
+             fontSize: 18,
+             color: spellColor,
+             textShadow: `0 0 8px ${spellColor}, 0 0 16px ${spellColor}`,
+             animation: `healRise ${e.duration}ms ease-out forwards`,
+             zIndex: 35,
+           }}>✦</div>
+    );
+  }
+
+  if (e.kind === 'buff_self') {
+    return (
+      <div className="absolute pointer-events-none"
+           style={{
+             left: e.sourceX, top: e.sourceY,
+             width: 50, height: 50,
+             border: `2px solid ${spellColor}`,
+             borderRadius: '50%',
+             boxShadow: `0 0 14px ${spellColor}, inset 0 0 14px ${spellColor}80`,
+             animation: `buffRing ${e.duration}ms ease-out forwards`,
+             zIndex: 35,
+           }} />
+    );
+  }
+
+  if (e.kind === 'spell_aoe') {
+    // Expanding ring centered on target (or source if no target)
+    return (
+      <div className="absolute pointer-events-none"
+           style={{
+             left: e.targetX, top: e.targetY,
+             width: 80, height: 80,
+             borderRadius: '50%',
+             background: `radial-gradient(circle, ${spellColor}90 0%, ${spellColor}40 50%, transparent 80%)`,
+             boxShadow: `0 0 20px ${spellColor}`,
+             animation: `spellBurst ${e.duration}ms ease-out forwards`,
+             zIndex: 35,
+           }} />
+    );
+  }
+
+  // spell_fire / spell_frost / spell_light / spell_shadow:
+  // Projectile + explosion at target
+  const projT = Math.min(1, age / (e.duration * 0.6));
+  const projDone = projT >= 1;
+  return (
+    <>
+      {!projDone && (
+        <div className="absolute pointer-events-none"
+             style={{
+               left: e.sourceX, top: e.sourceY,
+               width: 14, height: 14,
+               borderRadius: '50%',
+               background: `radial-gradient(circle, #fff 0%, ${spellColor} 50%, transparent 80%)`,
+               boxShadow: `0 0 10px ${spellColor}, 0 0 20px ${spellColor}80`,
+               transform: `translate(-50%, -50%) translate(${dx * projT}px, ${dy * projT}px)`,
+               zIndex: 35,
+             }} />
+      )}
+      {projDone && age - (e.duration * 0.6) < 260 && (
+        <div className="absolute pointer-events-none"
+             style={{
+               left: e.targetX, top: e.targetY,
+               width: 44, height: 44,
+               borderRadius: '50%',
+               background: `radial-gradient(circle, ${spellColor} 0%, ${spellColor}80 40%, transparent 70%)`,
+               boxShadow: `0 0 18px ${spellColor}`,
+               animation: `spellBurst 260ms ease-out forwards`,
+               zIndex: 35,
+             }} />
+      )}
+    </>
+  );
+};
+
+// ============ Death FX Layer ============
+
+interface DeathFx {
+  id: string;
+  x: number; y: number;
+  icon: string;
+  bornAt: number;
+  coins: Array<{ id: string; tx: number; ty: number; dr: number; emoji: string; delay: number }>;
+  boss: boolean;
+}
+
+const DeathFxLayer: React.FC<{
+  enemies: MonsterInstance[];
+  enemyPositions: Array<{ id: string; dx: number; dy: number }>;
+  partyX: number; partyY: number; now: number;
+}> = ({ enemies, enemyPositions, partyX, partyY, now }) => {
+  const prevRef = useRef<Record<string, { hp: number; maxHp: number }>>({});
+  const [deaths, setDeaths] = useState<DeathFx[]>([]);
+
+  useEffect(() => {
+    const newDeaths: DeathFx[] = [];
+    const seen = new Set<string>();
+    for (const m of enemies) {
+      seen.add(m.id);
+      const p = prevRef.current[m.id];
+      if (p && p.hp > 0 && m.hp <= 0) {
+        // Just died on this frame
+        const ePos = enemyPositions.find(x => x.id === m.id);
+        const def = MONSTERS[m.monsterId];
+        if (ePos && def) {
+          const x = partyX * TILE + TILE / 2 + ePos.dx;
+          const y = partyY * TILE + TILE / 2 + ePos.dy;
+          const boss = !!def.boss;
+          // Generate 3-7 coin/item particles that fly toward top-right
+          const n = boss ? 10 : 4;
+          const coins = Array.from({ length: n }, (_, i) => ({
+            id: `c_${m.id}_${i}`,
+            // target offset: top-right corner of screen relative to world position
+            // we just fly them up-right by a big amount
+            tx: 260 + Math.random() * 180,
+            ty: -220 - Math.random() * 120,
+            dr: 360 + Math.random() * 360,
+            emoji: Math.random() > 0.8 ? (boss ? '💎' : '✨') : '🪙',
+            delay: i * 40,
+          }));
+          newDeaths.push({
+            id: `d_${m.id}_${Date.now()}`,
+            x, y,
+            icon: def.icon,
+            bornAt: Date.now(),
+            coins,
+            boss,
+          });
+        }
+      }
+      prevRef.current[m.id] = { hp: m.hp, maxHp: m.maxHp };
+    }
+    // Also catch any monster that was in prev list but is gone (hp<=0 filtered out of array)
+    for (const id of Object.keys(prevRef.current)) {
+      if (!seen.has(id)) {
+        // Was tracked, now gone. If we didn't already fire death on it, fire now
+        const already = newDeaths.find(d => d.id.startsWith(`d_${id}_`));
+        if (!already && prevRef.current[id].hp > 0) {
+          // We don't have a position anymore — place at party center
+          const x = partyX * TILE + TILE / 2;
+          const y = partyY * TILE + TILE / 2;
+          newDeaths.push({
+            id: `d_${id}_${Date.now()}`,
+            x, y,
+            icon: '💥',
+            bornAt: Date.now(),
+            coins: Array.from({ length: 3 }, (_, i) => ({
+              id: `c_${id}_${i}`,
+              tx: 260 + Math.random() * 140,
+              ty: -220 - Math.random() * 80,
+              dr: 360 + Math.random() * 360,
+              emoji: '🪙',
+              delay: i * 40,
+            })),
+            boss: false,
+          });
+        }
+        delete prevRef.current[id];
+      }
+    }
+    if (newDeaths.length) setDeaths(d => [...d.slice(-20), ...newDeaths]);
+  }, [enemies, enemyPositions, partyX, partyY]);
+
+  // Cull
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const nw = Date.now();
+      setDeaths(ds => ds.filter(d => nw - d.bornAt < 1400));
+    }, 250);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      {deaths.map(d => {
+        const age = now - d.bornAt;
+        return (
+          <React.Fragment key={d.id}>
+            {/* Smoke poof */}
+            <div className="absolute pointer-events-none"
+                 style={{
+                   left: d.x, top: d.y,
+                   width: d.boss ? 90 : 56, height: d.boss ? 90 : 56,
+                   borderRadius: '50%',
+                   background: `radial-gradient(circle, rgba(255,255,255,0.75) 0%, rgba(180,160,140,0.45) 40%, transparent 75%)`,
+                   filter: 'blur(1px)',
+                   animation: 'deathPoof 700ms ease-out forwards',
+                   zIndex: 25,
+                 }} />
+            {/* Corpse fly-off */}
+            {age < 900 && (
+              <div className="absolute pointer-events-none"
+                   style={{
+                     left: d.x, top: d.y,
+                     fontSize: d.boss ? 44 : 28,
+                     animation: 'corpseFlyoff 900ms ease-in forwards',
+                     ['--dx' as any]: `${(Math.random() - 0.5) * 80}px`,
+                     ['--dy' as any]: `${-40 - Math.random() * 40}px`,
+                     ['--dr' as any]: `${(Math.random() - 0.5) * 480}deg`,
+                     filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.85))',
+                     zIndex: 22,
+                   }}>
+                {d.icon}
+              </div>
+            )}
+            {/* Loot coin arcs */}
+            {d.coins.map(c => (
+              <span key={c.id} className="absolute pointer-events-none"
+                    style={{
+                      left: d.x, top: d.y,
+                      fontSize: d.boss ? 22 : 16,
+                      filter: `drop-shadow(0 0 6px ${c.emoji === '💎' ? '#22D3EE' : c.emoji === '✨' ? '#fff6b0' : '#F2C846'})`,
+                      animation: `lootArc 1100ms cubic-bezier(0.4, 0.1, 0.6, 1) forwards`,
+                      animationDelay: `${c.delay}ms`,
+                      ['--tx' as any]: `${c.tx}px`,
+                      ['--ty' as any]: `${c.ty}px`,
+                      ['--dr' as any]: `${c.dr}deg`,
+                      zIndex: 30,
+                    }}>
+                {c.emoji}
+              </span>
+            ))}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+};
+
+// ============ Ability Cast Announcer ============
+
+interface CastAnnounce {
+  id: string;
+  heroId: string;
+  heroIdx: number;
+  abilityName: string;
+  abilityIcon: string;
+  color: string;
+  bornAt: number;
+}
+
+const AbilityCastAnnouncer: React.FC<{
+  heroes: Hero[]; partyX: number; partyY: number; now: number;
+}> = ({ heroes, partyX, partyY, now }) => {
+  const lastRef = useRef<Record<string, number>>({});
+  const [casts, setCasts] = useState<CastAnnounce[]>([]);
+
+  useEffect(() => {
+    const newCasts: CastAnnounce[] = [];
+    heroes.forEach((h, i) => {
+      if (!h.lastAction?.abilityId) return;
+      const prev = lastRef.current[h.id] ?? 0;
+      if (h.lastAction.at <= prev) return;
+      lastRef.current[h.id] = h.lastAction.at;
+      const ab = ABILITIES[h.lastAction.abilityId];
+      if (!ab) return;
+      const kind = h.lastAction.kind;
+      const color =
+        kind === 'spell_fire'   ? '#ff8030' :
+        kind === 'spell_frost'  ? '#7be0ff' :
+        kind === 'spell_heal'   ? '#9aff9a' :
+        kind === 'spell_light'  ? '#ffe580' :
+        kind === 'spell_shadow' ? '#b06ee0' :
+        kind === 'spell_aoe'    ? '#c070ff' :
+        kind === 'buff_self'    ? '#f2e08a' :
+        kind === 'ranged'       ? '#7FE2A0' :
+                                  '#E8E0D4';
+      newCasts.push({
+        id: `c_${h.id}_${h.lastAction.at}`,
+        heroId: h.id,
+        heroIdx: i,
+        abilityName: ab.name,
+        abilityIcon: ab.icon,
+        color,
+        bornAt: Date.now(),
+      });
+    });
+    if (newCasts.length) setCasts(c => [...c.slice(-15), ...newCasts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroes]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const nw = Date.now();
+      setCasts(cs => cs.filter(c => nw - c.bornAt < 1200));
+    }, 300);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      {casts.map(c => {
+        const pos = heroWorldPos(c.heroIdx, partyX, partyY);
+        const age = now - c.bornAt;
+        if (age > 1100) return null;
+        const t = age / 1100;
+        const dy = -26 * t - 12;
+        const opacity = t < 0.15 ? t / 0.15 : 1 - Math.max(0, (t - 0.7) / 0.3);
+        return (
+          <div key={c.id}
+               className="absolute pointer-events-none z-40"
+               style={{
+                 left: pos.x, top: pos.y - 40,
+                 transform: `translate(-50%, ${dy}px)`,
+                 opacity,
+               }}>
+            <div className="px-2 py-0.5 rounded-sm border flex items-center gap-1"
+                 style={{
+                   background: 'rgba(0,0,0,0.85)',
+                   borderColor: c.color,
+                   boxShadow: `0 0 8px ${c.color}`,
+                 }}>
+              <span className="text-[12px]" style={{ filter: `drop-shadow(0 0 3px ${c.color})` }}>
+                {c.abilityIcon}
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-wider"
+                    style={{
+                      color: c.color,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      textShadow: `0 0 4px ${c.color}, 0 1px 0 #000`,
+                    }}>
+                {c.abilityName}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
+// ============ Tile Resolve FX Layer ============
+
+interface TileResolveFx {
+  id: string;
+  x: number; y: number;
+  kind: 'chest' | 'shrine' | 'fountain' | 'trap' | 'merchant' | 'fork';
+  bornAt: number;
+}
+
+const TileResolveFxLayer: React.FC<{ dungeon: any; now: number }> = ({ dungeon, now }) => {
+  const prevClearedRef = useRef<Record<string, boolean>>({});
+  const [fx, setFx] = useState<TileResolveFx[]>([]);
+
+  useEffect(() => {
+    const newFx: TileResolveFx[] = [];
+    for (const t of dungeon.tiles) {
+      const key = `${t.x},${t.y}`;
+      const was = prevClearedRef.current[key] ?? false;
+      const now2 = !!t.cleared;
+      if (!was && now2) {
+        // Just cleared — fire FX for reward tiles
+        if (['chest', 'shrine', 'fountain', 'trap', 'merchant', 'fork'].includes(t.kind)) {
+          newFx.push({
+            id: `r_${key}_${Date.now()}`,
+            x: t.x * TILE + TILE / 2,
+            y: t.y * TILE + TILE / 2,
+            kind: t.kind,
+            bornAt: Date.now(),
+          });
+        }
+      }
+      prevClearedRef.current[key] = now2;
+    }
+    if (newFx.length) setFx(f => [...f.slice(-15), ...newFx]);
+  }, [dungeon.tiles, dungeon.pathIndex]);
+
+  // Cull
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const nw = Date.now();
+      setFx(list => list.filter(e => nw - e.bornAt < 1500));
+    }, 300);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      {fx.map(e => {
+        const age = now - e.bornAt;
+        const color =
+          e.kind === 'chest'    ? '#F2C846' :
+          e.kind === 'shrine'   ? '#9aff9a' :
+          e.kind === 'fountain' ? '#6EA9E4' :
+          e.kind === 'trap'     ? '#E86E6E' :
+          e.kind === 'merchant' ? '#F2B84B' :
+                                  '#F2E6A8';
+        // Sparkle burst particles
+        const particles = 10;
+        return (
+          <React.Fragment key={e.id}>
+            {/* Expanding ring */}
+            <div className="absolute pointer-events-none"
+                 style={{
+                   left: e.x, top: e.y,
+                   width: 90, height: 90,
+                   borderRadius: '50%',
+                   background: `radial-gradient(circle, ${color}aa 0%, ${color}40 30%, transparent 70%)`,
+                   boxShadow: `0 0 32px ${color}`,
+                   animation: 'spellBurst 1s ease-out forwards',
+                   zIndex: 18,
+                 }} />
+            {/* Sparkles */}
+            {age < 1200 && Array.from({ length: particles }).map((_, i) => {
+              const ang = (i / particles) * Math.PI * 2;
+              const tx = Math.cos(ang) * 50;
+              const ty = Math.sin(ang) * 50 - 10;
+              return (
+                <span key={i} className="absolute pointer-events-none"
+                      style={{
+                        left: e.x, top: e.y,
+                        fontSize: 14,
+                        filter: `drop-shadow(0 0 6px ${color})`,
+                        animation: `lootArc 1000ms ease-out forwards`,
+                        ['--tx' as any]: `${tx}px`,
+                        ['--ty' as any]: `${ty}px`,
+                        ['--dr' as any]: `${(Math.random() - 0.5) * 360}deg`,
+                        zIndex: 28,
+                      }}>
+                  {e.kind === 'chest' ? (Math.random() > 0.5 ? '🪙' : '💎') :
+                   e.kind === 'shrine' ? '✨' :
+                   e.kind === 'fountain' ? '💧' :
+                   e.kind === 'trap' ? '⚠' :
+                   e.kind === 'merchant' ? '🎁' : '✨'}
+                </span>
+              );
+            })}
+            {/* Label */}
+            {age < 900 && (
+              <div className="absolute pointer-events-none"
+                   style={{
+                     left: e.x, top: e.y - 36,
+                     transform: 'translate(-50%, 0)',
+                     animation: 'healRise 900ms ease-out forwards',
+                     zIndex: 29,
+                   }}>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded"
+                      style={{
+                        background: 'rgba(0,0,0,0.75)',
+                        color,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        textShadow: `0 0 6px ${color}`,
+                        border: `1px solid ${color}`,
+                      }}>
+                  {e.kind === 'chest'    ? 'CHEST OPENED' :
+                   e.kind === 'shrine'   ? 'SHRINE BLESSING' :
+                   e.kind === 'fountain' ? 'FOUNTAIN' :
+                   e.kind === 'trap'     ? 'TRAP!' :
+                   e.kind === 'merchant' ? 'MERCHANT' : 'FORK'}
+                </span>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </>
   );
 };
 
