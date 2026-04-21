@@ -84,6 +84,15 @@ function createInitialState(): GameState {
     blessings: {},
     shopRotation: rollShopRotation(dayIndex()),
     bountyBoard: rollBountyBoard(dayIndex(), 0, 0),
+    town: {
+      unlockedWorkers: 3,
+      workers: [
+        { id: 'w1', name: 'Peasant Jon' },
+        { id: 'w2', name: 'Miller Sam' },
+        { id: 'w3', name: 'Smithy Dan' },
+      ],
+    },
+    skills: {},
   };
   // starter consumables
   state.stash.items['healing_potion'] = 3;
@@ -149,6 +158,15 @@ function migrate(s: Partial<GameState>): GameState {
           s.totalMonstersKilled ?? 0,
           s.totalGoldEarned ?? 0,
         ),
+    town: s.town ?? {
+      unlockedWorkers: 3,
+      workers: [
+        { id: 'w1', name: 'Peasant Jon' },
+        { id: 'w2', name: 'Miller Sam' },
+        { id: 'w3', name: 'Smithy Dan' },
+      ],
+    },
+    skills: s.skills ?? {},
   };
   // Validate activeDungeon shape — if it's malformed, drop it to send the
   // player back to the town picker rather than crashing BattleView.
@@ -666,16 +684,20 @@ export function useCcGame() {
     });
   }, [mutate]);
 
-  // Use party's potions to top off HP/MP
+  // Use party's potions (and cooked food) to top off HP/MP. Healing pool is
+  // now any stashed item with healOnUse > 0 — so cooked fish from the Cooking
+  // skill feeds combat directly.
   const quickHealParty = useCallback(() => {
     mutate(s => {
       const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
       let used = 0;
-      // Major potions first
-      const potionOrder = ['elixir_of_life', 'greater_healing_potion', 'healing_potion'];
+      // Build heal pool: all stashed items with healOnUse, sorted biggest-first.
+      const healPool = Object.keys(s.stash.items)
+        .filter(id => (s.stash.items[id] ?? 0) > 0 && (ITEMS[id]?.healOnUse ?? 0) > 0)
+        .sort((a, b) => (ITEMS[b].healOnUse ?? 0) - (ITEMS[a].healOnUse ?? 0));
       for (const h of active) {
         if (h.hp >= h.maxHp * 0.95) continue;
-        for (const pid of potionOrder) {
+        for (const pid of healPool) {
           if ((s.stash.items[pid] ?? 0) <= 0) continue;
           const pot = ITEMS[pid];
           if (!pot) continue;
@@ -924,25 +946,27 @@ export function useCcGame() {
     });
   }, [mutate]);
 
-  // Heal one specific hero using the best available potion.
+  // Heal one specific hero using the best available heal item (including
+  // cooked food from the Cooking skill).
   const quickHealHero = useCallback((heroId: string) => {
     mutate(s => {
       const h = s.heroes.find(x => x.id === heroId);
       if (!h || h.state !== 'alive') return;
       if (h.hp >= h.maxHp) return;
-      const order = ['elixir_of_life', 'greater_healing_potion', 'healing_potion'];
-      for (const pid of order) {
-        if ((s.stash.items[pid] ?? 0) <= 0) continue;
+      const healPool = Object.keys(s.stash.items)
+        .filter(id => (s.stash.items[id] ?? 0) > 0 && (ITEMS[id]?.healOnUse ?? 0) > 0)
+        .sort((a, b) => (ITEMS[b].healOnUse ?? 0) - (ITEMS[a].healOnUse ?? 0));
+      for (const pid of healPool) {
         const pot = ITEMS[pid];
         if (!pot) continue;
         h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
         if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
         s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
         if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
-        pushLog(s, 'heal', `🧪 ${h.name} drinks ${pot.name}.`);
+        pushLog(s, 'heal', `🧪 ${h.name} consumes ${pot.name}.`);
         return;
       }
-      pushLog(s, 'system', `No healing potions for ${h.name}.`);
+      pushLog(s, 'system', `No healing items available for ${h.name}.`);
     });
   }, [mutate]);
 
@@ -994,6 +1018,45 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // ========== Town skills ==========
+  const setActiveTask = useCallback((skillId: string, actionId: string, duration: number, workerId?: string) => {
+    mutate(s => {
+      let worker = workerId
+        ? s.town.workers.find(w => w.id === workerId)
+        : s.town.workers.find(w => !w.activeTask);
+      if (!worker) {
+        pushLog(s, 'system', 'No available workers to assign task.');
+        return;
+      }
+      worker.activeTask = { skillId: skillId as any, actionId, duration, progress: 0 };
+    });
+  }, [mutate]);
+
+  const clearActiveTask = useCallback((workerId: string) => {
+    mutate(s => {
+      const w = s.town.workers.find(w => w.id === workerId);
+      if (w) w.activeTask = undefined;
+    });
+  }, [mutate]);
+
+  const hireWorker = useCallback(() => {
+    mutate(s => {
+      const currentCount = s.town.workers.length;
+      const cost = 1000 * Math.pow(2, currentCount - 3);
+      if (s.stash.gold < cost) {
+        pushLog(s, 'system', `Not enough gold to hire a worker (Need ${cost}g).`);
+        return;
+      }
+      s.stash.gold -= cost;
+      s.town.unlockedWorkers++;
+      s.town.workers.push({
+        id: `w${Date.now()}_${Math.floor(Math.random() * 999)}`,
+        name: `Peasant ${s.town.workers.length + 1}`,
+      });
+      pushLog(s, 'system', `🎉 Hired a new worker for ${cost}g!`);
+    });
+  }, [mutate]);
+
   return {
     state,
     enterDungeon,
@@ -1027,5 +1090,8 @@ export function useCcGame() {
     spendAllAP,
     autoEnchantCheapest,
     quickHealHero,
+    setActiveTask,
+    clearActiveTask,
+    hireWorker,
   };
 }

@@ -15,14 +15,15 @@ import { MonsterSpriteArt } from '../visuals/monsterSprites';
    monsters standing around the party.
    ============================================================ */
 
-const TILE = 64;
+const TILE = 180;
 
-// 2x2 hero cluster offsets inside a tile. Shared between party render and FX.
+// 2x2 hero cluster on the left half of the tile so enemies have room on the
+// right. Spread wide enough that nameplates don't touch.
 const HERO_OFFSETS: Array<{ dx: number; dy: number }> = [
-  { dx: -18, dy: -8 },
-  { dx:  18, dy: -8 },
-  { dx: -18, dy: 12 },
-  { dx:  18, dy: 12 },
+  { dx: -66, dy: -30 },
+  { dx: -14, dy: -30 },
+  { dx: -58, dy:  40 },
+  { dx:  -8, dy:  40 },
 ];
 
 function heroWorldPos(i: number, partyTileX: number, partyTileY: number): { x: number; y: number } {
@@ -156,15 +157,20 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
   const cameraX = -(partyX * TILE + TILE / 2) + viewportSize.w / 2;
   const cameraY = -(partyY * TILE + TILE / 2) + viewportSize.h / 2;
 
-  // Enemy positions on current tile (scatter around party center)
+  // Enemy positions: fan across a ~140° arc on the party's right. Radius is
+  // tuned so the whole ring stays inside the current tile (half-tile is 90px)
+  // and enemies never bleed into neighbor tiles.
   const enemyPositions = useMemo(() => {
+    const n = Math.max(1, enemies.length);
     return enemies.map((m, i) => {
-      const angle = (i / Math.max(1, enemies.length)) * Math.PI * 2;
-      const r = 36 + (i % 2) * 10;
+      const spread = Math.min(Math.PI * 0.8, 0.32 * (n - 1) + 0.45);
+      const t = n === 1 ? 0 : (i / (n - 1)) - 0.5;
+      const angle = t * spread;
+      const r = 62 + (i % 2) * 10;
       return {
         id: m.id,
-        dx: Math.cos(angle) * r + 20,
-        dy: Math.sin(angle) * r * 0.7,
+        dx: Math.cos(angle) * r + 14,
+        dy: Math.sin(angle) * r * 0.65,
       };
     });
   }, [enemies.length, dungeon.partyPos.x, dungeon.partyPos.y]);
@@ -323,15 +329,15 @@ export const PixelMapView: React.FC<Props> = ({ state, clickMonster }) => {
         })}
       </div>
 
-      {/* HUD overlays (screen space, above the world) */}
-      <div className="absolute top-2 left-2 z-20 flex items-center gap-2 px-3 py-1 bg-black/70 rounded-lg border"
+      {/* HUD overlays (screen space, above the world) — compact */}
+      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2 py-0.5 bg-black/70 rounded-md border"
            style={{ borderColor: theme.accentColor + '80', color: theme.accentColor }}>
-        <span className="text-xl">{dungeon.icon}</span>
+        <span className="text-sm leading-none">{dungeon.icon}</span>
         <div>
-          <div className="text-xs font-bold uppercase tracking-[0.25em]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <div className="text-[9px] font-bold uppercase tracking-[0.2em] leading-tight" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             {dungeon.name}
           </div>
-          <div className="text-[10px] text-[#B8A890]">Room {dungeon.pathIndex + 1} / {dungeon.path.length} · Floor {dungeon.floor}</div>
+          <div className="text-[8px] text-[#B8A890] leading-tight">R{dungeon.pathIndex + 1}/{dungeon.path.length} · F{dungeon.floor}</div>
         </div>
       </div>
 
@@ -371,15 +377,15 @@ const TileCell: React.FC<{ tile: Tile; theme: DungeonTheme; dungeon: any }> = ({
            top: tile.y * TILE,
            width: TILE, height: TILE,
          }}>
-      {/* Floor */}
+      {/* Floor — soft vignette at edges replaces the hard 1px border so tiles
+          blend rather than grid. */}
       <div className="absolute inset-0"
            style={{
              background: `
                radial-gradient(circle at 30% 30%, ${theme.floorLight}55 0%, transparent 60%),
                linear-gradient(135deg, ${theme.floorMid} 0%, ${theme.floorDark} 100%)
              `,
-             boxShadow: 'inset 0 0 8px rgba(0,0,0,0.3)',
-             border: `1px solid ${theme.wallDark}80`,
+             boxShadow: `inset 0 0 24px ${theme.wallDark}55, inset 0 0 6px rgba(0,0,0,0.25)`,
            }} />
       {/* Speckle texture */}
       <div className="absolute inset-0 opacity-40"
@@ -532,35 +538,36 @@ const PartyOnTile: React.FC<{
                      : 'drop-shadow(0 2px 2px rgba(0,0,0,0.85))',
                  zIndex: 10 + i,
                }}>
-            {/* Big differentiated nameplate */}
+            {/* Compact nameplate — no inline HP numbers */}
             <div className="absolute left-1/2 -translate-x-1/2"
                  style={{
-                   bottom: 'calc(100% - 2px)',
-                   minWidth: 68,
-                   transform: `translate(-50%, 0) ${flashT > 0 ? `translateX(${(Math.random() - 0.5) * 4 * flashT}px)` : ''}`,
+                   bottom: 'calc(100% + 2px)',
+                   whiteSpace: 'nowrap',
+                   transform: `translate(-50%, 0) ${flashT > 0 ? `translateX(${(Math.random() - 0.5) * 3 * flashT}px)` : ''}`,
+                   zIndex: 30,
                  }}>
               {/* Name / level chip */}
-              <div className="flex items-center justify-between gap-1 px-1 py-[1px] rounded-sm leading-none border"
+              <div className="flex items-center gap-1.5 px-1 py-[1px] rounded-sm leading-none border"
                    style={{
                      background: 'rgba(8,6,5,0.88)',
                      borderColor: cls.color + 'aa',
-                     boxShadow: lowHp ? '0 0 6px #ff4040aa' : undefined,
+                     boxShadow: lowHp ? '0 0 4px #ff4040aa' : undefined,
                    }}>
-                <span className="text-[8px] font-black tracking-wide"
+                <span className="text-[7px] font-black tracking-wide whitespace-nowrap"
                       style={{ color: cls.color, fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
-                  {h.name.slice(0, 6).toUpperCase()}
+                  {shortName(h.name)}
                 </span>
-                <span className="text-[7px] text-[#f2e08a] font-bold"
+                <span className="text-[6px] text-[#f2e08a] font-bold whitespace-nowrap"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   L{h.level}
                 </span>
               </div>
-              {/* HP bar with numbers */}
-              <div className="relative mt-0.5 h-[6px] rounded-sm overflow-hidden"
+              {/* HP bar — slim, numberless */}
+              <div className="relative mt-[1px] h-[4px] rounded-sm overflow-hidden"
                    style={{
                      background: '#0a0606',
                      border: '1px solid #000',
-                     boxShadow: flashT > 0 ? `0 0 6px rgba(255,60,60,${flashT})` : undefined,
+                     boxShadow: flashT > 0 ? `0 0 4px rgba(255,60,60,${flashT})` : undefined,
                    }}>
                 <div className="absolute inset-y-0 left-0"
                      style={{
@@ -573,14 +580,10 @@ const PartyOnTile: React.FC<{
                   <div className="absolute inset-0 pointer-events-none"
                        style={{ background: 'rgba(255,255,255,0.65)', opacity: flashT }} />
                 )}
-                <div className="absolute inset-0 flex items-center justify-center text-[7px] font-black text-white leading-none"
-                     style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000, 0 1px 0 #000' }}>
-                  {Math.max(0, Math.ceil(h.hp))}/{h.maxHp}
-                </div>
               </div>
               {/* MP bar (thin) */}
               {h.maxMp > 0 && (
-                <div className="relative mt-0.5 h-[3px] rounded-sm overflow-hidden"
+                <div className="relative mt-[1px] h-[2px] rounded-sm overflow-hidden"
                      style={{ background: '#0a0606', border: '1px solid #000' }}>
                   <div className="absolute inset-y-0 left-0"
                        style={{
@@ -591,8 +594,18 @@ const PartyOnTile: React.FC<{
                 </div>
               )}
             </div>
+            {/* Ground shadow — sits at feet so heroes feel planted on the floor */}
+            <div className="absolute pointer-events-none"
+                 style={{
+                   left: '50%', bottom: -3,
+                   width: 36, height: 10,
+                   transform: 'translate(-50%, 0)',
+                   background: 'radial-gradient(ellipse, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%)',
+                   filter: 'blur(1px)',
+                   zIndex: -1,
+                 }} />
             {/* Sprite */}
-            <ClassSprite classId={h.classId} size={42} />
+            <ClassSprite classId={h.classId} size={44} />
             {/* Shield ring */}
             {h.shield > 0 && (
               <div className="absolute inset-x-0 bottom-0 h-8 rounded-full pointer-events-none"
@@ -700,8 +713,8 @@ const MonsterOnTile: React.FC<{
   const isBoss = def.boss;
   const attackAge = monster.lastAttack ? now - monster.lastAttack.at : Infinity;
   const lungeT = attackAge < 260 ? 1 - attackAge / 260 : 0;
-  const lungeX = -Math.sin(lungeT * Math.PI) * 14;
-  const size = isBoss ? 68 : 46;
+  const lungeX = -Math.sin(lungeT * Math.PI) * 20;
+  const size = isBoss ? 64 : 44;
   const hpPct = Math.max(0, (monster.hp / Math.max(1, monster.maxHp)) * 100);
   const stunned = monster.stunRemaining > 0;
   const dying = monster.hp <= 0;
@@ -739,26 +752,26 @@ const MonsterOnTile: React.FC<{
                ['--glow' as any]: '#ff4040',
              }} />
       )}
-      {/* Big nameplate + HP bar (rendered in world orientation so not mirrored) */}
+      {/* Compact nameplate + slim HP bar — no inline numbers */}
       <div className="absolute left-1/2 -translate-x-1/2"
-           style={{ bottom: 'calc(100% + 2px)', minWidth: isBoss ? 90 : 60, pointerEvents: 'none' }}>
+           style={{ bottom: 'calc(100% + 3px)', minWidth: isBoss ? 72 : 46, pointerEvents: 'none' }}>
         {isBoss && (
-          <div className="text-[8px] text-center font-black uppercase tracking-widest text-[#ff9060] leading-none mb-0.5"
-               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000, 0 0 6px #ff5040' }}>
+          <div className="text-[7px] text-center font-black uppercase tracking-widest text-[#ff9060] leading-none mb-[1px]"
+               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000, 0 0 4px #ff5040' }}>
             👑 {def.name}
           </div>
         )}
         {!isBoss && (
-          <div className="text-[7px] text-center text-[#ffd0a0] leading-none mb-0.5"
+          <div className="text-[6px] text-center text-[#ffd0a0] leading-none mb-[1px]"
                style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
             {def.name} <span className="text-[#ffa060]">L{def.level}</span>
           </div>
         )}
-        <div className="relative h-[5px] rounded-sm overflow-hidden"
+        <div className="relative h-[4px] rounded-sm overflow-hidden"
              style={{
                background: '#0a0606',
                border: `1px solid ${isBoss ? '#ff4040' : '#000'}`,
-               boxShadow: isBoss ? '0 0 6px #ff504080' : undefined,
+               boxShadow: isBoss ? '0 0 4px #ff504080' : undefined,
              }}>
           <div className="absolute inset-y-0 left-0"
                style={{
@@ -767,12 +780,18 @@ const MonsterOnTile: React.FC<{
                  transition: 'width 180ms ease-out',
                  boxShadow: `inset 0 1px 0 ${lighten(barColor, 0.35)}`,
                }} />
-          <div className="absolute inset-0 flex items-center justify-center text-[7px] font-black text-white leading-none"
-               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 2px #000, 0 1px 0 #000' }}>
-            {Math.max(0, Math.ceil(monster.hp))}/{monster.maxHp}
-          </div>
         </div>
       </div>
+      {/* Ground shadow — anchors monster to the floor */}
+      <div className="absolute pointer-events-none"
+           style={{
+             left: '50%', bottom: -3,
+             width: size * 0.85, height: isBoss ? 14 : 10,
+             transform: 'translate(-50%, 0)',
+             background: 'radial-gradient(ellipse, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)',
+             filter: 'blur(1.5px)',
+             zIndex: -1,
+           }} />
       <div className="relative" style={{ transform: 'scaleX(-1)' }}>
         <MonsterSpriteArt monsterId={monster.monsterId} icon={def.icon} size={size} level={def.level} />
         {stunned && (
@@ -807,10 +826,15 @@ const MonsterOnTile: React.FC<{
 const DamageFloat: React.FC<{ float: Float; x: number; y: number; now: number }> = ({ float, x, y, now }) => {
   const age = now - float.bornAt;
   const t = Math.min(1, age / 1100);
-  const dy = -40 * t;
-  const dx = ((parseInt(float.id.slice(-3), 36) % 10) - 5) * 3 * t;
-  const opacity = 1 - t;
-  const scale = 1 + (float.big ? 0.5 : 0.25) * Math.max(0, 1 - t * 2);
+  // Arc out horizontally — random seeded angle per-float so clustered hits fan
+  // in different directions instead of stacking on each other.
+  const seed = parseInt(float.id.slice(-4), 36);
+  const angle = ((seed % 120) - 60) * (Math.PI / 180); // -60°…+60°
+  const distance = 32 + (seed % 18);
+  const dx = Math.sin(angle) * distance * easeOut(t);
+  const dy = -Math.cos(angle) * distance * easeOut(t) - 10 * t;
+  const opacity = t < 0.1 ? t / 0.1 : 1 - Math.max(0, (t - 0.7) / 0.3);
+  const scale = (float.big ? 1.15 : 1) + (float.big ? 0.55 : 0.3) * Math.max(0, 1 - t * 2.2);
   return (
     <div className="absolute pointer-events-none z-40"
          style={{
@@ -818,14 +842,14 @@ const DamageFloat: React.FC<{ float: Float; x: number; y: number; now: number }>
            transform: `translate(calc(-50% + ${dx}px), ${dy}px) scale(${scale})`,
            opacity,
          }}>
-      <span className={`font-black ${float.big ? 'text-3xl' : 'text-lg'} leading-none block text-center`}
+      <span className={`font-black ${float.big ? 'text-xl' : 'text-sm'} leading-none block text-center`}
             style={{
               color: float.color,
-              textShadow: `0 0 6px ${float.color}cc, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000`,
+              textShadow: `0 0 4px ${float.color}cc, 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000`,
               fontFamily: "'JetBrains Mono', monospace",
             }}>
         {float.text}
-        {float.crit && <span className="text-[9px] block leading-none mt-0.5">CRIT!</span>}
+        {float.crit && <span className="text-[8px] block leading-none mt-0.5">CRIT!</span>}
       </span>
     </div>
   );
@@ -844,22 +868,23 @@ const StashIndicator: React.FC<{ gold: number; essence: number }> = ({ gold, ess
     prevGoldRef.current = gold;
     prevEssenceRef.current = essence;
   }, [gold, essence]);
+  // Anchored below the mini-map so bottom corners stay free.
   return (
     <div className="absolute z-20"
          style={{
-           right: 164, top: 6,
+           right: 8, top: 132,
            pointerEvents: 'none',
          }}>
       <div key={bumpKey}
-           className="flex items-center gap-1 px-2 py-0.5 rounded-md"
+           className="flex items-center gap-1 px-1.5 py-0.5 rounded-md"
            style={{
              background: 'rgba(20,16,12,0.85)',
              border: '1px solid #D4A943',
-             boxShadow: '0 0 8px #D4A94360',
+             boxShadow: '0 0 5px #D4A94360',
              animation: 'goldCounterFlash 0.6s ease-out',
            }}>
-        <span className="text-base" style={{ filter: 'drop-shadow(0 0 3px #f2c846)' }}>💰</span>
-        <span className="text-xs font-black tabular-nums text-[#F2E6A8]"
+        <span className="text-[11px] leading-none" style={{ filter: 'drop-shadow(0 0 3px #f2c846)' }}>💰</span>
+        <span className="text-[10px] font-black tabular-nums text-[#F2E6A8]"
               style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 0 4px #d4a943' }}>
           {gold.toLocaleString()}
         </span>
@@ -871,7 +896,7 @@ const StashIndicator: React.FC<{ gold: number; essence: number }> = ({ gold, ess
 // ============ Mini Map ============
 
 const MiniMap: React.FC<{ dungeon: any; theme: DungeonTheme }> = ({ dungeon, theme }) => {
-  const CELL = 10;
+  const CELL = 6;
   const W = dungeon.width * CELL;
   const H = dungeon.height * CELL;
   const iconFor = (kind: string): string => {
@@ -970,22 +995,25 @@ const EncounterBanner: React.FC<{ enemies: MonsterInstance[] }> = ({ enemies }) 
     if (e.hp > 0) cur.alive++;
     counts.set(d.id, cur);
   }
+  // Tucked in the top-left under the dungeon HUD so it no longer blocks the
+  // battlefield. Compact chip — tight padding, small font, no caps headline.
   return (
-    <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-20 px-4 py-1.5 rounded-md"
+    <div className="absolute left-2 z-20 px-2 py-1 rounded-md"
          style={{
-           background: 'rgba(0, 80, 160, 0.85)',
-           border: '1px solid rgba(180,220,255,0.85)',
-           boxShadow: '0 2px 10px rgba(0,0,0,0.7)',
-           minWidth: 320,
+           top: 48,
+           background: 'rgba(0, 80, 160, 0.78)',
+           border: '1px solid rgba(180,220,255,0.55)',
+           boxShadow: '0 1px 6px rgba(0,0,0,0.55)',
+           maxWidth: 200,
          }}>
-      <div className="text-[11px] font-bold uppercase tracking-widest text-white text-center leading-tight"
+      <div className="text-[8px] font-bold uppercase tracking-[0.3em] text-[#9cc6f0] leading-tight"
            style={{ fontFamily: "'JetBrains Mono', monospace", textShadow: '0 1px 0 #000' }}>
-        An Encounter!
+        Encounter
       </div>
       {Array.from(counts.values()).map(g => (
-        <div key={g.name} className="text-xs text-white leading-tight text-center" style={{ fontFamily: "'Nunito', sans-serif" }}>
+        <div key={g.name} className="text-[10px] text-white leading-tight" style={{ fontFamily: "'Nunito', sans-serif" }}>
           <span className="font-bold">{g.alive}/{g.total}</span> {g.name}{g.total > 1 ? 's' : ''}{' '}
-          <span className="text-[10px] opacity-80">(Lvl. {g.level})</span>
+          <span className="text-[8px] opacity-70">L{g.level}</span>
         </div>
       ))}
     </div>
@@ -1741,24 +1769,24 @@ const AbilityCastAnnouncer: React.FC<{
           <div key={c.id}
                className="absolute pointer-events-none z-40"
                style={{
-                 left: pos.x, top: pos.y - 40,
-                 transform: `translate(-50%, ${dy}px)`,
+                 left: pos.x, top: pos.y - 80,
+                 transform: `translate(-50%, ${dy * 1.4}px)`,
                  opacity,
                }}>
-            <div className="px-2 py-0.5 rounded-sm border flex items-center gap-1"
+            <div className="px-1 py-[1px] rounded-sm border flex items-center gap-[3px]"
                  style={{
-                   background: 'rgba(0,0,0,0.85)',
+                   background: 'rgba(0,0,0,0.8)',
                    borderColor: c.color,
-                   boxShadow: `0 0 8px ${c.color}`,
+                   boxShadow: `0 0 4px ${c.color}`,
                  }}>
-              <span className="text-[12px]" style={{ filter: `drop-shadow(0 0 3px ${c.color})` }}>
+              <span className="text-[9px] leading-none" style={{ filter: `drop-shadow(0 0 2px ${c.color})` }}>
                 {c.abilityIcon}
               </span>
-              <span className="text-[9px] font-black uppercase tracking-wider"
+              <span className="text-[7px] font-black uppercase tracking-wider leading-none"
                     style={{
                       color: c.color,
                       fontFamily: "'JetBrains Mono', monospace",
-                      textShadow: `0 0 4px ${c.color}, 0 1px 0 #000`,
+                      textShadow: `0 0 3px ${c.color}, 0 1px 0 #000`,
                     }}>
                 {c.abilityName}
               </span>
@@ -1901,6 +1929,13 @@ const TileResolveFxLayer: React.FC<{ dungeon: any; now: number }> = ({ dungeon, 
 };
 
 // ============ helpers ============
+
+// "Sir Gareth" → "GARETH". Drops common title prefixes and caps to 7 chars.
+const TITLE_RX = /^(sir|dame|mother|father|brother|sister|lord|lady)\s+/i;
+function shortName(n: string): string {
+  const stripped = n.replace(TITLE_RX, '').trim();
+  return (stripped || n).slice(0, 7).toUpperCase();
+}
 
 function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3);

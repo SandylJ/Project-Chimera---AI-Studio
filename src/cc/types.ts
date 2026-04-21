@@ -307,6 +307,27 @@ export interface OfflineReport {
   itemsFound: number;
 }
 
+// ========== Town skills — idle background progression ==========
+export type SkillId = 'mining' | 'woodcutting' | 'smithing' | 'crafting' | 'herblore' | 'fishing' | 'cooking' | 'farming';
+
+export interface ActiveTask {
+  skillId: SkillId;
+  actionId: string;
+  progress: number;  // ms elapsed toward current cycle
+  duration: number;  // ms required per cycle
+}
+
+export interface TownWorker {
+  id: string;
+  name: string;
+  activeTask?: ActiveTask;
+}
+
+export interface TownState {
+  unlockedWorkers: number;
+  workers: TownWorker[];
+}
+
 export interface GameState {
   version: number;
   heroes: Hero[];
@@ -338,4 +359,7 @@ export interface GameState {
   shopRotation?: ShopRotation;
   // Daily bounty board — 3 rotating goals per day with claimable rewards.
   bountyBoard?: BountyBoard;
+  // Town skills — idle workers training Mining / Woodcutting / etc.
+  town: TownState;
+  skills: Partial<Record<SkillId, { level: number; xp: number }>>;
 }

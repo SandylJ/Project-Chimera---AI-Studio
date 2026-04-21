@@ -7,6 +7,7 @@ import { xpToNext } from './engine/util';
 import { PartyView } from './components/PartyView';
 import { StashView } from './components/StashView';
 import { TownView } from './components/TownView';
+import { TownSkillsView } from './components/TownSkillsView';
 import { CombatLog } from './components/CombatLog';
 import { DecisionModal } from './components/DecisionModal';
 import {
@@ -119,6 +120,12 @@ export default function CcApp() {
                       buyBlessing={g.buyBlessing}
                       claimBounty={g.claimBounty} />
           )}
+          {tab === 'skills' && (
+            <TownSkillsView state={state}
+                            setActiveTask={g.setActiveTask}
+                            clearActiveTask={g.clearActiveTask}
+                            hireWorker={g.hireWorker} />
+          )}
           {tab === 'log' && <CombatLog state={state} />}
         </div>
       </main>
@@ -215,6 +222,7 @@ const TopTabBar: React.FC<{
     { id: 'party',   label: 'Party',   icon: '👥' },
     { id: 'stash',   label: 'Stash',   icon: '📦' },
     { id: 'town',    label: 'Town',    icon: '🏰' },
+    { id: 'skills',  label: 'Skills',  icon: '⛏️' },
     { id: 'log',     label: 'Log',     icon: '📜' },
   ];
   const dungeon = state.activeDungeon;

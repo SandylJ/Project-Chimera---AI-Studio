@@ -1,6 +1,6 @@
 import { GameState, Monster, Rarity } from '../types';
 import { MONSTERS } from '../data/monsters';
-import { ITEMS, TIER_LOOT_POOLS } from '../data/items';
+import { ITEMS, TIER_LOOT_POOLS, SKILL_MATERIAL_POOLS } from '../data/items';
 import { pushLog, rngInt, rngChoice, rollChance } from './util';
 
 export function rollMonsterLoot(state: GameState, monster: Monster, luckBonus = 0): void {
@@ -26,6 +26,20 @@ export function rollMonsterLoot(state: GameState, monster: Monster, luckBonus = 
     const itemId = rngChoice(pool);
     addToStash(state, itemId, 1);
     logLoot(state, itemId, 1);
+  }
+
+  // Skill material drop — dungeon runs feed the Skills page directly.
+  // ~35% base chance, scales up with luck, and bosses roll twice.
+  const skillRoll = 0.35 + luckBonus * 0.2;
+  const skillTries = monster.boss ? 2 : 1;
+  for (let i = 0; i < skillTries; i++) {
+    if (rollChance(skillRoll)) {
+      const pool = pickSkillPool(monster.level);
+      const itemId = rngChoice(pool);
+      const qty = monster.boss ? rngInt(2, 5) : 1;
+      addToStash(state, itemId, qty);
+      logLoot(state, itemId, qty);
+    }
   }
 }
 
@@ -89,6 +103,13 @@ function pickTierPool(level: number): string[] {
     if (level <= tier.maxLevel) return tier.items;
   }
   return TIER_LOOT_POOLS[TIER_LOOT_POOLS.length - 1].items;
+}
+
+function pickSkillPool(level: number): string[] {
+  for (const tier of SKILL_MATERIAL_POOLS) {
+    if (level <= tier.maxLevel) return tier.items;
+  }
+  return SKILL_MATERIAL_POOLS[SKILL_MATERIAL_POOLS.length - 1].items;
 }
 
 function logLoot(state: GameState, itemId: string, qty: number): void {
