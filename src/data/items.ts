@@ -386,6 +386,16 @@ export const ITEMS: Record<string, Item> = {
   bloodcrown:       mk({ id: 'bloodcrown',       name: 'Bloodcrown',       icon: '👑', rarity: 'legendary', type: 'armor', slot: 'head', armor: 20, stats: { str: 10, con: 12, luck: 6 }, value: 9500, levelReq: 26 }),
   dragonhoard_plate:mk({ id: 'dragonhoard_plate',name: 'Dragonhoard Plate',icon: '🐉', rarity: 'celestial', type: 'armor', slot: 'body', armor: 78, stats: { str: 18, con: 36, luck: 10 }, value: 48000, levelReq: 45 }),
   dragonhoard_cape: mk({ id: 'dragonhoard_cape', name: 'Dragonhoard Cape', icon: '🧣', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 4, stats: { str: 12, dex: 12, con: 12, luck: 10 }, value: 38000, levelReq: 40 }),
+
+  // ========== EARLY AGILITY REWARDS (closes the 55-level marks-of-grace wait) ==========
+  grace_bracelet:   mk({ id: 'grace_bracelet',  name: 'Grace Bracelet',  icon: '🔗', rarity: 'uncommon', type: 'trinket', slot: 'ring', stats: { spd: 3, dex: 2 }, value: 450, description: 'Woven with Marks of Grace.' }),
+  stamina_gloves:   mk({ id: 'stamina_gloves',  name: 'Stamina Gloves',  icon: '🧤', rarity: 'rare', type: 'armor', slot: 'offhand', armor: 2, stats: { spd: 4, con: 2 }, value: 820, levelReq: 8, description: 'Keeps the party wind up.' }),
+  runners_cape:     mk({ id: 'runners_cape',    name: "Runner's Cape",   icon: '🎒', rarity: 'rare', type: 'armor', slot: 'neck', armor: 1, stats: { spd: 5, dex: 3 }, value: 950, levelReq: 10 }),
+
+  // ========== FISHING — BAIT-ASSISTED HIGH-TIER CATCH ==========
+  raw_karambwan:    mk({ id: 'raw_karambwan',   name: 'Raw Karambwan',   icon: '🐟', rarity: 'rare', type: 'material', value: 180 }),
+  cooked_karambwan: mk({ id: 'cooked_karambwan',name: 'Cooked Karambwan',icon: '🍢', rarity: 'rare', type: 'potion', value: 380, healOnUse: 240, description: 'Restores 240 HP.' }),
+  fish_oil:         mk({ id: 'fish_oil',        name: 'Fish Oil',        icon: '🫠', rarity: 'uncommon', type: 'material', value: 40, description: 'Rendered from deep-sea catches. Used in herblore.' }),
 };
 
 // Loot pools by dungeon tier (indexed by monster level)

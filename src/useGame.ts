@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BlessingId, Bounty, BountyBoard, BountyKind, ClassId, EquipSlot, GameState, Hero, Rarity, ShopRotation } from './types';
+import { BlessingId, Bounty, BountyBoard, BountyKind, ClassId, EquipSlot, GameState, Hero, Rarity, ShopRotation, StatKey } from './types';
 import { CLASSES } from './data/classes';
 import { ABILITIES } from './data/abilities';
 import { DUNGEON_DEFS } from './data/dungeons';
@@ -491,6 +491,28 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Table of buffs granted by specific potions. Keeps the stat buff
+  // system orthogonal to item definitions — potions can still carry
+  // `healOnUse` / `manaOnUse` for immediate numbers, and drop an entry
+  // here for the lingering stat boost.
+  const POTION_BUFFS: Record<string, { buffs: Array<{ stat: StatKey; power: number }>; duration: number; selfDamage?: number }> = {
+    attack_potion:   { buffs: [{ stat: 'str', power: 0.15 }], duration: 45000 },
+    defense_potion:  { buffs: [{ stat: 'con', power: 0.15 }], duration: 45000 },
+    strength_potion: { buffs: [{ stat: 'str', power: 0.25 }], duration: 45000 },
+    magic_potion:    { buffs: [{ stat: 'int', power: 0.25 }], duration: 45000 },
+    ranging_potion:  { buffs: [{ stat: 'dex', power: 0.25 }], duration: 45000 },
+    super_attack:    { buffs: [{ stat: 'str', power: 0.40 }], duration: 60000 },
+    super_defense:   { buffs: [{ stat: 'con', power: 0.40 }], duration: 60000 },
+    super_strength:  { buffs: [{ stat: 'str', power: 0.45 }], duration: 60000 },
+    super_magic:     { buffs: [{ stat: 'int', power: 0.45 }], duration: 60000 },
+    super_ranging:   { buffs: [{ stat: 'dex', power: 0.45 }], duration: 60000 },
+    stamina_potion:  { buffs: [{ stat: 'spd', power: 0.30 }], duration: 60000 },
+    agility_potion:  { buffs: [{ stat: 'spd', power: 0.30 }, { stat: 'dex', power: 0.30 }], duration: 60000 },
+    weapon_poison:   { buffs: [{ stat: 'luck', power: 0.25 }], duration: 60000 },
+    divine_potion:   { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 180000 },
+    overload_potion: { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 90000, selfDamage: 50 },
+  };
+
   const useConsumable = useCallback((heroId: string, itemId: string) => {
     mutate(s => {
       const h = s.heroes.find(x => x.id === heroId);
@@ -499,6 +521,15 @@ export function useCcGame() {
       if ((s.stash.items[itemId] ?? 0) < 1) return;
       if (it.healOnUse) h.hp = Math.min(h.maxHp, h.hp + it.healOnUse);
       if (it.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + it.manaOnUse);
+      const buffDef = POTION_BUFFS[itemId];
+      if (buffDef) {
+        for (const b of buffDef.buffs) {
+          h.buffs.push({ id: mkId('buff'), stat: b.stat, power: b.power, remaining: buffDef.duration });
+        }
+        if (buffDef.selfDamage) {
+          h.hp = Math.max(1, h.hp - buffDef.selfDamage);
+        }
+      }
       removeFromStash(s, itemId, 1);
       pushLog(s, 'heal', `${h.name} uses ${it.name}.`);
     });

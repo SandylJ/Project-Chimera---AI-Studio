@@ -199,6 +199,10 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'craft_bloodcrown',     name:'Craft Bloodcrown',    levelReq: 72, duration: 15000,xpReward: 440, inputs: { blood_diamond: 1, gold_bar: 3, blood_rune: 5 }, outputs: { bloodcrown: 1 } },
     { id: 'craft_dragonhoard_cape',name:'Craft Dragonhoard Cape',levelReq:88,duration: 22000,xpReward: 720, inputs: { dragon_hoard_scrap: 1, silk_fine: 3, nature_rune: 20 }, outputs: { dragonhoard_cape: 1 } },
     { id: 'craft_dragonhoard_plate',name:'Craft Dragonhoard Plate',levelReq:95,duration: 30000,xpReward: 1100,inputs: { dragon_hoard_scrap: 2, runite_bar: 5, soul_rune: 3 }, outputs: { dragonhoard_plate: 1 } },
+    // ---- Early agility trinkets (closes the marks_of_grace usage gap) ----
+    { id: 'craft_grace_bracelet', name:'Craft Grace Bracelet',levelReq: 20, duration: 5000, xpReward: 60, inputs: { marks_of_grace: 10, silver_bar: 1, thread: 2 }, outputs: { grace_bracelet: 1 } },
+    { id: 'craft_stamina_gloves', name:'Craft Stamina Gloves',levelReq: 25, duration: 5500, xpReward: 80, inputs: { marks_of_grace: 15, hard_leather: 1, silk_scraps: 2 }, outputs: { stamina_gloves: 1 } },
+    { id: 'craft_runners_cape',   name:'Craft Runners Cape',  levelReq: 35, duration: 7000, xpReward: 130,inputs: { marks_of_grace: 25, silk_fine: 1, thread: 3 }, outputs: { runners_cape: 1 } },
   ],
 
   herblore: [
@@ -229,6 +233,9 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'mix_guthix_rest',  name: 'Mix Guthix Rest',     levelReq: 50, duration: 5500, xpReward: 160, inputs: { ranarr: 1, herbs: 2, vial_of_water: 1 }, outputs: { guthix_rest: 1 } },
     { id: 'mix_divine_potion',name: 'Mix Divine Potion',   levelReq: 90, duration: 14000,xpReward: 520, inputs: { torstol: 1, cadantine: 1, soul_rune: 3 }, outputs: { divine_potion: 1 } },
     { id: 'mix_overload',     name: 'Mix Overload',        levelReq: 95, duration: 20000,xpReward: 900, inputs: { torstol: 1, spirit_herb: 1, super_strength: 1, super_magic: 1, super_ranging: 1 }, outputs: { overload_potion: 1 } },
+    // ---- Fish-oil based potions (ties Fishing into Herblore) ----
+    { id: 'mix_fisher_draught',name:'Mix Fisher Draught',  levelReq: 38, duration: 4200, xpReward: 110, inputs: { fish_oil: 1, herbs: 2, vial_of_water: 1 }, outputs: { greater_healing_potion: 1 } },
+    { id: 'mix_kraken_oil',   name: 'Mix Kraken Oil',      levelReq: 70, duration: 7500, xpReward: 300, inputs: { fish_oil: 2, cadantine: 1, vial_of_water: 1 }, outputs: { imbued_healing_potion: 1 } },
   ],
 
   fishing: [
@@ -244,6 +251,12 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'net_manta_ray',    name: 'Net Manta Ray',      levelReq: 81, duration: 18000,xpReward: 150, outputs: { raw_manta_ray: 1 } },
     { id: 'harpoon_anglerfish',name:'Harpoon Anglerfish', levelReq: 82, duration: 20000,xpReward: 160, outputs: { raw_anglerfish: 1 } },
     { id: 'cage_dark_crab',   name: 'Cage Dark Crab',     levelReq: 85, duration: 22000,xpReward: 170, outputs: { raw_dark_crab: 1 } },
+    // ---- Bait-assisted (cross-skill: feathers from Farming, silk from Thieving) ----
+    { id: 'bait_leaping_trout',name:'Bait Leaping Trout',  levelReq: 20, duration: 4500, xpReward: 65,  inputs: { feathers: 1 }, outputs: { raw_trout: 2 } },
+    { id: 'bait_karambwan',   name: 'Bait Karambwan',     levelReq: 65, duration: 12000,xpReward: 150, inputs: { silk_scraps: 1 }, outputs: { raw_karambwan: 1 } },
+    // ---- Rare rendering from high-tier catches ----
+    { id: 'render_fish_oil',  name: 'Render Fish Oil',    levelReq: 40, duration: 4000, xpReward: 80, inputs: { raw_lobster: 1 }, outputs: { fish_oil: 1 } },
+    { id: 'render_shark_oil', name: 'Render Shark Oil',   levelReq: 80, duration: 6000, xpReward: 180, inputs: { raw_shark: 1 }, outputs: { fish_oil: 3 } },
   ],
 
   farming: [
@@ -304,6 +317,7 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'cook_rogue_stew',  name: 'Cook Rogue Stew',    levelReq: 40, duration: 4500, xpReward: 170,inputs: { raw_lobster: 1, foraged_herb: 2, poison_vial_raw: 1 }, outputs: { rogue_stew: 1 } },
     { id: 'brew_apple_cider', name: 'Brew Apple Cider',   levelReq: 22, duration: 4000, xpReward: 85, inputs: { apple: 3, vial_of_water: 2 }, outputs: { apple_cider: 1 } },
     { id: 'brew_divine_wine', name: 'Brew Divine Wine',   levelReq: 85, duration: 14000,xpReward: 620,inputs: { spirit_herb: 1, cadantine: 1, torstol: 1, vial_of_water: 3 }, outputs: { divine_wine: 1 } },
+    { id: 'cook_karambwan',   name: 'Cook Karambwan',     levelReq: 65, duration: 4200, xpReward: 220,inputs: { raw_karambwan: 1 }, outputs: { cooked_karambwan: 1 } },
   ],
 
   // ============================================================
