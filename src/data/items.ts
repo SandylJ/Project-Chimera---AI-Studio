@@ -223,6 +223,162 @@ export const ITEMS: Record<string, Item> = {
   emerald_amulet:  mk({ id: 'emerald_amulet',  name: 'Emerald Amulet',  icon: '📿', rarity: 'rare', type: 'trinket', slot: 'neck', stats: { dex: 6, spd: 3 }, value: 1050 }),
   ruby_amulet:     mk({ id: 'ruby_amulet',     name: 'Ruby Amulet',     icon: '📿', rarity: 'rare', type: 'trinket', slot: 'neck', stats: { str: 8 }, value: 1800 }),
   diamond_amulet:  mk({ id: 'diamond_amulet',  name: 'Diamond Amulet',  icon: '📿', rarity: 'epic', type: 'trinket', slot: 'neck', stats: { str: 4, int: 4, con: 8, luck: 4 }, value: 4200 }),
+
+  // ========== MINING — HIGH-TIER GEMS & ESSENCE ==========
+  rune_essence:    mk({ id: 'rune_essence',    name: 'Rune Essence',    icon: '🔮', rarity: 'uncommon', type: 'material', value: 8, description: 'Raw essence for runecrafting.' }),
+  pure_essence:    mk({ id: 'pure_essence',    name: 'Pure Essence',    icon: '💠', rarity: 'rare', type: 'material', value: 22, description: 'Refined essence for high-tier runes.' }),
+  uncut_dragonstone: mk({ id: 'uncut_dragonstone', name: 'Uncut Dragonstone', icon: '🔶', rarity: 'epic', type: 'material', value: 950 }),
+  uncut_onyx:      mk({ id: 'uncut_onyx',      name: 'Uncut Onyx',      icon: '⬛', rarity: 'legendary', type: 'material', value: 2800 }),
+  dragonstone:     mk({ id: 'dragonstone',     name: 'Dragonstone',     icon: '🔶', rarity: 'epic', type: 'material', value: 2400 }),
+  onyx:            mk({ id: 'onyx',            name: 'Onyx',            icon: '⬛', rarity: 'legendary', type: 'material', value: 7200 }),
+
+  // ========== WOODCUTTING / SMITHING — CHARCOAL ==========
+  charcoal:        mk({ id: 'charcoal',        name: 'Charcoal',        icon: '🖤', rarity: 'common', type: 'material', value: 12, description: 'Slow-burned logs. Reduces coal use in smelts.' }),
+  arctic_pine_logs:mk({ id: 'arctic_pine_logs',name: 'Arctic Pine Logs',icon: '🌲', rarity: 'legendary', type: 'material', value: 900 }),
+  redwood_logs:    mk({ id: 'redwood_logs',    name: 'Redwood Logs',    icon: '🌳', rarity: 'legendary', type: 'material', value: 1800 }),
+
+  // ========== TOOLS (crafted utilities, cosmetic slot / inventory) ==========
+  chisel:          mk({ id: 'chisel',          name: 'Chisel',          icon: '🔧', rarity: 'common', type: 'material', value: 30, description: 'Needed to cut gems. Kept in stash.' }),
+  knife:           mk({ id: 'knife',           name: 'Crafting Knife',  icon: '🔪', rarity: 'common', type: 'material', value: 25, description: 'Used in fletching and leatherwork.' }),
+  tinderbox:       mk({ id: 'tinderbox',       name: 'Tinderbox',       icon: '🪨', rarity: 'common', type: 'material', value: 20, description: 'Lights fires — charcoal production.' }),
+  pestle_and_mortar: mk({ id: 'pestle_and_mortar', name: 'Pestle & Mortar', icon: '🥣', rarity: 'uncommon', type: 'material', value: 120, description: 'Grinds rare components for herblore.' }),
+  lockpick:        mk({ id: 'lockpick',        name: 'Lockpick',        icon: '🗝️', rarity: 'uncommon', type: 'material', value: 80, description: 'Opens stolen chests.' }),
+
+  // ========== RUNECRAFTING — TALISMANS (crafted, tier gate) ==========
+  air_talisman:    mk({ id: 'air_talisman',    name: 'Air Talisman',    icon: '🌫️', rarity: 'common', type: 'material', value: 20 }),
+  mind_talisman:   mk({ id: 'mind_talisman',   name: 'Mind Talisman',   icon: '🧠', rarity: 'common', type: 'material', value: 25 }),
+  water_talisman:  mk({ id: 'water_talisman',  name: 'Water Talisman',  icon: '🌊', rarity: 'common', type: 'material', value: 30 }),
+  earth_talisman:  mk({ id: 'earth_talisman',  name: 'Earth Talisman',  icon: '⛰️', rarity: 'common', type: 'material', value: 35 }),
+  fire_talisman:   mk({ id: 'fire_talisman',   name: 'Fire Talisman',   icon: '🔥', rarity: 'uncommon', type: 'material', value: 45 }),
+  body_talisman:   mk({ id: 'body_talisman',   name: 'Body Talisman',   icon: '🫁', rarity: 'uncommon', type: 'material', value: 55 }),
+  cosmic_talisman: mk({ id: 'cosmic_talisman', name: 'Cosmic Talisman', icon: '🌌', rarity: 'uncommon', type: 'material', value: 80 }),
+  chaos_talisman:  mk({ id: 'chaos_talisman',  name: 'Chaos Talisman',  icon: '🌀', rarity: 'rare', type: 'material', value: 140 }),
+  nature_talisman: mk({ id: 'nature_talisman', name: 'Nature Talisman', icon: '🍃', rarity: 'rare', type: 'material', value: 200 }),
+  law_talisman:    mk({ id: 'law_talisman',    name: 'Law Talisman',    icon: '⚖️', rarity: 'rare', type: 'material', value: 280 }),
+  death_talisman:  mk({ id: 'death_talisman',  name: 'Death Talisman',  icon: '💀', rarity: 'epic', type: 'material', value: 520 }),
+  blood_talisman:  mk({ id: 'blood_talisman',  name: 'Blood Talisman',  icon: '🩸', rarity: 'epic', type: 'material', value: 900 }),
+  soul_talisman:   mk({ id: 'soul_talisman',   name: 'Soul Talisman',   icon: '👻', rarity: 'legendary', type: 'material', value: 1600 }),
+
+  // ========== RUNECRAFTING — RUNES ==========
+  air_rune:        mk({ id: 'air_rune',        name: 'Air Rune',        icon: '💨', rarity: 'common', type: 'material', value: 4 }),
+  mind_rune:       mk({ id: 'mind_rune',       name: 'Mind Rune',       icon: '🌀', rarity: 'common', type: 'material', value: 5 }),
+  water_rune:      mk({ id: 'water_rune',      name: 'Water Rune',      icon: '💧', rarity: 'common', type: 'material', value: 6 }),
+  earth_rune:      mk({ id: 'earth_rune',      name: 'Earth Rune',      icon: '🌱', rarity: 'common', type: 'material', value: 7 }),
+  fire_rune:       mk({ id: 'fire_rune',       name: 'Fire Rune',       icon: '🔥', rarity: 'common', type: 'material', value: 8 }),
+  body_rune:       mk({ id: 'body_rune',       name: 'Body Rune',       icon: '🫁', rarity: 'uncommon', type: 'material', value: 12 }),
+  cosmic_rune:     mk({ id: 'cosmic_rune',     name: 'Cosmic Rune',     icon: '🌌', rarity: 'uncommon', type: 'material', value: 25 }),
+  chaos_rune:      mk({ id: 'chaos_rune',      name: 'Chaos Rune',      icon: '⚡', rarity: 'rare', type: 'material', value: 45 }),
+  nature_rune:     mk({ id: 'nature_rune',     name: 'Nature Rune',     icon: '🌿', rarity: 'rare', type: 'material', value: 60 }),
+  law_rune:        mk({ id: 'law_rune',        name: 'Law Rune',        icon: '⚖️', rarity: 'rare', type: 'material', value: 90 }),
+  death_rune:      mk({ id: 'death_rune',      name: 'Death Rune',      icon: '💀', rarity: 'epic', type: 'material', value: 200 }),
+  blood_rune:      mk({ id: 'blood_rune',      name: 'Blood Rune',      icon: '🩸', rarity: 'epic', type: 'material', value: 400 }),
+  soul_rune:       mk({ id: 'soul_rune',       name: 'Soul Rune',       icon: '👻', rarity: 'legendary', type: 'material', value: 700 }),
+  astral_rune:     mk({ id: 'astral_rune',     name: 'Astral Rune',     icon: '✨', rarity: 'legendary', type: 'material', value: 1200, description: 'Forged from fused runes under starlight.' }),
+  // Combined runes
+  mist_rune:       mk({ id: 'mist_rune',       name: 'Mist Rune',       icon: '🌫️', rarity: 'uncommon', type: 'material', value: 15 }),
+  dust_rune:       mk({ id: 'dust_rune',       name: 'Dust Rune',       icon: '💨', rarity: 'uncommon', type: 'material', value: 16 }),
+  mud_rune:        mk({ id: 'mud_rune',        name: 'Mud Rune',        icon: '🟫', rarity: 'uncommon', type: 'material', value: 18 }),
+  smoke_rune:      mk({ id: 'smoke_rune',      name: 'Smoke Rune',      icon: '🌪️', rarity: 'uncommon', type: 'material', value: 20 }),
+  steam_rune:      mk({ id: 'steam_rune',      name: 'Steam Rune',      icon: '♨️', rarity: 'uncommon', type: 'material', value: 22 }),
+  lava_rune:       mk({ id: 'lava_rune',       name: 'Lava Rune',       icon: '🌋', rarity: 'uncommon', type: 'material', value: 24 }),
+
+  // ========== RUNECRAFTING — SCROLLS (runes → combat scrolls) ==========
+  scroll_fireball:    mk({ id: 'scroll_fireball',    name: 'Scroll of Fireball',    icon: '🔥', rarity: 'rare', type: 'consumable', value: 350, description: 'Massive fire blast — 600 dmg to all enemies.' }),
+  scroll_bone_heal:   mk({ id: 'scroll_bone_heal',   name: 'Scroll of Mending',     icon: '🩸', rarity: 'rare', type: 'consumable', value: 400, description: 'Revive a downed hero and fully heal.' }),
+  scroll_soul_barrier:mk({ id: 'scroll_soul_barrier',name: 'Scroll of Soul Barrier',icon: '👻', rarity: 'epic', type: 'consumable', value: 650, description: 'Grants 500 shield to all party for 60s.' }),
+  scroll_astral:      mk({ id: 'scroll_astral',      name: 'Astral Scroll',         icon: '✨', rarity: 'epic', type: 'consumable', value: 800, description: 'Reveals every tile in the current dungeon.' }),
+
+  // ========== THIEVING — OUTPUTS ==========
+  silk_scraps:     mk({ id: 'silk_scraps',     name: 'Silk Scraps',     icon: '🧶', rarity: 'common', type: 'material', value: 10 }),
+  silk_fine:       mk({ id: 'silk_fine',       name: 'Fine Silk',       icon: '🪡', rarity: 'uncommon', type: 'material', value: 55 }),
+  foraged_herb:    mk({ id: 'foraged_herb',    name: 'Foraged Herb',    icon: '🌾', rarity: 'common', type: 'material', value: 12, description: 'Random herb found mid-heist.' }),
+  poison_vial_raw: mk({ id: 'poison_vial_raw', name: 'Raw Poison Vial', icon: '🫙', rarity: 'uncommon', type: 'material', value: 60 }),
+  poison_vial:     mk({ id: 'poison_vial',     name: 'Poison Vial',     icon: '☠️', rarity: 'rare', type: 'material', value: 180, description: 'Weaponized toxin — used in advanced herblore.' }),
+  stolen_key:      mk({ id: 'stolen_key',      name: 'Stolen Key',      icon: '🗝️', rarity: 'uncommon', type: 'material', value: 40, description: 'Opens thieves-chest events.' }),
+  jewel_case:      mk({ id: 'jewel_case',      name: 'Jewel Case',      icon: '📦', rarity: 'rare', type: 'consumable', value: 200, description: 'Contains a random uncut gem.' }),
+  gold_trinket:    mk({ id: 'gold_trinket',    name: 'Gold Trinket',    icon: '🧿', rarity: 'uncommon', type: 'material', value: 150 }),
+  stolen_scroll:   mk({ id: 'stolen_scroll',   name: 'Stolen Scroll',   icon: '📜', rarity: 'rare', type: 'consumable', value: 280, description: 'Mystery scroll — random effect when used.' }),
+  blood_diamond:   mk({ id: 'blood_diamond',   name: 'Blood Diamond',   icon: '🔴', rarity: 'epic', type: 'material', value: 900 }),
+  soul_gem:        mk({ id: 'soul_gem',        name: 'Soul Gem',        icon: '💜', rarity: 'legendary', type: 'material', value: 2400, description: 'A trapped soul for endgame runecrafting.' }),
+  dragon_hoard_scrap: mk({ id: 'dragon_hoard_scrap', name: 'Dragon Hoard Scrap', icon: '🐲', rarity: 'legendary', type: 'material', value: 3000 }),
+  thieves_cache:   mk({ id: 'thieves_cache',   name: "Thieves' Cache",  icon: '🎁', rarity: 'rare', type: 'consumable', value: 250, description: 'Random stash of loot when used.' }),
+  // Rogue outfit (crafting uses silk + poison, gives dodge/crit bonus when full set equipped — effect gated via items only for now)
+  rogue_mask:      mk({ id: 'rogue_mask',      name: 'Rogue Mask',      icon: '🥷', rarity: 'rare', type: 'armor', slot: 'head', armor: 4, stats: { dex: 6, luck: 3 }, value: 600, levelReq: 12 }),
+  rogue_top:       mk({ id: 'rogue_top',       name: 'Rogue Vest',      icon: '🎽', rarity: 'rare', type: 'armor', slot: 'body', armor: 8, stats: { dex: 8, spd: 3 }, value: 900, levelReq: 12 }),
+  rogue_legs:      mk({ id: 'rogue_legs',      name: 'Rogue Breeches',  icon: '👖', rarity: 'rare', type: 'armor', slot: 'legs', armor: 6, stats: { dex: 6, spd: 3 }, value: 750, levelReq: 12 }),
+  rogue_gloves:    mk({ id: 'rogue_gloves',    name: 'Rogue Gloves',    icon: '🧤', rarity: 'rare', type: 'armor', slot: 'offhand', armor: 2, stats: { dex: 5, luck: 2 }, value: 500, levelReq: 12, classReq: ['rogue'] }),
+  rogue_boots:     mk({ id: 'rogue_boots',     name: 'Rogue Boots',     icon: '🥾', rarity: 'rare', type: 'armor', slot: 'feet', armor: 2, stats: { spd: 6, dex: 3 }, value: 480, levelReq: 12 }),
+
+  // ========== AGILITY — OUTPUTS ==========
+  marks_of_grace:  mk({ id: 'marks_of_grace',  name: 'Marks of Grace',  icon: '🪽', rarity: 'uncommon', type: 'currency', value: 15, description: 'Earned from agility courses. Used for graceful gear.' }),
+  stamina_herb:    mk({ id: 'stamina_herb',    name: 'Stamina Herb',    icon: '🌱', rarity: 'uncommon', type: 'material', value: 22, description: 'Improves stamina potions.' }),
+  shortcut_token:  mk({ id: 'shortcut_token',  name: 'Shortcut Token',  icon: '🏃', rarity: 'rare', type: 'material', value: 120, description: 'Used to unlock dungeon shortcuts.' }),
+  mastery_mark:    mk({ id: 'mastery_mark',    name: 'Mastery Mark',    icon: '🎖️', rarity: 'legendary', type: 'currency', value: 500, description: 'Endgame agility currency.' }),
+  graceful_hood:   mk({ id: 'graceful_hood',   name: 'Graceful Hood',   icon: '🎩', rarity: 'epic', type: 'armor', slot: 'head', armor: 3, stats: { spd: 5, con: 3 }, value: 1400, levelReq: 16, description: 'Reduces party food consumption.' }),
+  graceful_top:    mk({ id: 'graceful_top',    name: 'Graceful Top',    icon: '🎽', rarity: 'epic', type: 'armor', slot: 'body', armor: 6, stats: { spd: 6, con: 4 }, value: 1900, levelReq: 16 }),
+  graceful_legs:   mk({ id: 'graceful_legs',   name: 'Graceful Legs',   icon: '👖', rarity: 'epic', type: 'armor', slot: 'legs', armor: 4, stats: { spd: 5, con: 3 }, value: 1600, levelReq: 16 }),
+  graceful_boots:  mk({ id: 'graceful_boots',  name: 'Graceful Boots',  icon: '🥿', rarity: 'epic', type: 'armor', slot: 'feet', armor: 2, stats: { spd: 8, dex: 3 }, value: 1500, levelReq: 16 }),
+  graceful_cape:   mk({ id: 'graceful_cape',   name: 'Graceful Cape',   icon: '🧣', rarity: 'legendary', type: 'armor', slot: 'neck', armor: 2, stats: { spd: 8, con: 6, luck: 4 }, value: 3000, levelReq: 24 }),
+  stamina_potion:  mk({ id: 'stamina_potion',  name: 'Stamina Potion',  icon: '🟢', rarity: 'uncommon', type: 'potion', value: 140, description: '+30% party move speed for 60s.' }),
+  agility_potion:  mk({ id: 'agility_potion',  name: 'Agility Potion',  icon: '🏃', rarity: 'rare', type: 'potion', value: 260, description: '+30% DEX & SPD for 60s.' }),
+
+  // ========== FARMING — EXPANSION (allotment + fruit + endgame herbs) ==========
+  potato:          mk({ id: 'potato',          name: 'Potato',          icon: '🥔', rarity: 'common', type: 'material', value: 6 }),
+  onion:           mk({ id: 'onion',           name: 'Onion',           icon: '🧅', rarity: 'common', type: 'material', value: 7 }),
+  cabbage:         mk({ id: 'cabbage',         name: 'Cabbage',         icon: '🥬', rarity: 'common', type: 'material', value: 9 }),
+  pumpkin:         mk({ id: 'pumpkin',         name: 'Pumpkin',         icon: '🎃', rarity: 'uncommon', type: 'material', value: 30 }),
+  apple:           mk({ id: 'apple',           name: 'Apple',           icon: '🍎', rarity: 'common', type: 'material', value: 10 }),
+  watermelon:      mk({ id: 'watermelon',      name: 'Watermelon',      icon: '🍉', rarity: 'uncommon', type: 'material', value: 35 }),
+  snapdragon:      mk({ id: 'snapdragon',      name: 'Snapdragon',      icon: '🌷', rarity: 'rare', type: 'material', value: 180 }),
+  wildblood:       mk({ id: 'wildblood',       name: 'Wildblood',       icon: '🌺', rarity: 'rare', type: 'material', value: 280 }),
+  dwarf_weed:      mk({ id: 'dwarf_weed',      name: 'Dwarf Weed',      icon: '🌿', rarity: 'epic', type: 'material', value: 600 }),
+  torstol:         mk({ id: 'torstol',         name: 'Torstol',         icon: '🌹', rarity: 'epic', type: 'material', value: 1100 }),
+  spirit_herb:     mk({ id: 'spirit_herb',     name: 'Spirit Herb',     icon: '👻', rarity: 'legendary', type: 'material', value: 2200, description: 'Blooms only at shrines. Endgame herblore.' }),
+
+  // ========== COOKING — EXPANSION ==========
+  apple_pie:       mk({ id: 'apple_pie',       name: 'Apple Pie',       icon: '🥧', rarity: 'uncommon', type: 'potion', value: 100, healOnUse: 100, description: 'Restores 100 HP.' }),
+  pumpkin_pie:     mk({ id: 'pumpkin_pie',     name: 'Pumpkin Pie',     icon: '🥧', rarity: 'rare', type: 'potion', value: 220, healOnUse: 180, manaOnUse: 30, description: 'Restores 180 HP and 30 MP.' }),
+  cabbage_stew:    mk({ id: 'cabbage_stew',    name: 'Cabbage Stew',    icon: '🍲', rarity: 'common', type: 'potion', value: 50, healOnUse: 60, description: 'Humble heal: 60 HP.' }),
+  spicy_stew:      mk({ id: 'spicy_stew',      name: 'Spicy Stew',      icon: '🌶️', rarity: 'rare', type: 'potion', value: 320, healOnUse: 250, manaOnUse: 60, description: 'Restores 250 HP and 60 MP.' }),
+  rogue_stew:      mk({ id: 'rogue_stew',      name: "Rogue's Stew",    icon: '🍲', rarity: 'rare', type: 'potion', value: 380, healOnUse: 220, description: '+10% crit for 45s on use.' }),
+  apple_cider:     mk({ id: 'apple_cider',     name: 'Apple Cider',     icon: '🍺', rarity: 'uncommon', type: 'potion', value: 90, healOnUse: 70, manaOnUse: 20, description: 'Restores 70 HP and 20 MP.' }),
+  divine_wine:     mk({ id: 'divine_wine',     name: 'Divine Wine',     icon: '🍷', rarity: 'legendary', type: 'potion', value: 2200, healOnUse: 600, manaOnUse: 300, description: 'Restores 600 HP and 300 MP.' }),
+  watermelon_slice: mk({ id: 'watermelon_slice', name: 'Watermelon Slice', icon: '🍉', rarity: 'uncommon', type: 'potion', value: 75, healOnUse: 65, description: 'Refreshing. Restores 65 HP.' }),
+
+  // ========== HERBLORE — EXPANSION ==========
+  anti_poison:     mk({ id: 'anti_poison',     name: 'Anti-Poison',     icon: '🟢', rarity: 'uncommon', type: 'potion', value: 180, description: 'Cures poison and grants 60s immunity.' }),
+  weapon_poison:   mk({ id: 'weapon_poison',   name: 'Weapon Poison',   icon: '☠️', rarity: 'rare', type: 'potion', value: 360, description: 'Coats party weapons: +25% crit chance for 60s.' }),
+  super_strength:  mk({ id: 'super_strength',  name: 'Super Strength',  icon: '🟥', rarity: 'rare', type: 'potion', value: 420, description: '+45% STR for 60s on use.' }),
+  super_magic:     mk({ id: 'super_magic',     name: 'Super Magic',     icon: '🟪', rarity: 'rare', type: 'potion', value: 420, description: '+45% INT for 60s on use.' }),
+  super_ranging:   mk({ id: 'super_ranging',   name: 'Super Ranging',   icon: '🟩', rarity: 'rare', type: 'potion', value: 420, description: '+45% DEX for 60s on use.' }),
+  overload_potion: mk({ id: 'overload_potion', name: 'Overload Potion', icon: '🌟', rarity: 'legendary', type: 'potion', value: 2800, description: '+50% to all stats for 90s — caution: costs 50 HP on use.' }),
+  divine_potion:   mk({ id: 'divine_potion',   name: 'Divine Potion',   icon: '💫', rarity: 'legendary', type: 'potion', value: 2600, description: 'Perma-50% stat boost until next dungeon ends.' }),
+  imbued_healing_potion: mk({ id: 'imbued_healing_potion', name: 'Imbued Healing Potion', icon: '🧬', rarity: 'epic', type: 'potion', value: 900, healOnUse: 600, description: 'Infused with blood runes. Restores 600 HP.' }),
+  guthix_rest:     mk({ id: 'guthix_rest',     name: 'Guthix Rest',     icon: '🍵', rarity: 'rare', type: 'potion', value: 300, healOnUse: 200, manaOnUse: 80, description: 'Tea of balance: 200 HP + 80 MP.' }),
+
+  // ========== SMITHING — EXPANSION (dragonite + rune-etched) ==========
+  dragonite_sword:     mk({ id: 'dragonite_sword',     name: 'Dragonite Longsword',icon: '🐉', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 110, stats: { str: 40, con: 12, luck: 6 }, value: 22000, levelReq: 42 }),
+  dragonite_helm:      mk({ id: 'dragonite_helm',      name: 'Dragonite Helm',     icon: '🐲', rarity: 'legendary', type: 'armor',  slot: 'head',   armor: 32, stats: { con: 16 }, value: 14000, levelReq: 42 }),
+  dragonite_platelegs: mk({ id: 'dragonite_platelegs', name: 'Dragonite Platelegs',icon: '🐲', rarity: 'legendary', type: 'armor',  slot: 'legs',   armor: 42, stats: { con: 18 }, value: 18000, levelReq: 42 }),
+  dragonite_platebody: mk({ id: 'dragonite_platebody', name: 'Dragonite Platebody',icon: '🐲', rarity: 'legendary', type: 'armor',  slot: 'body',   armor: 62, stats: { con: 28 }, value: 26000, levelReq: 42 }),
+  chaos_bar:           mk({ id: 'chaos_bar',           name: 'Chaos-Infused Bar',  icon: '🌀', rarity: 'epic', type: 'material', value: 1800 }),
+  death_bar:           mk({ id: 'death_bar',           name: 'Death-Forged Bar',   icon: '💀', rarity: 'legendary', type: 'material', value: 4500 }),
+  rune_etched_sword:   mk({ id: 'rune_etched_sword',   name: 'Rune-Etched Sword',  icon: '⚔️', rarity: 'epic', type: 'weapon', slot: 'weapon', weaponPower: 64, stats: { str: 22, int: 8, con: 6 }, value: 7500, levelReq: 28 }),
+  chaos_blade:         mk({ id: 'chaos_blade',         name: 'Chaos Blade',        icon: '⚡', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 96, stats: { str: 34, dex: 10, luck: 8 }, value: 16500, levelReq: 38 }),
+  death_hammer:        mk({ id: 'death_hammer',        name: 'Death Hammer',       icon: '🔨', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 104, stats: { str: 38, con: 14 }, value: 20000, levelReq: 40, classReq: ['barbarian', 'knight'] }),
+
+  // ========== CRAFTING — ENCHANTED & ENDGAME ==========
+  enchanted_sapphire_ring:  mk({ id: 'enchanted_sapphire_ring',  name: 'Enchanted Sapphire Ring', icon: '💍', rarity: 'rare', type: 'trinket', slot: 'ring', stats: { int: 8, luck: 4 }, value: 1100 }),
+  enchanted_emerald_ring:   mk({ id: 'enchanted_emerald_ring',   name: 'Enchanted Emerald Ring',  icon: '💍', rarity: 'epic', type: 'trinket', slot: 'ring', stats: { dex: 10, luck: 6 }, value: 2200 }),
+  enchanted_ruby_amulet:    mk({ id: 'enchanted_ruby_amulet',    name: 'Enchanted Ruby Amulet',   icon: '📿', rarity: 'epic', type: 'trinket', slot: 'neck', stats: { str: 14, con: 4 }, value: 3600 }),
+  enchanted_diamond_amulet: mk({ id: 'enchanted_diamond_amulet', name: 'Enchanted Diamond Amulet',icon: '📿', rarity: 'legendary', type: 'trinket', slot: 'neck', stats: { str: 10, int: 10, con: 12, luck: 6 }, value: 8500, levelReq: 25 }),
+  dragonstone_ring:         mk({ id: 'dragonstone_ring',         name: 'Dragonstone Ring',        icon: '💍', rarity: 'epic', type: 'trinket', slot: 'ring', stats: { str: 8, int: 8, con: 8 }, value: 5500 }),
+  onyx_ring:                mk({ id: 'onyx_ring',                name: 'Onyx Ring',               icon: '🕳️', rarity: 'legendary', type: 'trinket', slot: 'ring', stats: { str: 12, dex: 12, int: 12, con: 12, spd: 6, luck: 6 }, value: 22000, levelReq: 40 }),
+  battlestaff:              mk({ id: 'battlestaff',              name: 'Battlestaff',             icon: '🪄', rarity: 'uncommon', type: 'weapon', slot: 'weapon', weaponPower: 10, stats: { int: 10, str: 4 }, value: 380, classReq: ['mage', 'priest'] }),
+  mystic_staff:             mk({ id: 'mystic_staff',             name: 'Mystic Staff',            icon: '🪄', rarity: 'rare', type: 'weapon', slot: 'weapon', weaponPower: 18, stats: { int: 16, luck: 3 }, value: 1400, classReq: ['mage', 'priest'] }),
+  ancient_staff:            mk({ id: 'ancient_staff',            name: 'Ancient Staff',           icon: '🪄', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 42, stats: { int: 32, luck: 8 }, value: 12000, levelReq: 30, classReq: ['mage', 'priest'] }),
+  composite_bow:            mk({ id: 'composite_bow',            name: 'Composite Bow',           icon: '🏹', rarity: 'uncommon', type: 'weapon', slot: 'weapon', weaponPower: 14, stats: { dex: 10, spd: 2 }, value: 420, classReq: ['ranger'] }),
+  crystal_bow:              mk({ id: 'crystal_bow',              name: 'Crystal Bow',             icon: '🏹', rarity: 'epic', type: 'weapon', slot: 'weapon', weaponPower: 34, stats: { dex: 22, spd: 5, luck: 3 }, value: 5800, levelReq: 20, classReq: ['ranger'] }),
 };
 
 // Loot pools by dungeon tier (indexed by monster level)

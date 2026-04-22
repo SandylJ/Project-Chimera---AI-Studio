@@ -17,14 +17,17 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
   const [filter, setFilter] = useState<Filter>('all');
 
   const skillsList: { id: SkillId; icon: string; name: string }[] = [
-    { id: 'mining',      icon: '⛏️', name: 'Mining' },
-    { id: 'smithing',    icon: '🔨', name: 'Smithing' },
-    { id: 'woodcutting', icon: '🪓', name: 'Woodcutting' },
-    { id: 'farming',     icon: '🌱', name: 'Farming' },
-    { id: 'crafting',    icon: '🧵', name: 'Crafting' },
-    { id: 'herblore',    icon: '🧪', name: 'Herblore' },
-    { id: 'fishing',     icon: '🎣', name: 'Fishing' },
-    { id: 'cooking',     icon: '🍳', name: 'Cooking' },
+    { id: 'mining',       icon: '⛏️', name: 'Mining' },
+    { id: 'smithing',     icon: '🔨', name: 'Smithing' },
+    { id: 'woodcutting',  icon: '🪓', name: 'Woodcutting' },
+    { id: 'farming',      icon: '🌱', name: 'Farming' },
+    { id: 'crafting',     icon: '🧵', name: 'Crafting' },
+    { id: 'herblore',     icon: '🧪', name: 'Herblore' },
+    { id: 'fishing',      icon: '🎣', name: 'Fishing' },
+    { id: 'cooking',      icon: '🍳', name: 'Cooking' },
+    { id: 'runecrafting', icon: '🔮', name: 'Runecrafting' },
+    { id: 'thieving',     icon: '🥷', name: 'Thieving' },
+    { id: 'agility',      icon: '🏃', name: 'Agility' },
   ];
 
   const workers = state.town?.workers || [];

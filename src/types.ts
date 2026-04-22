@@ -308,7 +308,10 @@ export interface OfflineReport {
 }
 
 // ========== Town skills — idle background progression ==========
-export type SkillId = 'mining' | 'woodcutting' | 'smithing' | 'crafting' | 'herblore' | 'fishing' | 'cooking' | 'farming';
+export type SkillId =
+  | 'mining' | 'woodcutting' | 'smithing' | 'crafting' | 'herblore'
+  | 'fishing' | 'cooking' | 'farming'
+  | 'runecrafting' | 'thieving' | 'agility';
 
 export interface ActiveTask {
   skillId: SkillId;
