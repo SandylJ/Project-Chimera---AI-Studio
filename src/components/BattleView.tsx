@@ -190,14 +190,14 @@ export const BattleView: React.FC<Props> = ({
 const LOG_STRIP_MS = 6000;
 
 const CompactLogStrip: React.FC<{ state: GameState; nowTick: number }> = ({ state, nowTick }) => {
-  // Show the 3 most recent log entries that are "interesting" (not move/system).
+  // Show the 2 most recent log entries that are "interesting" (not move/system).
   const recent = state.currentLog
     .filter(e => e.kind !== 'move' && e.kind !== 'system')
-    .slice(0, 3)
+    .slice(0, 2)
     .filter(e => nowTick - e.t < LOG_STRIP_MS);
   if (recent.length === 0) return null;
   return (
-    <div className="absolute left-3 bottom-3 z-20 pointer-events-none space-y-0.5">
+    <div className="absolute left-2 bottom-2 z-20 pointer-events-none space-y-[2px] max-w-[50%]">
       {recent.map(e => {
         const age = nowTick - e.t;
         const t = age / LOG_STRIP_MS;
@@ -205,16 +205,16 @@ const CompactLogStrip: React.FC<{ state: GameState; nowTick: number }> = ({ stat
         const color = e.rarity ? rarityLineColor(e.rarity) : kindLineColor(e.kind);
         return (
           <div key={e.id}
-               className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm"
+               className="flex items-center gap-1 px-1.5 py-[2px] rounded-sm"
                style={{
-                 background: 'rgba(0,0,0,0.72)',
+                 background: 'rgba(0,0,0,0.65)',
                  borderLeft: `2px solid ${color}`,
                  opacity,
-                 transform: `translateY(${(1 - opacity) * -6}px)`,
+                 transform: `translateY(${(1 - opacity) * -4}px)`,
                  fontFamily: "'JetBrains Mono', monospace",
                  transition: 'opacity 0.2s, transform 0.2s',
                }}>
-            <span className="text-[11px]" style={{ color }}>{e.text}</span>
+            <span className="text-[9px] leading-tight truncate" style={{ color }}>{e.text}</span>
           </div>
         );
       })}
@@ -254,28 +254,28 @@ const ComboBanner: React.FC<{ combo: number; lastKillAt: number; nowTick: number
   const t = Math.max(0, 1 - age / 3000);
   const bonus = Math.min(100, (combo - 1) * 5);
   return (
-    <div className="absolute bottom-3 right-3 z-30 pointer-events-none"
+    <div className="absolute bottom-2 right-2 z-30 pointer-events-none"
          style={{ animation: 'comboPulse 0.45s ease-out' }}>
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md"
            style={{
              background: 'linear-gradient(90deg, rgba(60,16,4,0.92) 0%, rgba(28,8,4,0.92) 100%)',
-             border: '2px solid #ff6040',
-             boxShadow: `0 0 ${14 + combo}px #ff604080`,
+             border: '1px solid #ff6040',
+             boxShadow: `0 0 ${8 + combo / 2}px #ff604070`,
            }}>
-        <span className="text-3xl" style={{ filter: `drop-shadow(0 0 6px #ff4040)` }}>🔥</span>
+        <span className="text-lg leading-none" style={{ filter: `drop-shadow(0 0 4px #ff4040)` }}>🔥</span>
         <div>
-          <div className="text-[9px] text-[#ff8a5a] font-bold uppercase tracking-widest leading-none"
+          <div className="text-[8px] text-[#ff8a5a] font-bold uppercase tracking-widest leading-none"
                style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             Combo
           </div>
-          <div className="text-2xl font-black text-[#ffc890] leading-none"
-               style={{ fontFamily: "'Cinzel', serif", textShadow: '0 0 10px #ff4040' }}>
+          <div className="text-base font-black text-[#ffc890] leading-none"
+               style={{ fontFamily: "'Cinzel', serif", textShadow: '0 0 6px #ff4040' }}>
             ×{combo}
           </div>
-          <div className="text-[9px] text-[#B8A890] leading-none mt-0.5">+{bonus}% rewards</div>
+          <div className="text-[8px] text-[#B8A890] leading-none mt-[1px]">+{bonus}%</div>
         </div>
       </div>
-      <div className="mt-1 h-1 rounded bg-black/60 overflow-hidden" style={{ width: 150 }}>
+      <div className="mt-[2px] h-[2px] rounded bg-black/60 overflow-hidden" style={{ width: 92 }}>
         <div className="h-full" style={{ width: `${t * 100}%`, background: '#ff6040', transition: 'width 0.1s linear' }} />
       </div>
     </div>

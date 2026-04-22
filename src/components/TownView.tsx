@@ -26,119 +26,335 @@ const STATIC_STOCK = [
   'elixir_of_life',
 ];
 
+type BuildingId = 'tavern' | 'blacksmith' | 'shrine' | 'bounties' | 'temple' | 'inn' | 'townhall';
+
+interface Building {
+  id: BuildingId;
+  icon: string;
+  name: string;
+  tagline: string;
+  color: string;
+  col: 1 | 2 | 3;
+  row: 1 | 2 | 3;
+}
+
+// Plaza layout — row 1 = back wall (sacred/civic), row 2 = main street (crafts/trade),
+// row 3 = front gate (rest + jobs). col 2 is the town square / fountain.
+const BUILDINGS: Building[] = [
+  { id: 'temple',     icon: '⛪',  name: 'Temple',       tagline: 'Revive the fallen',           color: '#E8E0D4', col: 1, row: 1 },
+  { id: 'shrine',     icon: '⟡',  name: 'Celestial Shrine', tagline: 'Burn essence for blessings', color: '#B485E8', col: 3, row: 1 },
+  { id: 'blacksmith', icon: '⚒️', name: 'Blacksmith',   tagline: 'Enchant equipped gear',        color: '#D4A943', col: 1, row: 2 },
+  { id: 'tavern',     icon: '🍺', name: 'The Tired Hound', tagline: 'Recruit heroes · Trade with the barkeep', color: '#F2B84B', col: 3, row: 2 },
+  { id: 'bounties',   icon: '📜', name: 'Bounty Board', tagline: 'Daily contracts',              color: '#7FE2A0', col: 1, row: 3 },
+  { id: 'inn',        icon: '🛌', name: 'The Inn',      tagline: 'Rest and heal the party',      color: '#6EA9E4', col: 2, row: 3 },
+  { id: 'townhall',   icon: '🏛️', name: 'Town Hall',    tagline: 'Records and danger zone',      color: '#B8A890', col: 3, row: 3 },
+];
+
 export const TownView: React.FC<Props> = ({
   state, recruitHero, buyShopItem, buyShopBundle, reviveHero, healParty, resetGame,
   upgradeEquip, buyBlessing, claimBounty,
 }) => {
-  const [section, setSection] = useState<'tavern' | 'shop' | 'blacksmith' | 'shrine' | 'bounties' | 'temple' | 'inn' | 'about'>('shop');
+  const [section, setSection] = useState<BuildingId | null>(null);
+
+  // Notification badges — green dot appears on buildings with actionable state.
+  const notifications: Partial<Record<BuildingId, string>> = {};
+  const completedBounties = state.bountyBoard?.bounties.filter(b => !b.claimed && bountyProgress(state, b) >= b.target).length ?? 0;
+  if (completedBounties > 0) notifications.bounties = `${completedBounties} ready`;
+  const dead = state.heroes.filter(h => h.state !== 'alive').length;
+  if (dead > 0) notifications.temple = `${dead} fallen`;
+  const needHeal = state.heroes.some(h => !h.bench && h.state === 'alive' && (h.hp < h.maxHp || h.mp < h.maxMp));
+  if (needHeal) notifications.inn = 'rest ready';
+  if (state.stash.essence > 0) notifications.shrine = `${state.stash.essence}⟡`;
+
+  if (section !== null) {
+    const building = BUILDINGS.find(b => b.id === section)!;
+    return (
+      <div className="p-4 h-full overflow-hidden flex flex-col bg-gradient-to-b from-[#14100C] to-[#0D0B09]">
+        <div className="flex items-center gap-2 mb-3">
+          <button type="button" onClick={() => setSection(null)}
+                  className="press px-2 py-1.5 text-xs font-bold text-[#B8A890] hover:text-[#F2E6A8] hover:bg-[#2B2B32] rounded border border-[#3D3328] transition-colors">
+            ← Town
+          </button>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl leading-none">{building.icon}</span>
+            <h2 className="text-lg font-bold leading-none" style={{ color: building.color, fontFamily: "'Cinzel', serif" }}>
+              {building.name}
+            </h2>
+            <span className="text-[10px] uppercase tracking-widest text-[#7A6E60]"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              {building.tagline}
+            </span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto pr-1">
+          {section === 'tavern'     && <Tavern state={state} recruitHero={recruitHero} buyShopItem={buyShopItem} buyShopBundle={buyShopBundle} />}
+          {section === 'blacksmith' && <Blacksmith state={state} upgradeEquip={upgradeEquip} />}
+          {section === 'shrine'     && <Shrine state={state} buyBlessing={buyBlessing} />}
+          {section === 'bounties'   && <Bounties state={state} claimBounty={claimBounty} />}
+          {section === 'temple'     && <Temple state={state} reviveHero={reviveHero} />}
+          {section === 'inn'        && <Inn state={state} healParty={healParty} />}
+          {section === 'townhall'   && <About resetGame={resetGame} state={state} />}
+        </div>
+      </div>
+    );
+  }
+
+  return <TownMap state={state} buildings={BUILDINGS} notifications={notifications} onEnter={setSection} />;
+};
+
+/* ============ Town map (plaza) ============ */
+
+const TownMap: React.FC<{
+  state: GameState;
+  buildings: Building[];
+  notifications: Partial<Record<BuildingId, string>>;
+  onEnter: (id: BuildingId) => void;
+}> = ({ state, buildings, notifications, onEnter }) => {
+  // Place buildings in a 3x3 plaza grid. Center cell (col 2 row 2) is the fountain.
+  const byCell = new Map<string, Building>();
+  for (const b of buildings) byCell.set(`${b.col}-${b.row}`, b);
+  const liveCount = state.heroes.filter(h => !h.bench && h.state === 'alive').length;
+  const goldK = (state.stash.gold >= 1000) ? `${Math.round(state.stash.gold / 100) / 10}k` : state.stash.gold.toString();
 
   return (
-    <div className="p-4 h-full overflow-hidden flex flex-col">
-      <h2 className="text-2xl font-bold text-[#F2E6A8] mb-1" style={{ fontFamily: "'Cinzel', serif" }}>
-        🏰 The Town
-      </h2>
-      <div className="text-xs text-[#B8A890] mb-3">
-        Rest, recruit, trade, upgrade, and prepare for the next expedition.
+    <div className="h-full w-full overflow-hidden flex flex-col relative"
+         style={{
+           background: `
+             radial-gradient(ellipse at 50% 25%, #1e2a3a 0%, transparent 65%),
+             radial-gradient(ellipse at 50% 90%, #2a2418 0%, transparent 70%),
+             linear-gradient(180deg, #0a0d14 0%, #120e0a 55%, #1a140e 100%)
+           `,
+         }}>
+      {/* Subtle stars top / torches bottom (ambient) */}
+      <div className="pointer-events-none absolute inset-0 opacity-60"
+           style={{
+             backgroundImage: `
+               radial-gradient(circle at 12% 18%, #fff3 0.6px, transparent 1.5px),
+               radial-gradient(circle at 72% 12%, #fff4 0.5px, transparent 1.5px),
+               radial-gradient(circle at 38% 8%, #fff2 0.4px, transparent 1px),
+               radial-gradient(circle at 88% 22%, #fff3 0.5px, transparent 1.5px),
+               radial-gradient(circle at 22% 30%, #fff2 0.4px, transparent 1px)
+             `,
+           }} />
+      {/* Header banner */}
+      <div className="relative z-10 px-5 py-3 flex items-center justify-between border-b border-[#3D3328]/50"
+           style={{ background: 'linear-gradient(180deg, rgba(20,16,12,0.85) 0%, rgba(20,16,12,0.4) 100%)' }}>
+        <div>
+          <h2 className="text-2xl font-bold text-[#F2E6A8] leading-none"
+              style={{ fontFamily: "'Cinzel', serif", textShadow: '0 2px 4px #000' }}>
+            🏰 The Town Square
+          </h2>
+          <div className="text-[10px] text-[#B8A890] uppercase tracking-[0.35em] mt-1"
+               style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            Rest · Recruit · Trade · Prepare
+          </div>
+        </div>
+        <div className="flex items-center gap-3 text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <MapStat icon="🪙" value={goldK}                       color="#D4A943" />
+          <MapStat icon="⟡"  value={state.stash.essence.toString()} color="#B485E8" />
+          <MapStat icon="👥" value={`${liveCount}/4`}            color="#7FE2A0" />
+        </div>
       </div>
-      <div className="flex border-b border-[#3D3328] mb-3 flex-wrap">
-        {(['shop', 'blacksmith', 'shrine', 'bounties', 'tavern', 'temple', 'inn', 'about'] as const).map(s => {
-          const label: Record<typeof s, string> = {
-            shop: '🛒 Shop',
-            blacksmith: '🔨 Blacksmith',
-            shrine: '⟡ Shrine',
-            bounties: '🎯 Bounties',
-            tavern: '🍺 Tavern',
-            temple: '⛪ Temple',
-            inn: '🛌 Inn',
-            about: 'ℹ About',
-          } as any;
-          const unclaimedComplete = s === 'bounties' &&
-            (state.bountyBoard?.bounties.some(b => !b.claimed && bountyProgress(state, b) >= b.target) ?? false);
-          const isActive = section === s;
-          return (
-            <button key={s} type="button" onClick={() => setSection(s)}
-                    className={`press relative px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
-                      isActive
-                        ? 'text-[#0a0806] font-black'
-                        : 'text-[#B8A890] hover:bg-[#2B2B32] hover:text-[#E8E0D4]'
-                    }`}
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      background: isActive ? 'var(--cc-blue)' : '#14100C',
-                      border: `1px solid ${isActive ? 'var(--cc-blue)' : '#2B2B32'}`,
-                      borderBottom: isActive ? '1px solid var(--cc-blue)' : '1px solid transparent',
-                      borderRadius: 2,
-                      marginBottom: -1,
-                    }}>
-              {label[s]}
-              {unclaimedComplete && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#7FE2A0]"
-                      style={{ boxShadow: '0 0 6px #7FE2A0', animation: 'glowPulse 1.4s ease-in-out infinite', ['--glow' as any]: '#7FE2A0' }} />
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex-1 overflow-y-auto pr-1">
-        {section === 'tavern' && <Tavern state={state} recruitHero={recruitHero} />}
-        {section === 'shop' && <Shop state={state} buyShopItem={buyShopItem} buyShopBundle={buyShopBundle} />}
-        {section === 'blacksmith' && <Blacksmith state={state} upgradeEquip={upgradeEquip} />}
-        {section === 'shrine' && <Shrine state={state} buyBlessing={buyBlessing} />}
-        {section === 'bounties' && <Bounties state={state} claimBounty={claimBounty} />}
-        {section === 'temple' && <Temple state={state} reviveHero={reviveHero} />}
-        {section === 'inn' && <Inn state={state} healParty={healParty} />}
-        {section === 'about' && <About resetGame={resetGame} state={state} />}
+
+      {/* Plaza grid */}
+      <div className="flex-1 overflow-auto relative px-4 py-6">
+        <div className="mx-auto max-w-[1100px] grid gap-3"
+             style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'repeat(3, minmax(170px, 1fr))' }}>
+          {([1, 2, 3] as const).flatMap(row =>
+            ([1, 2, 3] as const).map(col => {
+              const b = byCell.get(`${col}-${row}`);
+              if (!b) {
+                // Center cell = fountain plaza piece, corners with no building = empty tile
+                if (col === 2 && row === 2) return <FountainCell key={`f-${col}-${row}`} />;
+                return <EmptyCell key={`e-${col}-${row}`} />;
+              }
+              return (
+                <BuildingCell key={b.id} building={b} badge={notifications[b.id]} onClick={() => onEnter(b.id)} />
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-/* ============ Tavern ============ */
+const MapStat: React.FC<{ icon: string; value: string; color: string }> = ({ icon, value, color }) => (
+  <div className="flex items-center gap-1 px-2 py-0.5 rounded border"
+       style={{
+         background: 'rgba(20,16,12,0.85)',
+         borderColor: color + '60',
+       }}>
+    <span className="text-sm leading-none">{icon}</span>
+    <span className="text-xs font-black tabular-nums"
+          style={{ color, textShadow: `0 0 6px ${color}40` }}>
+      {value}
+    </span>
+  </div>
+);
 
-const Tavern: React.FC<{ state: GameState; recruitHero: (id: ClassId) => void }> = ({ state, recruitHero }) => {
+const BuildingCell: React.FC<{
+  building: Building;
+  badge?: string;
+  onClick: () => void;
+}> = ({ building, badge, onClick }) => (
+  <button type="button" onClick={onClick}
+          className="group relative overflow-hidden rounded-lg transition-all text-left hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(0,0,0,0.6)]"
+          style={{
+            background: `
+              linear-gradient(180deg, rgba(20,16,12,0.25) 0%, rgba(20,16,12,0.85) 100%),
+              radial-gradient(circle at 50% 30%, ${building.color}26 0%, transparent 65%)
+            `,
+            border: `2px solid ${building.color}55`,
+            boxShadow: badge ? `0 0 14px ${building.color}80, inset 0 0 20px ${building.color}20` : `inset 0 0 18px ${building.color}15`,
+          }}>
+    {/* Notification badge */}
+    {badge && (
+      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest pointer-events-none"
+           style={{
+             background: `${building.color}E0`,
+             color: '#14100C',
+             borderColor: building.color,
+             fontFamily: "'JetBrains Mono', monospace",
+             animation: 'glowPulse 1.6s ease-in-out infinite',
+             ['--glow' as any]: building.color,
+           }}>
+        {badge}
+      </div>
+    )}
+    {/* Giant building glyph */}
+    <div className="flex flex-col items-center justify-end h-full p-4 pt-6 relative">
+      <div className="text-6xl mb-2 transition-transform group-hover:scale-110"
+           style={{ filter: `drop-shadow(0 4px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 10px ${building.color}60)` }}>
+        {building.icon}
+      </div>
+      <div className="text-center">
+        <div className="font-bold text-lg leading-tight"
+             style={{ color: building.color, fontFamily: "'Cinzel', serif", textShadow: '0 1px 3px #000' }}>
+          {building.name}
+        </div>
+        <div className="text-[10px] text-[#B8A890] leading-tight mt-0.5">
+          {building.tagline}
+        </div>
+      </div>
+      {/* Entry hint on hover */}
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-[0.25em] opacity-0 group-hover:opacity-100 transition-opacity"
+           style={{ color: building.color, fontFamily: "'JetBrains Mono', monospace" }}>
+        Enter →
+      </div>
+    </div>
+  </button>
+);
+
+const FountainCell: React.FC = () => (
+  <div className="relative rounded-lg overflow-hidden flex items-center justify-center"
+       style={{
+         background: `
+           radial-gradient(circle at 50% 50%, #2f4a6a 0%, #1a2a3a 60%, #0a0d14 100%)
+         `,
+         border: '2px dashed #3D3328',
+       }}>
+    <div className="text-center">
+      <div className="text-5xl mb-1" style={{ filter: 'drop-shadow(0 0 8px #6EA9E4aa)', animation: 'ambientFloat 3s ease-in-out infinite alternate' }}>⛲</div>
+      <div className="text-[10px] uppercase tracking-[0.3em] text-[#6EA9E4] font-bold leading-none"
+           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        Plaza
+      </div>
+    </div>
+  </div>
+);
+
+const EmptyCell: React.FC = () => (
+  <div className="relative rounded-lg opacity-40 flex items-center justify-center"
+       style={{
+         background: 'rgba(20,16,12,0.35)',
+         border: '1px dashed #3D3328',
+       }}>
+    <span className="text-3xl opacity-30">🌳</span>
+  </div>
+);
+
+/* ============ Tavern ============ */
+// The Tavern combines hero recruitment (back room) with the travelling
+// merchant who sets up at the bar — potions, scrolls, bundles. One location
+// for the social + supply side of town.
+
+const Tavern: React.FC<{
+  state: GameState;
+  recruitHero: (id: ClassId) => void;
+  buyShopItem: (id: string) => void;
+  buyShopBundle: (id: string) => void;
+}> = ({ state, recruitHero, buyShopItem, buyShopBundle }) => {
+  const [tab, setTab] = useState<'recruit' | 'merchant'>('recruit');
   return (
     <div className="space-y-4">
-      <div className="text-sm text-[#B8A890]">
-        Recruit new heroes. Max 4 active at once — the rest wait on the bench.
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {Object.values(CLASSES).map(c => {
-          const have = state.heroes.filter(h => h.classId === c.id).length;
-          const cost = c.recruitCost + have * 150;
+      <div className="flex gap-1 text-[10px] font-bold uppercase tracking-widest"
+           style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        {([
+          { id: 'recruit',  label: '🧑‍🤝‍🧑 Recruit Heroes' },
+          { id: 'merchant', label: '🎒 Travelling Merchant' },
+        ] as const).map(t => {
+          const active = tab === t.id;
           return (
-            <div key={c.id}
-                 className="p-3 rounded-lg border"
-                 style={{ background: c.color + '10', borderColor: c.color + '40' }}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="shrink-0 flex items-end justify-center rounded"
-                     style={{ width: 48, height: 58, background: `linear-gradient(180deg, ${c.color}22 0%, #00000000 100%)`, border: `1px solid ${c.color}60` }}>
-                  <ClassSprite classId={c.id} size={46} />
-                </div>
-                <div className="flex-1">
-                  <div className="text-lg font-bold" style={{ color: c.color, fontFamily: "'Cinzel', serif" }}>{c.name}</div>
-                  <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    {c.role}
-                  </div>
-                </div>
-                <div className="text-xs text-[#D4A943] font-bold">{have} in roster</div>
-              </div>
-              <p className="text-xs text-[#B8A890] mb-3">{c.description}</p>
-              <button
-                type="button"
-                onClick={() => recruitHero(c.id)}
-                disabled={state.stash.gold < cost}
-                className={`press w-full py-2 text-xs font-bold transition-colors ${state.stash.gold >= cost ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
-                style={{
-                  background: state.stash.gold >= cost ? 'var(--cc-blue)' : '#14100C',
-                  border: `1px solid ${state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32'}`,
-                  borderRadius: 2,
-                }}>
-                {cost === 0 && have === 0 ? 'Recruit (free)' : `Recruit (${cost} gp)`}
-              </button>
-            </div>
+            <button key={t.id} onClick={() => setTab(t.id)}
+                    className={`px-3 py-1.5 rounded border transition-colors ${
+                      active
+                        ? 'bg-[#F2B84B] text-[#14100C] border-[#F2B84B]'
+                        : 'bg-[#14100C] text-[#B8A890] border-[#3D3328] hover:border-[#F2B84B] hover:text-[#F2E6A8]'
+                    }`}>
+              {t.label}
+            </button>
           );
         })}
       </div>
+
+      {tab === 'recruit' && (
+        <div className="space-y-3">
+          <div className="text-sm text-[#B8A890]">
+            Recruit new heroes. Max 4 active at once — the rest wait on the bench.
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {Object.values(CLASSES).map(c => {
+              const have = state.heroes.filter(h => h.classId === c.id).length;
+              const cost = c.recruitCost + have * 150;
+              return (
+                <div key={c.id}
+                     className="p-3 rounded-lg border"
+                     style={{ background: c.color + '10', borderColor: c.color + '40' }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="shrink-0 flex items-end justify-center rounded"
+                         style={{ width: 48, height: 58, background: `linear-gradient(180deg, ${c.color}22 0%, #00000000 100%)`, border: `1px solid ${c.color}60` }}>
+                      <ClassSprite classId={c.id} size={46} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-lg font-bold" style={{ color: c.color, fontFamily: "'Cinzel', serif" }}>{c.name}</div>
+                      <div className="text-[10px] text-[#7A6E60] uppercase tracking-widest" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {c.role}
+                      </div>
+                    </div>
+                    <div className="text-xs text-[#D4A943] font-bold">{have} in roster</div>
+                  </div>
+                  <p className="text-xs text-[#B8A890] mb-3">{c.description}</p>
+                  <button
+                    type="button"
+                    onClick={() => recruitHero(c.id)}
+                    disabled={state.stash.gold < cost}
+                    className={`press w-full py-2 text-xs font-bold transition-colors ${state.stash.gold >= cost ? 'text-[#0a0806] hover:brightness-110' : 'text-[#AAAAAA] cursor-not-allowed'}`}
+                    style={{
+                      background: state.stash.gold >= cost ? 'var(--cc-blue)' : '#14100C',
+                      border: `1px solid ${state.stash.gold >= cost ? 'var(--cc-blue)' : '#2B2B32'}`,
+                      borderRadius: 2,
+                    }}>
+                    {cost === 0 && have === 0 ? 'Recruit (free)' : `Recruit (${cost} gp)`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tab === 'merchant' && <Shop state={state} buyShopItem={buyShopItem} buyShopBundle={buyShopBundle} />}
     </div>
   );
 };
