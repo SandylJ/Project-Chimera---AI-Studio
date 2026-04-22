@@ -1,1689 +1,1097 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { PlayerState, SkillId, SkillAction, InventoryItem, Equipment, Item, QuestProgress, Quest, QuestObjective, BountyContract, BountyTier } from './types';
-import { ACTIONS, ITEMS, LEVEL_XP, XP_TO_LEVEL, KINGDOM_WORKERS, RARE_DROP_TABLE, MONSTER_DROP_TABLES, QUESTS, SKILL_PETS, PET_BASE_CHANCE, CLUE_REWARDS } from './constants';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { BlessingId, Bounty, BountyBoard, BountyKind, ClassId, EquipSlot, GameState, Hero, Rarity, ShopRotation } from './types';
+import { CLASSES } from './data/classes';
+import { ABILITIES } from './data/abilities';
+import { DUNGEON_DEFS } from './data/dungeons';
+import { ITEMS } from './data/items';
+import { randomNameFor } from './data/names';
+import { tickGame } from './engine/tick';
+import {
+  mkId, pushLog, recomputeHeroMaxHPMP, effectiveStats, canEquip,
+  enchantCost, enchantTier, blessingLevel, blessingCost, MAX_ENCHANT,
+} from './engine/util';
+import { applyDamageToMonster } from './engine/combat';
+import { generateDungeon } from './engine/dungeonGen';
+import { resolveDecision as engineResolveDecision } from './engine/decisions';
+import { addToStash, removeFromStash, sellValue } from './engine/loot';
+import { simulateOffline } from './engine/offline';
 
-const INITIAL_STATE: PlayerState = {
-  gp: 0,
-  celestialEssence: 0,
-  skills: {
-    mining: { id: 'mining', level: 1, xp: 0 },
-    woodcutting: { id: 'woodcutting', level: 1, xp: 0 },
-    fishing: { id: 'fishing', level: 1, xp: 0 },
-    hunting: { id: 'hunting', level: 1, xp: 0 },
-    farming: { id: 'farming', level: 1, xp: 0 },
-    smithing: { id: 'smithing', level: 1, xp: 0 },
-    cooking: { id: 'cooking', level: 1, xp: 0 },
-    herblore: { id: 'herblore', level: 1, xp: 0 },
-    crafting: { id: 'crafting', level: 1, xp: 0 },
-    runecrafting: { id: 'runecrafting', level: 1, xp: 0 },
-    thieving: { id: 'thieving', level: 1, xp: 0 },
-    agility: { id: 'agility', level: 1, xp: 0 },
-    attack: { id: 'attack', level: 1, xp: 0 },
-    strength: { id: 'strength', level: 1, xp: 0 },
-    defense: { id: 'defense', level: 1, xp: 0 },
-    magic: { id: 'magic', level: 1, xp: 0 },
-    ranged: { id: 'ranged', level: 1, xp: 0 },
-    prayer: { id: 'prayer', level: 1, xp: 0 },
-    empire: { id: 'empire', level: 1, xp: 0 },
-    raids: { id: 'raids', level: 1, xp: 0 },
-    slayer: { id: 'slayer', level: 1, xp: 0 },
-    construction: { id: 'construction', level: 1, xp: 0 },
-  },
-  inventory: [],
-  equipment: {},
-  activeEdicts: [],
-  ascensions: {
-    mining: 0, woodcutting: 0, fishing: 0, hunting: 0, farming: 0,
-    smithing: 0, cooking: 0, herblore: 0, crafting: 0, runecrafting: 0, thieving: 0,
-    agility: 0, attack: 0, strength: 0, defense: 0, magic: 0, ranged: 0, prayer: 0,
-    empire: 0, raids: 0, slayer: 0, construction: 0
-  },
-  buffs: [],
-  kingdom: {},
-  showNotifications: true,
-  // New systems
-  quests: {},
-  collectionLog: [],
-  totalActions: {},
-  totalItemsGained: {},
-  bankTab: 'all',
-  killCount: {},
-  // Bounty Hunting
-  bountyContract: undefined,
-  bountyStreak: 0,
-  bountyMarks: 0,
-  totalBountiesCompleted: 0,
-  // Gem Socketing
-  socketedGems: {},
-  // Dry streak
-  dryStreak: 0,
-  // Pets
-  activePet: undefined,
-  petsUnlocked: [],
-  // Auto-sell
-  autoSellItems: [],
-  // Prestige
-  prestigeLevel: 0,
-  prestigeTokens: 0,
-};
+const SAVE_KEY = 'cc_save_v1';
+const TICK_MS = 100;
+const SAVE_MS = 5000;
+const STATE_VERSION = 1;
 
-export interface GameEvent {
-  id: string;
-  timestamp: number;
-  message: string;
-  type: 'loot' | 'level' | 'xp' | 'info' | 'quest';
-  rarity?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'celestial';
-  icon?: string;
+function createHero(classId: ClassId, usedNames: Set<string>): Hero {
+  const c = CLASSES[classId];
+  const stats = { ...c.baseStats };
+  const hero: Hero = {
+    id: mkId('h'),
+    classId,
+    name: randomNameFor(classId, usedNames),
+    level: 1,
+    xp: 0,
+    hp: c.baseHP,
+    maxHp: c.baseHP,
+    mp: c.baseMP,
+    maxMp: c.baseMP,
+    baseStats: stats,
+    equipment: {},
+    enchants: {},
+    abilities: [...c.startingAbilities],
+    cooldowns: {},
+    attackTimer: 1000,
+    state: 'alive',
+    bench: false,
+    abilityPoints: 0,
+    shield: 0,
+    buffs: [],
+  };
+  recomputeHeroMaxHPMP(hero);
+  hero.hp = hero.maxHp;
+  hero.mp = hero.maxMp;
+  return hero;
 }
 
-const calculateLuck = (equipment: Equipment, socketedGems?: Record<string, string[]>, activeEdicts?: string[]) => {
-  let luck = 0;
-  Object.values(equipment).forEach(itemId => {
-    if (itemId) {
-      const item = ITEMS[itemId];
-      if (item?.stats?.luck) luck += item.stats.luck;
-    }
-  });
-  if (socketedGems) {
-    const gemBonuses = calculateGemBonuses(socketedGems);
-    luck += gemBonuses.luck || 0;
+function createInitialState(): GameState {
+  const used = new Set<string>();
+  const knight = createHero('knight', used); used.add(knight.name);
+  const priest = createHero('priest', used); used.add(priest.name);
+  // Give them starter weapons
+  knight.equipment.weapon = 'rusty_sword';
+  priest.equipment.weapon = 'oak_staff';
+
+  const state: GameState = {
+    version: STATE_VERSION,
+    heroes: [knight, priest],
+    stash: { items: {}, gold: 100, essence: 0, bountyMarks: 0 },
+    currentLog: [],
+    unlockedDungeons: ['sewer_warrens'],
+    unlockedClasses: ['knight', 'priest'],
+    speed: 1,
+    paused: false,
+    lastTick: Date.now(),
+    totalPlaytime: 0,
+    dungeonsCompleted: {},
+    totalMonstersKilled: 0,
+    totalGoldEarned: 0,
+    achievements: [],
+    autoSellRarities: [],
+    collectionLog: [],
+    tutorialStep: 0,
+    killCombo: 0,
+    lastKillAt: 0,
+    bestKillCombo: 0,
+    blessings: {},
+    shopRotation: rollShopRotation(dayIndex()),
+    bountyBoard: rollBountyBoard(dayIndex(), 0, 0),
+    town: {
+      unlockedWorkers: 3,
+      workers: [
+        { id: 'w1', name: 'Peasant Jon' },
+        { id: 'w2', name: 'Miller Sam' },
+        { id: 'w3', name: 'Smithy Dan' },
+      ],
+    },
+    skills: {},
+  };
+  // starter consumables
+  state.stash.items['healing_potion'] = 3;
+  state.stash.items['mana_potion'] = 2;
+
+  pushLog(state, 'system', '✨ A new party gathers at the tavern. Their legend begins.');
+  return state;
+}
+
+function loadFromStorage(): GameState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<GameState>;
+    if (parsed.version !== STATE_VERSION) return null;
+    return migrate(parsed);
+  } catch (e) {
+    console.error('Failed to load save, starting fresh:', e);
+    return null;
   }
-  // Relic: Fortune Star — +50% luck
-  if (activeEdicts?.includes('relic_fortune_star')) {
-    luck = Math.floor(luck * 1.5);
-  }
-  return luck;
-};
+}
 
-const calculateSetBonuses = (equipment: Equipment) => {
-  const setCounts: Record<string, number> = {};
-  const bonuses: Partial<Item['stats']> = {};
-
-  Object.values(equipment).forEach(itemId => {
-    if (itemId) {
-      const item = ITEMS[itemId];
-      if (item?.setBonus) {
-        setCounts[item.setBonus.setId] = (setCounts[item.setBonus.setId] || 0) + 1;
-      }
-    }
-  });
-
-  Object.values(equipment).forEach(itemId => {
-    if (itemId) {
-      const item = ITEMS[itemId];
-      if (item?.setBonus && setCounts[item.setBonus.setId] >= item.setBonus.piecesRequired) {
-        const setId = item.setBonus.setId;
-        if (setCounts[setId] !== -1) {
-          Object.entries(item.setBonus.bonus).forEach(([stat, value]) => {
-            const s = stat as keyof Item['stats'];
-            bonuses[s] = (bonuses[s] || 0) + (value as number);
-          });
-          setCounts[setId] = -1;
-        }
-      }
-    }
-  });
-
-  return bonuses;
-};
-
-const calculateGemBonuses = (socketedGems: Record<string, string[]>): Partial<Item['stats']> => {
-  const bonuses: Partial<Item['stats']> = {};
-  Object.values(socketedGems).forEach(gems => {
-    gems.forEach(gemId => {
-      const gem = ITEMS[gemId];
-      if (gem?.gemBonus) {
-        Object.entries(gem.gemBonus).forEach(([stat, value]) => {
-          const s = stat as keyof Item['stats'];
-          bonuses[s] = (bonuses[s] || 0) + (value as number);
-        });
-      }
-    });
-  });
-  return bonuses;
-};
-
-const calculateDuration = (action: SkillAction, skills: Record<SkillId, any>, equipment: Equipment, activeEdicts: string[], ascensions: Record<SkillId, number>, buffs: any[], inventory: InventoryItem[], socketedGems?: Record<string, string[]>) => {
-  let actualDuration = action.duration;
-
-  // Tool Bonus
-  const bestTool = inventory
-    .map(i => ITEMS[i.itemId])
-    .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === action.skill)
-    .sort((a, b) => (b.toolBonus?.speedMultiplier || 1) - (a.toolBonus?.speedMultiplier || 1))[0];
-
-  if (bestTool?.toolBonus) {
-    actualDuration *= (1 / bestTool.toolBonus.speedMultiplier);
-  }
-
-  // Buffs
-  buffs.forEach(buff => {
-    if (buff.type === 'speed') {
-      actualDuration *= (1 / buff.multiplier);
-    }
-    if (buff.type === 'combat' && action.isMonster) {
-      actualDuration *= (1 / buff.multiplier);
-    }
-  });
-
-  // Global Edict Efficiency
-  if (activeEdicts.includes('edict_efficiency')) {
-    actualDuration *= 0.9;
-  }
-
-  // Relic: Heart of the Empire
-  if (action.skill === 'empire' && activeEdicts.includes('relic_empire_heart')) {
-    actualDuration *= 0.5;
-  }
-
-  // Relic: Iron Will — combat 25% faster
-  if (action.isMonster && activeEdicts.includes('relic_iron_will')) {
-    actualDuration *= 0.75;
-  }
-
-  // Relic: Gatherer's Grace — gathering 30% faster
-  const gatheringSkills: SkillId[] = ['mining', 'woodcutting', 'fishing', 'hunting', 'farming'];
-  if (gatheringSkills.includes(action.skill) && activeEdicts.includes('relic_gatherers_grace')) {
-    actualDuration *= 0.7;
-  }
-
-  // Ascension Bonus
-  const ascensionCount = ascensions[action.skill] || 0;
-  const ascensionMultiplier = activeEdicts.includes('relic_timeless_mastery') ? 0.10 : 0.05;
-  actualDuration *= (1 - ascensionCount * ascensionMultiplier);
-
-  if (action.isMonster) {
-    // Relic: Void Blade (10% chance to execute)
-    if (activeEdicts.includes('relic_void_blade') && Math.random() < 0.1) {
-      return 100;
-    }
-
-    let combatLevel = 1;
-
-    if (['attack', 'strength', 'defense'].includes(action.skill)) {
-      combatLevel = (skills.attack.level + skills.strength.level + skills.defense.level) / 3;
-    } else if (action.skill === 'magic') {
-      combatLevel = skills.magic.level;
-    } else if (action.skill === 'ranged') {
-      combatLevel = skills.ranged.level;
-    }
-
-    // Equipment Stats
-    let equipmentBonus = 0;
-    Object.values(equipment).forEach((itemId: string | undefined) => {
-      if (itemId) {
-        const item = ITEMS[itemId];
-        if (item?.stats) {
-          if (['attack', 'strength', 'defense'].includes(action.skill)) {
-            equipmentBonus += (item.stats.attack || 0) + (item.stats.strength || 0);
-          } else if (action.skill === 'magic') {
-            equipmentBonus += item.stats.magic || 0;
-          } else if (action.skill === 'ranged') {
-            equipmentBonus += item.stats.ranged || 0;
-          }
-        }
-      }
-    });
-
-    // Gem Bonuses
-    if (socketedGems) {
-      const gemBonuses = calculateGemBonuses(socketedGems);
-      if (['attack', 'strength', 'defense'].includes(action.skill)) {
-        equipmentBonus += (gemBonuses.attack || 0) + (gemBonuses.strength || 0);
-      } else if (action.skill === 'magic') {
-        equipmentBonus += gemBonuses.magic || 0;
-      } else if (action.skill === 'ranged') {
-        equipmentBonus += gemBonuses.ranged || 0;
-      }
-    }
-
-    actualDuration = actualDuration / (1 + (combatLevel - 1) * 0.05 + equipmentBonus * 0.01);
-
-    // Weakness bonus
-    if (action.weakness && action.skill === action.weakness) {
-      actualDuration *= 0.7;
-    }
-
-    // Martial Law Edict
-    if (activeEdicts.includes('edict_martial_law')) {
-      actualDuration *= 0.85;
+// Fill in any fields missing from older save shapes so we never crash on
+// `undefined.toLocaleString()` etc. Non-destructive.
+function migrate(s: Partial<GameState>): GameState {
+  const filled: GameState = {
+    version: STATE_VERSION,
+    heroes: (s.heroes ?? []).map(migrateHero),
+    stash: {
+      items: s.stash?.items ?? {},
+      gold: s.stash?.gold ?? 0,
+      essence: s.stash?.essence ?? 0,
+      bountyMarks: s.stash?.bountyMarks ?? 0,
+    },
+    activeDungeon: s.activeDungeon,
+    currentLog: s.currentLog ?? [],
+    unlockedDungeons: s.unlockedDungeons?.length ? s.unlockedDungeons : ['sewer_warrens'],
+    unlockedClasses: s.unlockedClasses?.length ? s.unlockedClasses : ['knight', 'priest'],
+    activeDecision: s.activeDecision,
+    speed: (s.speed === 1 || s.speed === 2 || s.speed === 4) ? s.speed : 1,
+    paused: s.paused ?? false,
+    lastTick: s.lastTick ?? Date.now(),
+    totalPlaytime: s.totalPlaytime ?? 0,
+    dungeonsCompleted: s.dungeonsCompleted ?? {},
+    totalMonstersKilled: s.totalMonstersKilled ?? 0,
+    totalGoldEarned: s.totalGoldEarned ?? 0,
+    achievements: s.achievements ?? [],
+    autoSellRarities: s.autoSellRarities ?? [],
+    collectionLog: s.collectionLog ?? [],
+    pendingOfflineReport: s.pendingOfflineReport,
+    tutorialStep: s.tutorialStep ?? 0,
+    killCombo: s.killCombo ?? 0,
+    lastKillAt: s.lastKillAt ?? 0,
+    bestKillCombo: s.bestKillCombo ?? 0,
+    blessings: s.blessings ?? {},
+    shopRotation: s.shopRotation && s.shopRotation.day === dayIndex()
+      ? s.shopRotation
+      : rollShopRotation(dayIndex()),
+    bountyBoard: s.bountyBoard && s.bountyBoard.day === dayIndex()
+      ? s.bountyBoard
+      : rollBountyBoard(
+          dayIndex(),
+          s.totalMonstersKilled ?? 0,
+          s.totalGoldEarned ?? 0,
+        ),
+    town: s.town ?? {
+      unlockedWorkers: 3,
+      workers: [
+        { id: 'w1', name: 'Peasant Jon' },
+        { id: 'w2', name: 'Miller Sam' },
+        { id: 'w3', name: 'Smithy Dan' },
+      ],
+    },
+    skills: s.skills ?? {},
+  };
+  // Validate activeDungeon shape — if it's malformed, drop it to send the
+  // player back to the town picker rather than crashing BattleView.
+  if (filled.activeDungeon) {
+    const d = filled.activeDungeon;
+    if (!Array.isArray(d.tiles) || d.tiles.length === 0 || !d.partyPos || !d.path) {
+      console.warn('Save had malformed activeDungeon, dropping it.');
+      filled.activeDungeon = undefined;
     }
   }
+  return filled;
+}
 
-  // Set Bonus
-  const setBonuses = calculateSetBonuses(equipment);
-  if (setBonuses.speed) {
-    actualDuration /= (1 + setBonuses.speed);
-  }
+function migrateHero(h: Partial<Hero> & { id: string }): Hero {
+  return {
+    id: h.id,
+    classId: h.classId ?? 'knight',
+    name: h.name ?? 'Unknown',
+    level: h.level ?? 1,
+    xp: h.xp ?? 0,
+    hp: h.hp ?? 1,
+    maxHp: h.maxHp ?? 1,
+    mp: h.mp ?? 0,
+    maxMp: h.maxMp ?? 0,
+    baseStats: h.baseStats ?? { str: 1, dex: 1, int: 1, con: 1, spd: 1, luck: 1 },
+    equipment: h.equipment ?? {},
+    enchants: h.enchants ?? {},
+    abilities: h.abilities ?? [],
+    cooldowns: h.cooldowns ?? {},
+    attackTimer: h.attackTimer ?? 1000,
+    state: h.state ?? 'alive',
+    bench: h.bench ?? false,
+    abilityPoints: h.abilityPoints ?? 0,
+    shield: h.shield ?? 0,
+    buffs: h.buffs ?? [],
+  };
+}
 
-  return Math.max(100, actualDuration);
-};
+function dayIndex(): number {
+  return Math.floor(Date.now() / 86_400_000);
+}
 
-// Quest helper: check if quest prerequisites are met
-const checkQuestPrerequisites = (quest: Quest, state: PlayerState): boolean => {
-  return quest.prerequisites.every(req => {
-    switch (req.type) {
-      case 'skill_level':
-        return req.skillId ? state.skills[req.skillId].level >= req.quantity : false;
-      case 'item':
-        return req.itemId ? (state.inventory.find(i => i.itemId === req.itemId)?.quantity || 0) >= req.quantity : false;
-      case 'quest':
-        return req.questId ? state.quests[req.questId]?.status === 'completed' : false;
-      case 'gp':
-        return state.gp >= req.quantity;
-      case 'kill_count':
-        return req.actionId ? (state.killCount[req.actionId] || 0) >= req.quantity : false;
-      default:
-        return true;
+// Deterministic rotation from a day seed so "today's shop" is stable.
+function rollShopRotation(day: number): ShopRotation {
+  const rng = mulberry32(day ^ 0x9E37);
+  const allEquip = Object.values(ITEMS).filter(i => i.slot && !i.classReq);
+  const scrolls = ['scroll_town_portal', 'scroll_identify', 'scroll_xp', 'scroll_bless', 'scroll_haste'];
+  const pool = [...allEquip].sort((a, b) => a.value - b.value);
+  // Three tiers of featured gear — pull from a shared pool so ids are unique.
+  const used = new Set<string>();
+  const pick = (tier: 'low' | 'mid' | 'high'): string[] => {
+    const slice = (tier === 'low' ? pool.slice(0, 12)
+                : tier === 'mid' ? pool.slice(6, 22)
+                : pool.slice(18)).filter(i => !used.has(i.id));
+    const out: string[] = [];
+    for (let i = 0; i < 4 && slice.length; i++) {
+      const idx = Math.floor(rng() * slice.length);
+      const chosen = slice[idx];
+      out.push(chosen.id);
+      used.add(chosen.id);
+      slice.splice(idx, 1);
     }
-  });
-};
+    return out;
+  };
+  return {
+    day,
+    featured: [...pick('low'), ...pick('mid'), ...pick('high')],
+    scrolls,
+    bundles: [
+      { id: 'bundle_heal_small', label: 'Healer Pouch', items: [['healing_potion', 5], ['mana_potion', 3]], price: 180 },
+      { id: 'bundle_heal_big',   label: 'Crusader Pack', items: [['greater_healing_potion', 4], ['mana_potion', 4], ['scroll_town_portal', 1]], price: 500 },
+      { id: 'bundle_explore',    label: 'Dungeoneer Kit', items: [['scroll_identify', 3], ['scroll_xp', 1], ['healing_potion', 4]], price: 700 },
+    ],
+  };
+}
 
-// Check if a quest objective is complete
-const checkObjectiveProgress = (obj: QuestObjective, state: PlayerState, questProgress: QuestProgress): boolean => {
-  const current = questProgress.objectiveProgress[obj.id] || 0;
-  return current >= obj.target;
-};
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-export function useGame() {
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [state, setState] = useState<PlayerState>(() => {
-    const saved = localStorage.getItem('chimera_save');
-    if (!saved) return INITIAL_STATE;
-    try {
-      const parsed = JSON.parse(saved);
+function rollBountyBoard(day: number, killsSoFar: number, goldSoFar: number): BountyBoard {
+  const rng = mulberry32((day ^ 0xB000) >>> 0);
+  const kindPool: BountyKind[] = ['kill_count', 'earn_gold', 'find_items', 'best_combo'];
+  const used = new Set<BountyKind>();
+  const bounties: Bounty[] = [];
+  const dungeonIds = Object.keys(DUNGEON_DEFS);
+  for (let i = 0; i < 3; i++) {
+    // 25% chance of clear_dungeon bounty for slot 0; else pick unique kind
+    let kind: BountyKind;
+    if (i === 0 && rng() < 0.5) {
+      kind = 'clear_dungeon';
+    } else {
+      const pool = kindPool.filter(k => !used.has(k));
+      kind = pool[Math.floor(rng() * pool.length)];
+      used.add(kind);
+    }
+    bounties.push(makeBounty(kind, rng, dungeonIds));
+  }
+  return {
+    day,
+    bounties,
+    snapshot: {
+      totalMonstersKilled: killsSoFar,
+      totalGoldEarned: goldSoFar,
+      itemsCollected: 0,
+      dungeonsCleared: {},
+      bestKillCombo: 0,
+    },
+    dungeonClearCount: {},
+    itemsCollected: 0,
+  };
+}
+
+function makeBounty(kind: BountyKind, rng: () => number, dungeonIds: string[]): Bounty {
+  switch (kind) {
+    case 'kill_count': {
+      const target = 30 + Math.floor(rng() * 50);
       return {
-        ...INITIAL_STATE,
-        ...parsed,
-        skills: { ...INITIAL_STATE.skills, ...parsed.skills },
-        ascensions: { ...INITIAL_STATE.ascensions, ...parsed.ascensions },
-        equipment: { ...INITIAL_STATE.equipment, ...parsed.equipment },
-        buffs: parsed.buffs || [],
-        kingdom: parsed.kingdom || {},
-        // Merge new systems
-        quests: parsed.quests || {},
-        collectionLog: parsed.collectionLog || [],
-        totalActions: parsed.totalActions || {},
-        totalItemsGained: parsed.totalItemsGained || {},
-        bankTab: parsed.bankTab || 'all',
-        killCount: parsed.killCount || {},
-        // Bounty Hunting
-        bountyContract: parsed.bountyContract || undefined,
-        bountyStreak: parsed.bountyStreak || 0,
-        bountyMarks: parsed.bountyMarks || 0,
-        totalBountiesCompleted: parsed.totalBountiesCompleted || 0,
-        socketedGems: parsed.socketedGems || {},
-        dryStreak: parsed.dryStreak || 0,
-        activePet: parsed.activePet || undefined,
-        petsUnlocked: parsed.petsUnlocked || [],
-        autoSellItems: parsed.autoSellItems || [],
-        prestigeLevel: parsed.prestigeLevel || 0,
-        prestigeTokens: parsed.prestigeTokens || 0,
+        id: `b_kill_${target}`, kind, target,
+        label: `⚔ Slay ${target} foes`,
+        description: `Defeat any ${target} monsters today.`,
+        claimed: false,
+        reward: { gold: target * 6 + 100 },
       };
-    } catch (e) {
-      return INITIAL_STATE;
     }
-  });
+    case 'earn_gold': {
+      const target = 500 + Math.floor(rng() * 1500);
+      return {
+        id: `b_gold_${target}`, kind, target,
+        label: `🪙 Earn ${target} gold`,
+        description: `Earn ${target} gold from loot today.`,
+        claimed: false,
+        reward: { essence: 5 + Math.floor(target / 400) },
+      };
+    }
+    case 'find_items': {
+      const target = 10 + Math.floor(rng() * 20);
+      return {
+        id: `b_items_${target}`, kind, target,
+        label: `📦 Loot ${target} items`,
+        description: `Collect ${target} items from drops today.`,
+        claimed: false,
+        reward: { itemId: 'scroll_identify', itemQty: 2 },
+      };
+    }
+    case 'best_combo': {
+      const target = 5 + Math.floor(rng() * 10);
+      return {
+        id: `b_combo_${target}`, kind, target,
+        label: `🔥 Reach ×${target} combo`,
+        description: `Kill ${target} monsters within the combo window.`,
+        claimed: false,
+        reward: { itemId: 'scroll_haste', itemQty: 1, gold: 200 },
+      };
+    }
+    case 'clear_dungeon': {
+      const dungeonId = dungeonIds[Math.floor(rng() * Math.min(3, dungeonIds.length))];
+      return {
+        id: `b_clear_${dungeonId}`, kind, target: 1, dungeonId,
+        label: `🏆 Clear a dungeon`,
+        description: `Complete any floor of a dungeon today.`,
+        claimed: false,
+        reward: { essence: 15, gold: 500 },
+      };
+    }
+  }
+}
 
-  const addEvent = useCallback((message: string, type: GameEvent['type'] = 'info', icon?: string, rarity?: GameEvent['rarity']) => {
-    const displayMessage = icon ? `${icon} ${message}` : message;
-    setEvents(prev => [{
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: Date.now(),
-      message: displayMessage,
-      type,
-      rarity
-    }, ...prev].slice(0, 20));
-  }, []);
+// Current progress for a bounty, given the live state.
+export function bountyProgress(state: GameState, b: Bounty): number {
+  const board = state.bountyBoard;
+  if (!board) return 0;
+  switch (b.kind) {
+    case 'kill_count': return Math.max(0, state.totalMonstersKilled - board.snapshot.totalMonstersKilled);
+    case 'earn_gold':  return Math.max(0, state.totalGoldEarned - board.snapshot.totalGoldEarned);
+    case 'find_items': return board.itemsCollected;
+    case 'best_combo': return state.bestKillCombo;
+    case 'clear_dungeon':
+      return Object.values(board.dungeonClearCount).reduce((a, v) => a + v, 0);
+  }
+}
+
+function saveToStorage(state: GameState): void {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...state, lastTick: Date.now() }));
+  } catch {}
+}
+
+export function useCcGame() {
+  const [state, setState] = useState<GameState>(() => {
+    const saved = loadFromStorage();
+    if (saved) {
+      // offline progress
+      const away = Date.now() - (saved.lastTick ?? Date.now());
+      const report = simulateOffline(saved, away);
+      if (report) saved.pendingOfflineReport = report;
+      saved.lastTick = Date.now();
+      return saved;
+    }
+    return createInitialState();
+  });
 
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // Offline progress calculation — computed once on mount, applied to state
-  const [offlineGains, setOfflineGains] = useState<{ xp: number; gp: number; actions: number; duration: string; skillId: string } | null>(null);
-  const offlineAppliedRef = useRef(false);
-
+  // Tick loop
   useEffect(() => {
-    if (offlineAppliedRef.current) return;
-    offlineAppliedRef.current = true;
-
-    const saved = localStorage.getItem('chimera_save');
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved);
-      const lastSave = parsed._lastSaveTime;
-      if (!lastSave || !parsed.activeAction) return;
-
-      const elapsed = Date.now() - lastSave;
-      if (elapsed < 60000) return; // less than 1 minute, skip
-
-      const action = ACTIONS.find(a => a.id === parsed.activeAction?.actionId);
-      if (!action) return;
-
-      const duration = parsed.activeAction.actualDuration || action.duration;
-      const completedActions = Math.min(Math.floor(elapsed / duration), 500); // cap at 500
-      if (completedActions < 1) return;
-
-      const totalXp = completedActions * action.xpReward;
-      let totalGp = 0;
-      action.outputs.forEach(o => {
-        if (o.itemId === 'gp' && o.chance >= 0.5) {
-          totalGp += o.quantity * completedActions;
-        }
-      });
-
-      // Apply gains to state
-      setState(prev => {
-        const skill = prev.skills[action.skill];
-        const newXp = skill.xp + totalXp;
-        const newLevel = XP_TO_LEVEL(newXp);
-        return {
-          ...prev,
-          gp: prev.gp + totalGp,
-          skills: {
-            ...prev.skills,
-            [action.skill]: { ...skill, xp: newXp, level: newLevel },
-          },
-        };
-      });
-
-      const mins = Math.floor(elapsed / 60000);
-      const hrs = Math.floor(mins / 60);
-      const durationStr = hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
-
-      setOfflineGains({ xp: totalXp, gp: totalGp, actions: completedActions, duration: durationStr, skillId: action.skill });
-    } catch { /* invalid save */ }
+    let lastTs = performance.now();
+    const id = window.setInterval(() => {
+      const now = performance.now();
+      const dt = now - lastTs;
+      lastTs = now;
+      const s = stateRef.current;
+      // Mutate then shallow-copy at top to trigger React update.
+      tickGame(s, dt);
+      setState({ ...s });
+    }, TICK_MS);
+    return () => window.clearInterval(id);
   }, []);
 
+  // Periodic save
   useEffect(() => {
-    localStorage.setItem('chimera_save', JSON.stringify({ ...state, _lastSaveTime: Date.now() }));
-  }, [state]);
-
-  // Track item in collection log
-  const trackCollectionLog = useCallback((itemId: string) => {
-    setState(prev => {
-      if (prev.collectionLog.includes(itemId)) return prev;
-      return { ...prev, collectionLog: [...prev.collectionLog, itemId] };
-    });
+    const id = window.setInterval(() => {
+      saveToStorage(stateRef.current);
+    }, SAVE_MS);
+    return () => window.clearInterval(id);
   }, []);
 
-  const addToInventory = useCallback((itemId: string, quantity: number) => {
-    const item = ITEMS[itemId];
-    if (!item) return;
-
-    // Auto-sell check: if item is in auto-sell list and not rare+, sell immediately
-    if (stateRef.current.autoSellItems.includes(itemId) && (!item.rarity || item.rarity === 'common' || item.rarity === 'uncommon')) {
-      const gpValue = item.value * quantity;
-      addEvent(`Auto-sold ${quantity}x ${item.name} for ${gpValue} GP`, 'loot', '💰');
-      setState(prev => ({ ...prev, gp: prev.gp + gpValue, totalItemsGained: { ...prev.totalItemsGained, [itemId]: (prev.totalItemsGained[itemId] || 0) + quantity } }));
-      trackCollectionLog(itemId);
-      return;
-    }
-
-    if (item.rarity === 'celestial') {
-      addEvent(`CELESTIAL DROP: ${quantity}x ${item.name}`, 'loot', '🌌', 'celestial');
-    } else if (item.rarity === 'legendary') {
-      addEvent(`LEGENDARY DROP: ${quantity}x ${item.name}`, 'loot', '🔥', 'legendary');
-    } else if (item.rarity === 'epic') {
-      addEvent(`EPIC DROP: ${quantity}x ${item.name}`, 'loot', '🟣', 'epic');
-    } else if (item.rarity === 'rare') {
-      addEvent(`Rare drop: ${quantity}x ${item.name}`, 'loot', '🔷', 'rare');
-    } else {
-      addEvent(`Gained ${quantity}x ${item.name}`, 'loot', item.icon, item.rarity);
-    }
-    // Track in collection log
-    trackCollectionLog(itemId);
-
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.itemId === itemId);
-      // Track lifetime totals
-      const newTotalItems = { ...prev.totalItemsGained, [itemId]: (prev.totalItemsGained[itemId] || 0) + quantity };
-
-      if (existing) {
-        return {
-          ...prev,
-          totalItemsGained: newTotalItems,
-          inventory: prev.inventory.map(i =>
-            i.itemId === itemId ? { ...i, quantity: i.quantity + quantity } : i
-          )
-        };
-      }
-      return {
-        ...prev,
-        totalItemsGained: newTotalItems,
-        inventory: [...prev.inventory, { itemId, quantity }]
-      };
-    });
-  }, [addEvent, trackCollectionLog]);
-
-  const salvageItem = useCallback((itemId: string, quantity: number) => {
-    const item = ITEMS[itemId];
-    if (!item || item.type !== 'equipment') return;
-
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.itemId === itemId);
-      if (!existing || existing.quantity < quantity) return prev;
-
-      let essenceAmount = 0;
-      switch (item.rarity) {
-        case 'common': essenceAmount = 1 * quantity; break;
-        case 'uncommon': essenceAmount = 5 * quantity; break;
-        case 'rare': essenceAmount = 25 * quantity; break;
-        case 'epic': essenceAmount = 100 * quantity; break;
-        case 'legendary': essenceAmount = 500 * quantity; break;
-        case 'celestial': essenceAmount = 2500 * quantity; break;
-        default: essenceAmount = 1 * quantity;
-      }
-
-      addEvent(`Salvaged ${quantity}x ${item.name} for ${essenceAmount} Celestial Essence`, 'info', '♻️');
-
-      return {
-        ...prev,
-        celestialEssence: prev.celestialEssence + essenceAmount,
-        inventory: prev.inventory
-          .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - quantity } : i)
-          .filter(i => i.quantity > 0)
-      };
-    });
-  }, [addEvent]);
-
-  const removeFromInventory = useCallback((itemId: string, quantity: number) => {
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.itemId === itemId);
-      if (!existing || existing.quantity < quantity) return prev;
-
-      const newInventory = prev.inventory
-        .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - quantity } : i)
-        .filter(i => i.quantity > 0);
-
-      return { ...prev, inventory: newInventory };
-    });
+  // Save on unload
+  useEffect(() => {
+    const onBeforeUnload = () => saveToStorage(stateRef.current);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, []);
 
-  const hasItems = useCallback((items: { itemId: string; quantity: number }[]) => {
-    return items.every(req => {
-      if (req.itemId === 'gp') return stateRef.current.gp >= req.quantity;
-      if (req.itemId === 'celestial_essence') return stateRef.current.celestialEssence >= req.quantity;
-      const inv = stateRef.current.inventory.find(i => i.itemId === req.itemId);
-      return inv && inv.quantity >= req.quantity;
-    });
+  // ============ actions ============
+
+  const mutate = useCallback((fn: (s: GameState) => void) => {
+    const s = stateRef.current;
+    fn(s);
+    setState({ ...s });
   }, []);
 
-  const startAction = useCallback((actionId: string) => {
-    const action = ACTIONS.find(a => a.id === actionId);
-    if (!action) return;
+  const enterDungeon = useCallback((defId: string) => {
+    mutate(s => {
+      if (s.activeDungeon) return;
+      const def = DUNGEON_DEFS[defId];
+      if (!def) return;
+      if (!s.unlockedDungeons.includes(defId)) return;
+      const floor = (s.dungeonsCompleted[defId] ?? 0) + 1;
+      s.activeDungeon = generateDungeon(def, floor);
+      pushLog(s, 'system', `⚔ Entering ${def.name} — floor ${floor}`);
+    });
+  }, [mutate]);
 
-    const skill = stateRef.current.skills[action.skill];
-    if (skill.level < action.levelRequired) {
-      addEvent(`Level ${action.levelRequired} ${action.skill} required!`, 'info');
-      return;
-    }
+  const retreatToTown = useCallback(() => {
+    mutate(s => {
+      if (!s.activeDungeon) return;
+      s.activeDungeon = undefined;
+      pushLog(s, 'retreat', '🚪 Party returns to town.');
+    });
+  }, [mutate]);
 
-    if (action.secondarySkillRequired) {
-      const secSkill = stateRef.current.skills[action.secondarySkillRequired.skill];
-      if (secSkill.level < action.secondarySkillRequired.level) {
-        addEvent(`Level ${action.secondarySkillRequired.level} ${action.secondarySkillRequired.skill} required!`, 'info');
+  const equipItem = useCallback((heroId: string, itemId: string) => {
+    mutate(s => {
+      const hero = s.heroes.find(h => h.id === heroId);
+      const item = ITEMS[itemId];
+      if (!hero || !item || !item.slot) return;
+      const check = canEquip(hero, item);
+      if (!check.ok) {
+        pushLog(s, 'system', `❌ Cannot equip ${item.name}: ${check.reason}`);
         return;
       }
-    }
+      if ((s.stash.items[itemId] ?? 0) < 1) return;
+      // swap with currently equipped
+      const prev = hero.equipment[item.slot];
+      if (prev) {
+        s.stash.items[prev] = (s.stash.items[prev] ?? 0) + 1;
+      }
+      removeFromStash(s, itemId, 1);
+      hero.equipment[item.slot] = itemId;
+      // Enchants are tied to the specific equipped item — reset on swap.
+      if (hero.enchants) delete hero.enchants[item.slot];
+      recomputeHeroMaxHPMP(hero, s);
+    });
+  }, [mutate]);
 
-    // Check quest requirement
-    if (action.questRequired) {
-      const questProgress = stateRef.current.quests[action.questRequired];
-      if (!questProgress || questProgress.status !== 'completed') {
-        const quest = QUESTS.find(q => q.id === action.questRequired);
-        addEvent(`Quest required: ${quest?.name || action.questRequired}!`, 'info');
+  const unequipItem = useCallback((heroId: string, slot: EquipSlot) => {
+    mutate(s => {
+      const hero = s.heroes.find(h => h.id === heroId);
+      if (!hero) return;
+      const itemId = hero.equipment[slot];
+      if (!itemId) return;
+      s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) + 1;
+      delete hero.equipment[slot];
+      if (hero.enchants) delete hero.enchants[slot];
+      recomputeHeroMaxHPMP(hero, s);
+    });
+  }, [mutate]);
+
+  const sellItem = useCallback((itemId: string, qty: number) => {
+    mutate(s => {
+      const have = s.stash.items[itemId] ?? 0;
+      const actual = Math.min(qty, have);
+      if (actual <= 0) return;
+      const gold = sellValue(itemId, actual);
+      removeFromStash(s, itemId, actual);
+      s.stash.gold += gold;
+      s.totalGoldEarned += gold;
+      pushLog(s, 'loot', `🪙 Sold ${actual}× ${ITEMS[itemId]?.name} for ${gold} gp.`);
+    });
+  }, [mutate]);
+
+  const useConsumable = useCallback((heroId: string, itemId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      const it = ITEMS[itemId];
+      if (!h || !it) return;
+      if ((s.stash.items[itemId] ?? 0) < 1) return;
+      if (it.healOnUse) h.hp = Math.min(h.maxHp, h.hp + it.healOnUse);
+      if (it.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + it.manaOnUse);
+      removeFromStash(s, itemId, 1);
+      pushLog(s, 'heal', `${h.name} uses ${it.name}.`);
+    });
+  }, [mutate]);
+
+  const recruitHero = useCallback((classId: ClassId) => {
+    mutate(s => {
+      const c = CLASSES[classId];
+      if (!c) return;
+      if (s.stash.gold < c.recruitCost) {
+        pushLog(s, 'system', `❌ Need ${c.recruitCost} gp to recruit a ${c.name}.`);
         return;
       }
-    }
+      s.stash.gold -= c.recruitCost;
+      const used = new Set(s.heroes.map(h => h.name));
+      const hero = createHero(classId, used);
+      // bench if active roster is full
+      const activeCount = s.heroes.filter(h => !h.bench).length;
+      if (activeCount >= 4) hero.bench = true;
+      s.heroes.push(hero);
+      if (!s.unlockedClasses.includes(classId)) s.unlockedClasses.push(classId);
+      pushLog(s, 'system', `🎉 ${hero.name} the ${c.name} joins the party!`);
+    });
+  }, [mutate]);
 
-    if (action.toolRequired) {
-      const hasTool = stateRef.current.inventory.some(i => i.itemId === action.toolRequired);
-      if (!hasTool) {
-        addEvent(`Required tool missing: ${ITEMS[action.toolRequired!]?.name || action.toolRequired}`, 'info');
+  const toggleBench = useCallback((heroId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      if (!h) return;
+      const activeCount = s.heroes.filter(x => !x.bench).length;
+      if (h.bench && activeCount >= 4) {
+        pushLog(s, 'system', `❌ Active party is full (max 4).`);
         return;
       }
-    }
+      h.bench = !h.bench;
+    });
+  }, [mutate]);
 
-    if (action.inputs && !hasItems(action.inputs)) {
-      addEvent(`Missing required materials!`, 'info');
-      return;
-    }
-
-    const actualDuration = calculateDuration(action, stateRef.current.skills, stateRef.current.equipment, stateRef.current.activeEdicts, stateRef.current.ascensions, stateRef.current.buffs, stateRef.current.inventory, stateRef.current.socketedGems);
-
-    setState(prev => ({
-      ...prev,
-      activeAction: {
-        actionId,
-        startTime: Date.now(),
-        progress: 0,
-        actualDuration
+  const reviveHero = useCallback((heroId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      if (!h) return;
+      const cost = 100 + h.level * 20;
+      if (s.stash.gold < cost) {
+        pushLog(s, 'system', `❌ Need ${cost} gp to revive.`);
+        return;
       }
-    }));
-  }, [hasItems, addEvent]);
+      s.stash.gold -= cost;
+      h.state = 'alive';
+      h.hp = h.maxHp;
+      h.mp = h.maxMp;
+      pushLog(s, 'heal', `✨ ${h.name} revived at the temple!`);
+    });
+  }, [mutate]);
 
-  const stopAction = useCallback(() => {
-    setState(prev => ({ ...prev, activeAction: undefined }));
+  const healParty = useCallback(() => {
+    mutate(s => {
+      const cost = s.heroes.filter(h => !h.bench).reduce((a, h) => a + Math.floor((h.maxHp - h.hp) * 0.5 + (h.maxMp - h.mp) * 0.3), 0);
+      if (cost === 0) return;
+      if (s.stash.gold < cost) {
+        pushLog(s, 'system', `❌ Need ${cost} gp to rest at the inn.`);
+        return;
+      }
+      s.stash.gold -= cost;
+      for (const h of s.heroes) {
+        if (h.bench || h.state !== 'alive') continue;
+        h.hp = h.maxHp;
+        h.mp = h.maxMp;
+      }
+      pushLog(s, 'heal', `🛌 Party rests at the inn. (-${cost} gp)`);
+    });
+  }, [mutate]);
+
+  const buyAbility = useCallback((heroId: string, abilityId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      const ab = ABILITIES[abilityId];
+      if (!h || !ab) return;
+      if (ab.classId !== h.classId) return;
+      if (h.level < ab.levelReq) return;
+      if (h.abilities.includes(abilityId)) return;
+      if (h.abilityPoints < 1) return;
+      h.abilityPoints--;
+      h.abilities.push(abilityId);
+      pushLog(s, 'level', `⭐ ${h.name} learned ${ab.name}!`);
+    });
+  }, [mutate]);
+
+  const buyShopItem = useCallback((itemId: string) => {
+    mutate(s => {
+      const it = ITEMS[itemId];
+      if (!it) return;
+      if (s.stash.gold < it.value) {
+        pushLog(s, 'system', `❌ Not enough gold.`);
+        return;
+      }
+      s.stash.gold -= it.value;
+      addToStash(s, itemId, 1);
+      pushLog(s, 'loot', `🛒 Bought ${it.name}.`);
+    });
+  }, [mutate]);
+
+  const resolveDecision = useCallback((optionId: string) => {
+    mutate(s => {
+      engineResolveDecision(s, optionId);
+    });
+  }, [mutate]);
+
+  const setSpeed = useCallback((speed: 1 | 2 | 4) => {
+    mutate(s => { s.speed = speed; });
+  }, [mutate]);
+
+  const togglePause = useCallback(() => {
+    mutate(s => { s.paused = !s.paused; });
+  }, [mutate]);
+
+  const setAutoSell = useCallback((rarity: Rarity, on: boolean) => {
+    mutate(s => {
+      s.autoSellRarities = on
+        ? Array.from(new Set([...s.autoSellRarities, rarity]))
+        : s.autoSellRarities.filter(r => r !== rarity);
+    });
+  }, [mutate]);
+
+  const dismissOfflineReport = useCallback(() => {
+    mutate(s => { s.pendingOfflineReport = undefined; });
+  }, [mutate]);
+
+  const resetGame = useCallback(() => {
+    if (!confirm('Reset everything? This deletes your save.')) return;
+    localStorage.removeItem(SAVE_KEY);
+    setState(createInitialState());
   }, []);
 
-  const addGp = useCallback((amount: number) => {
-    setState(prev => {
-      // Relic: Golden Touch — double positive GP gains
-      let finalAmount = amount;
-      if (amount > 0 && prev.activeEdicts.includes('relic_golden_touch')) {
-        finalAmount = amount * 2;
-      }
-      if (finalAmount > 0) addEvent(`Gained ${finalAmount} GP`, 'loot', '💰');
-      return { ...prev, gp: prev.gp + finalAmount };
-    });
-  }, [addEvent]);
+  const advanceTutorial = useCallback(() => {
+    mutate(s => { s.tutorialStep = s.tutorialStep + 1; });
+  }, [mutate]);
 
-  // Update quest progress based on game events
-  const updateQuestProgress = useCallback((eventType: string, data: { actionId?: string; itemId?: string; skillId?: SkillId; quantity?: number }) => {
-    setState(prev => {
-      let changed = false;
-      const newQuests = { ...prev.quests };
-
-      // Check all in-progress quests
-      (Object.values(newQuests) as QuestProgress[]).forEach(qp => {
-        if (qp.status !== 'in_progress') return;
-        const quest = QUESTS.find(q => q.id === qp.questId);
-        if (!quest) return;
-
-        quest.objectives.forEach(obj => {
-          const currentProgress = qp.objectiveProgress[obj.id] || 0;
-          if (currentProgress >= obj.target) return; // Already complete
-
-          let increment = 0;
-
-          if (eventType === 'action_complete' && obj.type === 'kill' && data.actionId === obj.actionId) {
-            increment = 1;
-          } else if (eventType === 'action_complete' && obj.type === 'craft' && data.actionId === obj.actionId) {
-            increment = 1;
-          } else if (eventType === 'item_gained' && obj.type === 'gather' && data.itemId === obj.itemId) {
-            increment = data.quantity || 1;
-          } else if (eventType === 'level_up' && obj.type === 'reach_level' && data.skillId === obj.skillId) {
-            // Set to current level
-            const skillLevel = prev.skills[data.skillId!]?.level || 0;
-            if (skillLevel >= obj.target) {
-              qp.objectiveProgress[obj.id] = obj.target;
-              changed = true;
-              return;
-            }
-          } else if (eventType === 'gp_gained' && obj.type === 'earn_gp') {
-            increment = data.quantity || 0;
-          }
-
-          if (increment > 0) {
-            qp.objectiveProgress[obj.id] = Math.min(obj.target, currentProgress + increment);
-            changed = true;
-          }
-        });
-
-        // Check if all objectives complete
-        if (changed) {
-          const allComplete = quest.objectives.every(obj =>
-            (qp.objectiveProgress[obj.id] || 0) >= obj.target
-          );
-          if (allComplete && qp.status === 'in_progress') {
-            qp.status = 'completed';
-            qp.completedAt = Date.now();
-            addEvent(`QUEST COMPLETE: ${quest.name}!`, 'quest', '🏆', 'legendary');
-
-            // Grant rewards
-            quest.rewards.forEach(reward => {
-              switch (reward.type) {
-                case 'xp':
-                  if (reward.skillId) {
-                    const skill = prev.skills[reward.skillId];
-                    const newXp = skill.xp + reward.quantity;
-                    const newLevel = XP_TO_LEVEL(newXp);
-                    prev.skills[reward.skillId] = { ...skill, xp: newXp, level: newLevel };
-                    addEvent(`Quest reward: ${reward.quantity} ${reward.skillId} XP`, 'xp', '⭐');
-                  }
-                  break;
-                case 'gp':
-                  prev.gp += reward.quantity;
-                  addEvent(`Quest reward: ${reward.quantity} GP`, 'loot', '💰');
-                  break;
-                case 'celestial_essence':
-                  prev.celestialEssence += reward.quantity;
-                  addEvent(`Quest reward: ${reward.quantity} Celestial Essence`, 'loot', '✨');
-                  break;
-                case 'item':
-                  if (reward.itemId) {
-                    const existing = prev.inventory.find(i => i.itemId === reward.itemId);
-                    if (existing) {
-                      existing.quantity += reward.quantity;
-                    } else {
-                      prev.inventory.push({ itemId: reward.itemId, quantity: reward.quantity });
-                    }
-                    const rewardItem = ITEMS[reward.itemId];
-                    addEvent(`Quest reward: ${reward.quantity}x ${rewardItem?.name || reward.itemId}`, 'loot', rewardItem?.icon);
-                  }
-                  break;
-              }
-            });
-          }
-        }
-      });
-
-      return changed ? { ...prev, quests: newQuests } : prev;
-    });
-  }, [addEvent]);
-
-  const completeAction = useCallback((action: SkillAction) => {
-    // Check inputs again
-    if (action.inputs && !hasItems(action.inputs)) {
-      addEvent(`Stopped: Out of materials!`, 'info');
-      stopAction();
-      return;
-    }
-
-    // Remove inputs
-    if (action.inputs) {
-      action.inputs.forEach(input => {
-        if (input.itemId === 'gp') {
-          setState(prev => ({ ...prev, gp: prev.gp - input.quantity }));
-        } else if (input.itemId === 'celestial_essence') {
-          setState(prev => ({ ...prev, celestialEssence: prev.celestialEssence - input.quantity }));
-        } else {
-          removeFromInventory(input.itemId, input.quantity);
-        }
-      });
-    }
-
-    // Add outputs
-    const luck = calculateLuck(stateRef.current.equipment, stateRef.current.socketedGems, stateRef.current.activeEdicts);
-    const luckMultiplier = 1 + (luck / 100);
-
-    action.outputs.forEach(output => {
-      const rolledChance = output.chance * luckMultiplier;
-      if (Math.random() <= rolledChance) {
-        let quantity = output.quantity;
-
-        // Relic: Eye of the Storm (20% chance to double)
-        if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
-          quantity *= 2;
-          addEvent(`Eye of the Storm doubled your ${ITEMS[output.itemId]?.name || 'loot'}!`, 'loot');
-        }
-
-        if (output.itemId === 'gp') {
-          if (stateRef.current.activeEdicts.includes('edict_prosperity')) {
-            quantity = Math.floor(quantity * 1.2);
-          }
-          addGp(quantity);
-          // Track GP for quests
-          updateQuestProgress('gp_gained', { quantity });
-        } else if (output.itemId === 'celestial_essence') {
-          setState(prev => ({ ...prev, celestialEssence: prev.celestialEssence + quantity }));
-          addEvent(`Gained ${quantity} Celestial Essence`, 'loot');
-        } else {
-          addToInventory(output.itemId, quantity);
-          // Track items for quests
-          updateQuestProgress('item_gained', { itemId: output.itemId, quantity });
-        }
-      }
-    });
-
-    // ===== UNIQUE MONSTER DROP TABLE =====
-    // Each monster has signature drops that roll separately from RDT
-    if (action.isMonster) {
-      const monsterDrops = MONSTER_DROP_TABLES[action.id];
-      if (monsterDrops) {
-        monsterDrops.forEach(drop => {
-          const adjustedChance = drop.chance * luckMultiplier;
-          if (Math.random() <= adjustedChance) {
-            let qty = drop.quantity;
-            // Eye of the Storm can double these too
-            if (stateRef.current.activeEdicts.includes('relic_storm_eye') && Math.random() < 0.2) {
-              qty *= 2;
-            }
-            addToInventory(drop.itemId, qty);
-            const dropItem = ITEMS[drop.itemId];
-            if (dropItem && (dropItem.rarity === 'legendary' || dropItem.rarity === 'celestial' || dropItem.rarity === 'epic')) {
-              addEvent(`UNIQUE DROP: ${qty}x ${dropItem.name}!`, 'loot', dropItem.icon, dropItem.rarity);
+  // Auto-equip the best item from stash into each active hero's empty or
+  // clearly-inferior slots. Non-destructive — returns swapped items to stash.
+  const autoEquipBest = useCallback(() => {
+    mutate(s => {
+      const active = s.heroes.filter(h => !h.bench);
+      let equipped = 0;
+      const slots: EquipSlot[] = ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
+      for (const h of active) {
+        for (const slot of slots) {
+          // Find the best available item for this slot
+          let bestId: string | undefined;
+          let bestScore = -1;
+          for (const [id, qty] of Object.entries(s.stash.items)) {
+            if (qty <= 0) continue;
+            const it = ITEMS[id];
+            if (!it || it.slot !== slot) continue;
+            if (it.classReq && !it.classReq.includes(h.classId)) continue;
+            if (it.levelReq && h.level < it.levelReq) continue;
+            const stats = it.stats ?? {};
+            const statSum = (stats.str ?? 0) + (stats.dex ?? 0) + (stats.int ?? 0) + (stats.con ?? 0) + (stats.spd ?? 0) + (stats.luck ?? 0);
+            const score = (it.weaponPower ?? 0) + (it.armor ?? 0) + statSum * 1.2;
+            if (score > bestScore) {
+              bestScore = score;
+              bestId = id;
             }
           }
-        });
+          if (!bestId) continue;
+          // Compare with currently-equipped
+          const curId = h.equipment[slot];
+          if (curId) {
+            const cur = ITEMS[curId];
+            const curStats = cur?.stats ?? {};
+            const curSum = (curStats.str ?? 0) + (curStats.dex ?? 0) + (curStats.int ?? 0) + (curStats.con ?? 0) + (curStats.spd ?? 0) + (curStats.luck ?? 0);
+            const curScore = (cur?.weaponPower ?? 0) + (cur?.armor ?? 0) + curSum * 1.2;
+            if (curScore >= bestScore) continue;
+          }
+          // Do the swap
+          if (curId) {
+            s.stash.items[curId] = (s.stash.items[curId] ?? 0) + 1;
+          }
+          s.stash.items[bestId] = (s.stash.items[bestId] ?? 0) - 1;
+          if (s.stash.items[bestId] <= 0) delete s.stash.items[bestId];
+          h.equipment[slot] = bestId;
+          recomputeHeroMaxHPMP(h);
+          equipped++;
+        }
       }
-    }
+      if (equipped > 0) pushLog(s, 'system', `🛡 Auto-equipped ${equipped} upgrade${equipped === 1 ? '' : 's'}.`);
+      else pushLog(s, 'system', `🛡 No better gear available.`);
+    });
+  }, [mutate]);
 
-    // Global Rare Drop Table (RDT) roll for monsters — with dry streak protection
-    if (action.isMonster) {
-      const currentDryStreak = stateRef.current.dryStreak;
-      // After 40 kills (2x expected rate of 1/20), boost chance by 2% per kill over threshold
-      const dryStreakBoost = currentDryStreak > 40 ? (currentDryStreak - 40) * 0.02 : 0;
-      const rdtChance = Math.min(0.5, (0.05 + dryStreakBoost) * luckMultiplier);
-      let gotRareDrop = false;
+  // Use party's potions (and cooked food) to top off HP/MP. Healing pool is
+  // now any stashed item with healOnUse > 0 — so cooked fish from the Cooking
+  // skill feeds combat directly.
+  const quickHealParty = useCallback(() => {
+    mutate(s => {
+      const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+      let used = 0;
+      // Build heal pool: all stashed items with healOnUse, sorted biggest-first.
+      const healPool = Object.keys(s.stash.items)
+        .filter(id => (s.stash.items[id] ?? 0) > 0 && (ITEMS[id]?.healOnUse ?? 0) > 0)
+        .sort((a, b) => (ITEMS[b].healOnUse ?? 0) - (ITEMS[a].healOnUse ?? 0));
+      for (const h of active) {
+        if (h.hp >= h.maxHp * 0.95) continue;
+        for (const pid of healPool) {
+          if ((s.stash.items[pid] ?? 0) <= 0) continue;
+          const pot = ITEMS[pid];
+          if (!pot) continue;
+          h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
+          if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
+          s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
+          if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+          used++;
+          if (h.hp >= h.maxHp * 0.95) break;
+        }
+      }
+      // Mana potions on casters
+      for (const h of active) {
+        if (h.mp >= h.maxMp * 0.9) continue;
+        while ((s.stash.items['mana_potion'] ?? 0) > 0 && h.mp < h.maxMp * 0.9) {
+          const pot = ITEMS['mana_potion'];
+          h.mp = Math.min(h.maxMp, h.mp + (pot.manaOnUse ?? 0));
+          s.stash.items['mana_potion'] = (s.stash.items['mana_potion'] ?? 0) - 1;
+          if (s.stash.items['mana_potion'] <= 0) delete s.stash.items['mana_potion'];
+          used++;
+        }
+      }
+      if (used > 0) pushLog(s, 'heal', `🧪 Used ${used} potion${used === 1 ? '' : 's'} across the party.`);
+      else pushLog(s, 'system', `🧪 No potions needed or available.`);
+    });
+  }, [mutate]);
 
-      if (Math.random() <= rdtChance) {
-        const rdtRoll = Math.random();
-        let cumulativeChance = 0;
-        for (const rdtItem of RARE_DROP_TABLE) {
-          cumulativeChance += rdtItem.chance;
-          if (rdtRoll <= cumulativeChance) {
-            if (rdtItem.itemId === 'gp') {
-              const gpAmount = Math.floor(Math.random() * 5000) + 1000;
-              addGp(gpAmount);
-              addEvent(`RARE DROP TABLE: Hidden stash of ${gpAmount} GP!`, 'loot', '💰', 'rare');
-            } else {
-              addToInventory(rdtItem.itemId, 1);
-              addEvent(`RARE DROP TABLE: ${ITEMS[rdtItem.itemId]?.name}!`, 'loot', ITEMS[rdtItem.itemId]?.icon, ITEMS[rdtItem.itemId]?.rarity);
+  // Auto-sell common/uncommon items in stash (fast "collect item sales" card)
+  const sellJunk = useCallback(() => {
+    mutate(s => {
+      let gold = 0;
+      let sold = 0;
+      for (const [id, qty] of Object.entries(s.stash.items)) {
+        const it = ITEMS[id];
+        if (!it) continue;
+        if (it.slot) continue; // don't sell equipment
+        if (it.type === 'potion') continue; // don't sell potions
+        if (it.rarity === 'common' || it.rarity === 'uncommon') {
+          gold += Math.floor(it.value * qty * 0.5);
+          sold += qty;
+          delete s.stash.items[id];
+        }
+      }
+      if (sold === 0) {
+        pushLog(s, 'system', `No junk to sell.`);
+        return;
+      }
+      s.stash.gold += gold;
+      s.totalGoldEarned += gold;
+      pushLog(s, 'loot', `💰 Sold ${sold} junk item${sold === 1 ? '' : 's'} for ${gold} gp.`);
+    });
+  }, [mutate]);
+
+  // Upgrade the enchant on a hero's equipped slot. Costs gold + materials.
+  const upgradeEquip = useCallback((heroId: string, slot: EquipSlot) => {
+    mutate(s => {
+      const hero = s.heroes.find(h => h.id === heroId);
+      if (!hero) return;
+      const cost = enchantCost(hero, slot);
+      if (!cost) {
+        pushLog(s, 'system', '❌ Nothing to upgrade in that slot.');
+        return;
+      }
+      if (s.stash.gold < cost.gold) {
+        pushLog(s, 'system', `❌ Need ${cost.gold}g for this enchant.`);
+        return;
+      }
+      for (const m of cost.materials) {
+        if ((s.stash.items[m.id] ?? 0) < m.qty) {
+          pushLog(s, 'system', `❌ Need ${m.qty}× ${ITEMS[m.id]?.name ?? m.id}.`);
+          return;
+        }
+      }
+      s.stash.gold -= cost.gold;
+      for (const m of cost.materials) {
+        s.stash.items[m.id] = (s.stash.items[m.id] ?? 0) - m.qty;
+        if (s.stash.items[m.id] <= 0) delete s.stash.items[m.id];
+      }
+      hero.enchants ||= {};
+      const newTier = enchantTier(hero, slot) + 1;
+      hero.enchants[slot] = newTier;
+      recomputeHeroMaxHPMP(hero, s);
+      const itemName = ITEMS[hero.equipment[slot]!]?.name ?? 'gear';
+      pushLog(s, 'loot', `🔨 ${hero.name}'s ${itemName} enchanted to +${newTier}!`, newTier >= 5 ? 'epic' : 'rare');
+    });
+  }, [mutate]);
+
+  // Spend essence for a permanent party-wide blessing level.
+  const buyBlessing = useCallback((id: BlessingId) => {
+    mutate(s => {
+      const lvl = blessingLevel(s, id);
+      const cost = blessingCost(lvl);
+      if (s.stash.essence < cost) {
+        pushLog(s, 'system', `❌ Need ${cost}⟡ essence.`);
+        return;
+      }
+      s.stash.essence -= cost;
+      s.blessings ||= {};
+      s.blessings[id] = lvl + 1;
+      // vigor changes maxHp — recompute
+      if (id === 'vigor') {
+        for (const h of s.heroes) recomputeHeroMaxHPMP(h, s);
+      }
+      pushLog(s, 'victory', `✨ Shrine blessing: ${id} → Lv${lvl + 1}`, 'legendary');
+    });
+  }, [mutate]);
+
+  // Consume a scroll. Effects depend on id.
+  const useScroll = useCallback((itemId: string) => {
+    mutate(s => {
+      if ((s.stash.items[itemId] ?? 0) < 1) return;
+      const it = ITEMS[itemId];
+      if (!it) return;
+      switch (itemId) {
+        case 'scroll_town_portal': {
+          if (!s.activeDungeon) {
+            pushLog(s, 'system', 'Not in a dungeon.');
+            return;
+          }
+          s.activeDungeon = undefined;
+          for (const h of s.heroes) {
+            if (h.state === 'alive') { h.hp = h.maxHp; h.mp = h.maxMp; }
+          }
+          pushLog(s, 'retreat', '🌀 Town Portal whisks the party home!', 'rare');
+          break;
+        }
+        case 'scroll_identify': {
+          if (!s.activeDungeon) { pushLog(s, 'system', 'Only in dungeons.'); return; }
+          const d = s.activeDungeon;
+          const hidden = d.tiles.filter(t => !t.revealed);
+          let revealed = 0;
+          for (let i = 0; i < 2 && hidden.length; i++) {
+            const t = hidden.splice(Math.floor(Math.random() * hidden.length), 1)[0];
+            t.revealed = true;
+            revealed++;
+          }
+          pushLog(s, 'system', `📜 Scroll of Identify reveals ${revealed} tiles.`);
+          break;
+        }
+        case 'scroll_xp': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) { h.xp += 500; }
+          pushLog(s, 'level', `📖 Insight grants +500 XP to each hero.`, 'rare');
+          break;
+        }
+        case 'scroll_bless': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) {
+            for (const stat of ['str','dex','int','con','spd','luck'] as const) {
+              h.buffs.push({ id: mkId('buff'), stat, power: 0.25, remaining: 60000 });
             }
-            gotRareDrop = true;
-            break;
           }
+          pushLog(s, 'heal', '📃 Party blessed — +25% all stats 60s.', 'rare');
+          break;
         }
-      }
-
-      // Update dry streak counter
-      setState(prev => ({
-        ...prev,
-        dryStreak: gotRareDrop ? 0 : prev.dryStreak + 1,
-      }));
-    }
-
-    // ===== PET DROP ROLL =====
-    const petId = SKILL_PETS[action.skill];
-    if (petId && !stateRef.current.petsUnlocked.includes(petId)) {
-      // Higher skill level slightly improves chance
-      const levelBonus = stateRef.current.skills[action.skill].level * 0.0001;
-      const petChance = PET_BASE_CHANCE + levelBonus;
-      if (Math.random() <= petChance) {
-        addToInventory(petId, 1);
-        addEvent(`PET DROP: ${ITEMS[petId]?.name}! A new companion follows you!`, 'loot', ITEMS[petId]?.icon, 'celestial');
-        setState(prev => ({
-          ...prev,
-          petsUnlocked: [...prev.petsUnlocked, petId],
-          activePet: prev.activePet || petId, // auto-equip first pet
-        }));
-      }
-    }
-
-    // Track action completion for quests + kill counts + bounty contracts
-    setState(prev => {
-      let newBountyContract = prev.bountyContract;
-      let newBountyStreak = prev.bountyStreak;
-      let newBountyMarks = prev.bountyMarks;
-      let newTotalBounties = prev.totalBountiesCompleted;
-      let newSlayerSkills = { ...prev.skills };
-
-      // Track bounty contract progress
-      if (action.isMonster && newBountyContract && action.id === newBountyContract.monsterId) {
-        newBountyContract = { ...newBountyContract, killsCompleted: newBountyContract.killsCompleted + 1 };
-
-        if (newBountyContract.killsCompleted >= newBountyContract.killsRequired) {
-          // Contract complete!
-          const streakBonus = Math.floor(newBountyStreak * 0.1 * newBountyContract.bountyMarkReward);
-          const totalMarks = newBountyContract.bountyMarkReward + streakBonus;
-          newBountyMarks += totalMarks;
-          newBountyStreak += 1;
-          newTotalBounties += 1;
-
-          // Bonus slayer XP
-          const slayer = newSlayerSkills.slayer;
-          const newXp = slayer.xp + newBountyContract.bonusXp;
-          const newLevel = XP_TO_LEVEL(newXp);
-          if (newLevel > slayer.level) {
-            addEvent(`LEVEL UP! SLAYER is now level ${newLevel}!`, 'level');
+        case 'scroll_haste': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) {
+            h.buffs.push({ id: mkId('buff'), stat: 'spd', power: 1.0, remaining: 45000 });
           }
-          newSlayerSkills = { ...newSlayerSkills, slayer: { ...slayer, xp: newXp, level: newLevel } };
+          pushLog(s, 'heal', '⚡ Haste! Double speed 45s.', 'rare');
+          break;
+        }
+        default: break;
+      }
+      s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) - 1;
+      if (s.stash.items[itemId] <= 0) delete s.stash.items[itemId];
+    });
+  }, [mutate]);
 
-          addEvent(`CONTRACT COMPLETE! +${totalMarks} Bounty Marks${streakBonus > 0 ? ` (${streakBonus} streak bonus)` : ''} | Streak: ${newBountyStreak}`, 'quest', '🏆', 'legendary');
-          newBountyContract = undefined;
+  // Buy a shop bundle — spend gold, add bundled items.
+  const buyShopBundle = useCallback((bundleId: string) => {
+    mutate(s => {
+      const rot = s.shopRotation;
+      if (!rot) return;
+      const b = rot.bundles.find(x => x.id === bundleId);
+      if (!b) return;
+      if (s.stash.gold < b.price) {
+        pushLog(s, 'system', `❌ Need ${b.price}g for ${b.label}.`);
+        return;
+      }
+      s.stash.gold -= b.price;
+      for (const [id, qty] of b.items) addToStash(s, id, qty);
+      pushLog(s, 'loot', `🛒 Bought ${b.label}.`, 'uncommon');
+    });
+  }, [mutate]);
+
+  // Auto-spend ability points: for each hero with points, learn the
+  // cheapest next ability they qualify for (lowest levelReq, not yet owned).
+  const spendAllAP = useCallback(() => {
+    mutate(s => {
+      let learned = 0;
+      for (const h of s.heroes) {
+        while (h.abilityPoints > 0) {
+          const tree = (ABILITIES ? Object.values(ABILITIES) : []).filter(a => a.classId === h.classId);
+          const pool = tree
+            .filter(a => !h.abilities.includes(a.id) && h.level >= a.levelReq)
+            .sort((a, b) => a.levelReq - b.levelReq);
+          if (pool.length === 0) break;
+          h.abilityPoints--;
+          h.abilities.push(pool[0].id);
+          learned++;
+          pushLog(s, 'level', `⭐ ${h.name} learned ${pool[0].name}!`);
         }
       }
-
-      return {
-        ...prev,
-        skills: newSlayerSkills,
-        totalActions: { ...prev.totalActions, [action.id]: (prev.totalActions[action.id] || 0) + 1 },
-        killCount: action.isMonster
-          ? { ...prev.killCount, [action.id]: (prev.killCount[action.id] || 0) + 1 }
-          : prev.killCount,
-        bountyContract: newBountyContract,
-        bountyStreak: newBountyStreak,
-        bountyMarks: newBountyMarks,
-        totalBountiesCompleted: newTotalBounties,
-      };
+      if (learned === 0) pushLog(s, 'system', 'No eligible abilities to learn.');
     });
+  }, [mutate]);
 
-    // Update quest progress for action completion
-    if (action.isMonster) {
-      updateQuestProgress('action_complete', { actionId: action.id });
-    } else {
-      updateQuestProgress('action_complete', { actionId: action.id });
-    }
-
-    // Add XP
-    setState(prev => {
-      const skill = prev.skills[action.skill];
-      let xpReward = action.xpReward;
-
-      // Buffs
-      prev.buffs.forEach(buff => {
-        if (buff.type === 'xp') {
-          xpReward = Math.floor(xpReward * buff.multiplier);
+  // Auto-enchant: pick the equipped slot with the cheapest next-tier cost
+  // that we can afford, and enchant it. Great as a one-click sink.
+  const autoEnchantCheapest = useCallback(() => {
+    mutate(s => {
+      const slots: EquipSlot[] = ['weapon', 'offhand', 'head', 'body', 'legs', 'feet', 'neck', 'ring'];
+      type Option = { hero: Hero; slot: EquipSlot; gold: number };
+      const options: Option[] = [];
+      for (const h of s.heroes) {
+        if (h.bench) continue;
+        for (const slot of slots) {
+          if (!h.equipment[slot]) continue;
+          const cost = enchantCost(h, slot);
+          if (!cost) continue;
+          if (s.stash.gold < cost.gold) continue;
+          if (!cost.materials.every(m => (s.stash.items[m.id] ?? 0) >= m.qty)) continue;
+          options.push({ hero: h, slot, gold: cost.gold });
         }
+      }
+      if (options.length === 0) {
+        pushLog(s, 'system', 'No affordable enchants right now.');
+        return;
+      }
+      options.sort((a, b) => a.gold - b.gold);
+      const best = options[0];
+      const cost = enchantCost(best.hero, best.slot)!;
+      s.stash.gold -= cost.gold;
+      for (const m of cost.materials) {
+        s.stash.items[m.id] = (s.stash.items[m.id] ?? 0) - m.qty;
+        if (s.stash.items[m.id] <= 0) delete s.stash.items[m.id];
+      }
+      best.hero.enchants ||= {};
+      const newTier = enchantTier(best.hero, best.slot) + 1;
+      best.hero.enchants[best.slot] = newTier;
+      recomputeHeroMaxHPMP(best.hero, s);
+      const itemName = ITEMS[best.hero.equipment[best.slot]!]?.name ?? 'gear';
+      pushLog(s, 'loot', `🔨 ${best.hero.name}'s ${itemName} enchanted to +${newTier}!`, newTier >= 5 ? 'epic' : 'rare');
+    });
+  }, [mutate]);
+
+  // Heal one specific hero using the best available heal item (including
+  // cooked food from the Cooking skill).
+  const quickHealHero = useCallback((heroId: string) => {
+    mutate(s => {
+      const h = s.heroes.find(x => x.id === heroId);
+      if (!h || h.state !== 'alive') return;
+      if (h.hp >= h.maxHp) return;
+      const healPool = Object.keys(s.stash.items)
+        .filter(id => (s.stash.items[id] ?? 0) > 0 && (ITEMS[id]?.healOnUse ?? 0) > 0)
+        .sort((a, b) => (ITEMS[b].healOnUse ?? 0) - (ITEMS[a].healOnUse ?? 0));
+      for (const pid of healPool) {
+        const pot = ITEMS[pid];
+        if (!pot) continue;
+        h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
+        if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
+        s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
+        if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+        pushLog(s, 'heal', `🧪 ${h.name} consumes ${pot.name}.`);
+        return;
+      }
+      pushLog(s, 'system', `No healing items available for ${h.name}.`);
+    });
+  }, [mutate]);
+
+  // Claim a completed daily bounty
+  const claimBounty = useCallback((bountyId: string) => {
+    mutate(s => {
+      const board = s.bountyBoard;
+      if (!board) return;
+      const b = board.bounties.find(x => x.id === bountyId);
+      if (!b || b.claimed) return;
+      const progress = bountyProgress(s, b);
+      if (progress < b.target) {
+        pushLog(s, 'system', '❌ Bounty not yet complete.');
+        return;
+      }
+      b.claimed = true;
+      if (b.reward.gold) {
+        s.stash.gold += b.reward.gold;
+        s.totalGoldEarned += b.reward.gold;
+      }
+      if (b.reward.essence) s.stash.essence += b.reward.essence;
+      if (b.reward.itemId && b.reward.itemQty) addToStash(s, b.reward.itemId, b.reward.itemQty);
+      pushLog(s, 'victory', `🎯 Bounty complete: ${b.label}!`, 'legendary');
+    });
+  }, [mutate]);
+
+  // Click monster → bonus damage (classic CC2 interaction)
+  const clickMonster = useCallback((monsterId: string) => {
+    mutate(s => {
+      const d = s.activeDungeon;
+      if (!d) return;
+      const tile = d.tiles.find(t => t.x === d.partyPos.x && t.y === d.partyPos.y);
+      if (!tile?.encounter) return;
+      const m = tile.encounter.monsters.find(x => x.id === monsterId);
+      if (!m || m.hp <= 0) return;
+      // Base click damage scales with total party STR/DEX/INT
+      const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+      if (active.length === 0) return;
+      const totalPower = active.reduce((a, h) => {
+        const st = effectiveStats(h);
+        return a + Math.max(st.str, st.dex, st.int);
+      }, 0);
+      const base = 4 + Math.floor(totalPower * 0.08);
+      // small crit chance
+      const isCrit = Math.random() < 0.1;
+      const dmg = isCrit ? base * 2 : base;
+      applyDamageToMonster(s, m, dmg, 'YOU');
+      if (isCrit) pushLog(s, 'combat', `🎯 Critical click! ${dmg} dmg`, 'rare');
+    });
+  }, [mutate]);
+
+  // ========== Town skills ==========
+  const setActiveTask = useCallback((skillId: string, actionId: string, duration: number, workerId?: string) => {
+    mutate(s => {
+      let worker = workerId
+        ? s.town.workers.find(w => w.id === workerId)
+        : s.town.workers.find(w => !w.activeTask);
+      if (!worker) {
+        pushLog(s, 'system', 'No available workers to assign task.');
+        return;
+      }
+      worker.activeTask = { skillId: skillId as any, actionId, duration, progress: 0 };
+    });
+  }, [mutate]);
+
+  const clearActiveTask = useCallback((workerId: string) => {
+    mutate(s => {
+      const w = s.town.workers.find(w => w.id === workerId);
+      if (w) w.activeTask = undefined;
+    });
+  }, [mutate]);
+
+  const hireWorker = useCallback(() => {
+    mutate(s => {
+      const currentCount = s.town.workers.length;
+      const cost = 1000 * Math.pow(2, currentCount - 3);
+      if (s.stash.gold < cost) {
+        pushLog(s, 'system', `Not enough gold to hire a worker (Need ${cost}g).`);
+        return;
+      }
+      s.stash.gold -= cost;
+      s.town.unlockedWorkers++;
+      s.town.workers.push({
+        id: `w${Date.now()}_${Math.floor(Math.random() * 999)}`,
+        name: `Peasant ${s.town.workers.length + 1}`,
       });
-
-      // Edict: Wisdom
-      if (prev.activeEdicts.includes('edict_wisdom')) {
-        xpReward = Math.floor(xpReward * 1.15);
-      }
-
-      // Relic: Eternal Wisdom
-      if (prev.activeEdicts.includes('relic_eternal_wisdom')) {
-        xpReward = Math.floor(xpReward * 1.25);
-      }
-
-      // Prestige bonus: +5% XP per prestige level
-      if (prev.prestigeLevel > 0) {
-        xpReward = Math.floor(xpReward * (1 + prev.prestigeLevel * 0.05));
-      }
-
-      // Ascension Bonus (Timeless Mastery doubles it)
-      const ascensionCount = prev.ascensions[action.skill] || 0;
-      const ascXpMult = prev.activeEdicts.includes('relic_timeless_mastery') ? 0.10 : 0.05;
-      xpReward = Math.floor(xpReward * (1 + ascensionCount * ascXpMult));
-
-      // Tool XP Bonus
-      const bestTool = prev.inventory
-        .map(i => ITEMS[i.itemId])
-        .filter(item => item?.type === 'tool' && item.toolBonus?.skillId === action.skill)
-        .sort((a, b) => (b.toolBonus?.xpMultiplier || 1) - (a.toolBonus?.xpMultiplier || 1))[0];
-
-      if (bestTool?.toolBonus) {
-        xpReward = Math.floor(xpReward * bestTool.toolBonus.xpMultiplier);
-      }
-
-      const newXp = skill.xp + xpReward;
-      const newLevel = XP_TO_LEVEL(newXp);
-
-      if (newLevel > skill.level) {
-        addEvent(`LEVEL UP! ${action.skill.toUpperCase()} is now level ${newLevel}!`, 'level');
-        // Update quest progress for level ups
-        updateQuestProgress('level_up', { skillId: action.skill });
-      }
-
-      const nextSkills = {
-        ...prev.skills,
-        [action.skill]: { ...skill, xp: newXp, level: newLevel }
-      };
-
-      const nextBuffs = prev.buffs.map(b => ({ ...b, remainingActions: b.remainingActions - 1 })).filter(b => b.remainingActions > 0);
-      if (nextBuffs.length < prev.buffs.length) {
-        addEvent(`A buff has expired!`, 'info');
-      }
-
-      const nextDuration = calculateDuration(action, nextSkills, prev.equipment, prev.activeEdicts, prev.ascensions, nextBuffs, prev.inventory, prev.socketedGems);
-
-      return {
-        ...prev,
-        skills: nextSkills,
-        buffs: nextBuffs,
-        activeAction: prev.activeAction ? {
-          ...prev.activeAction,
-          startTime: Date.now(),
-          progress: 0,
-          actualDuration: nextDuration
-        } : undefined
-      };
+      pushLog(s, 'system', `🎉 Hired a new worker for ${cost}g!`);
     });
-  }, [addToInventory, removeFromInventory, hasItems, stopAction, addEvent, addGp, updateQuestProgress]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const { activeAction } = stateRef.current;
-      if (!activeAction) return;
-
-      const action = ACTIONS.find(a => a.id === activeAction.actionId);
-      if (!action) return;
-
-      const elapsed = Date.now() - activeAction.startTime;
-      const progress = Math.min(100, (elapsed / activeAction.actualDuration) * 100);
-
-      if (progress >= 100) {
-        completeAction(action);
-      } else {
-        setState(prev => prev.activeAction ? {
-          ...prev,
-          activeAction: { ...prev.activeAction, progress }
-        } : prev);
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [completeAction]);
-
-  const equipItem = useCallback((itemId: string) => {
-    const item = ITEMS[itemId];
-    if (!item || item.type !== 'equipment' || !item.equipmentSlot) return;
-
-    setState(prev => {
-      const currentEquipped = prev.equipment[item.equipmentSlot!];
-      let newInventory = prev.inventory
-        .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - 1 } : i)
-        .filter(i => i.quantity > 0);
-
-      if (currentEquipped) {
-        const existing = newInventory.find(i => i.itemId === currentEquipped);
-        if (existing) {
-          newInventory = newInventory.map(i => i.itemId === currentEquipped ? { ...i, quantity: i.quantity + 1 } : i);
-        } else {
-          newInventory.push({ itemId: currentEquipped, quantity: 1 });
-        }
-      }
-
-      return {
-        ...prev,
-        inventory: newInventory,
-        equipment: { ...prev.equipment, [item.equipmentSlot!]: itemId }
-      };
-    });
-    addEvent(`Equipped ${item.name}`, 'info');
-    updateQuestProgress('action_complete', { actionId: `equip_${itemId}` });
-  }, [addEvent, updateQuestProgress]);
-
-  const unequipItem = useCallback((slot: string) => {
-    setState(prev => {
-      const itemId = prev.equipment[slot as keyof Equipment];
-      if (!itemId) return prev;
-
-      // Return the item to inventory
-      let newInventory = [...prev.inventory];
-      const existing = newInventory.find(i => i.itemId === itemId);
-      if (existing) {
-        newInventory = newInventory.map(i => i.itemId === itemId ? { ...i, quantity: i.quantity + 1 } : i);
-      } else {
-        newInventory.push({ itemId, quantity: 1 });
-      }
-
-      // Return any socketed gems to inventory
-      const socketedGems = prev.socketedGems[slot] || [];
-      socketedGems.forEach(gemId => {
-        const gemInInv = newInventory.find(i => i.itemId === gemId);
-        if (gemInInv) {
-          newInventory = newInventory.map(i => i.itemId === gemId ? { ...i, quantity: i.quantity + 1 } : i);
-        } else {
-          newInventory.push({ itemId: gemId, quantity: 1 });
-        }
-      });
-
-      // Clear socketed gems for this slot
-      const newSocketedGems = { ...prev.socketedGems };
-      delete newSocketedGems[slot];
-
-      return {
-        ...prev,
-        inventory: newInventory,
-        equipment: { ...prev.equipment, [slot]: undefined },
-        socketedGems: newSocketedGems,
-      };
-    });
-    addEvent(`Unequipped item from ${slot}`, 'info');
-  }, [addEvent]);
-
-  const toggleEdict = useCallback((itemId: string) => {
-    const item = ITEMS[itemId];
-    if (!item || item.type !== 'edict') return;
-
-    setState(prev => {
-      const isActive = prev.activeEdicts.includes(itemId);
-      if (isActive) {
-        addEvent(`Deactivated ${item.name}`, 'info');
-        return { ...prev, activeEdicts: prev.activeEdicts.filter(id => id !== itemId) };
-      } else {
-        const activeEdictsOnly = prev.activeEdicts.filter(id => ITEMS[id]?.type === 'edict' && !id.startsWith('relic_'));
-        if (!itemId.startsWith('relic_') && activeEdictsOnly.length >= 3) {
-          addEvent(`Maximum of 3 Edicts can be active!`, 'info');
-          return prev;
-        }
-        addEvent(`Activated ${item.name}`, 'info');
-        return { ...prev, activeEdicts: [...prev.activeEdicts, itemId] };
-      }
-    });
-  }, [addEvent]);
-
-  const usePotion = useCallback((itemId: string) => {
-    const item = ITEMS[itemId];
-    if (!item || item.type !== 'potion') return;
-
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.itemId === itemId);
-      if (!existing || existing.quantity <= 0) return prev;
-
-      let buff: any = null;
-      if (itemId === 'luck_potion') {
-        buff = { id: 'luck_buff', name: 'Luck Boost', type: 'combat', multiplier: 1.5, remainingActions: 50 };
-      } else if (itemId === 'overload_potion') {
-        buff = { id: 'overload_buff', name: 'Overload', type: 'combat', multiplier: 2.0, remainingActions: 100 };
-      } else if (itemId === 'agility_elixir') {
-        buff = { id: 'agility_buff', name: 'Agility Boost', type: 'speed', multiplier: 1.25, remainingActions: 50 };
-      } else if (itemId === 'thief_brew') {
-        buff = { id: 'thief_buff', name: 'Thief\'s Brew', type: 'speed', multiplier: 1.5, remainingActions: 30 };
-      } else if (itemId === 'vampyrism_potion') {
-        buff = { id: 'vampyrism_buff', name: 'Vampyrism', type: 'combat', multiplier: 1.3, remainingActions: 100 };
-      }
-
-      if (!buff) return prev;
-
-      addEvent(`Consumed ${item.name}!`, 'info', '🧪');
-
-      return {
-        ...prev,
-        inventory: prev.inventory.map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - 1 } : i).filter(i => i.quantity > 0),
-        buffs: [...prev.buffs.filter(b => b.id !== buff.id), buff]
-      };
-    });
-  }, [addEvent]);
-
-  const ascendSkill = useCallback((skillId: SkillId) => {
-    setState(prev => {
-      const skill = prev.skills[skillId];
-      if (skill.level < 99) return prev;
-
-      const newAscensions = { ...prev.ascensions, [skillId]: (prev.ascensions[skillId] || 0) + 1 };
-      const newSkills = { ...prev.skills, [skillId]: { id: skillId, level: 1, xp: 0 } };
-
-      addEvent(`ASCENSION! ${skillId.toUpperCase()} has been reborn. Gained 1 Celestial Essence.`, 'level');
-
-      return {
-        ...prev,
-        celestialEssence: prev.celestialEssence + 1,
-        skills: newSkills,
-        ascensions: newAscensions,
-        activeAction: undefined
-      };
-    });
-  }, [addEvent]);
-
-  const buyRelic = useCallback((relicId: string) => {
-    const relic = ITEMS[relicId];
-    if (!relic || !relicId.startsWith('relic_')) return;
-
-    setState(prev => {
-      if (prev.celestialEssence < relic.value) {
-        addEvent(`Not enough Celestial Essence!`, 'info');
-        return prev;
-      }
-
-      if (prev.inventory.some(i => i.itemId === relicId)) {
-        addEvent(`You already own this relic!`, 'info');
-        return prev;
-      }
-
-      addEvent(`Forged ${relic.name}!`, 'loot');
-      return {
-        ...prev,
-        celestialEssence: prev.celestialEssence - relic.value,
-        inventory: [...prev.inventory, { itemId: relicId, quantity: 1 }]
-      };
-    });
-  }, [addEvent]);
-
-  const hireWorker = useCallback((workerId: string) => {
-    const worker = KINGDOM_WORKERS.find(w => w.id === workerId);
-    if (!worker) return;
-
-    setState(prev => {
-      const currentCount = prev.kingdom[workerId] || 0;
-      const cost = Math.floor(worker.baseCost * Math.pow(worker.costMultiplier, currentCount));
-
-      if (prev.gp < cost) {
-        addEvent(`Not enough GP to hire ${worker.name}!`, 'info');
-        return prev;
-      }
-
-      const missingReqs = worker.requirements.filter(req => prev.skills[req.skillId].level < req.level);
-      if (missingReqs.length > 0) {
-        const reqStr = missingReqs.map(r => `${r.skillId} Lv.${r.level}`).join(', ');
-        addEvent(`Requirements not met: ${reqStr}`, 'info');
-        return prev;
-      }
-
-      const primarySkill = prev.skills[worker.primarySkillId];
-      const maxWorkers = 1 + Math.floor(primarySkill.level / 20) * 2;
-      if (currentCount >= maxWorkers) {
-        addEvent(`Maximum ${worker.name}s reached for level ${primarySkill.level} (${maxWorkers})!`, 'info');
-        return prev;
-      }
-
-      addEvent(`Hired ${worker.name}!`, 'info');
-      return {
-        ...prev,
-        gp: prev.gp - cost,
-        kingdom: { ...prev.kingdom, [workerId]: currentCount + 1 }
-      };
-    });
-  }, [addEvent]);
-
-  const useItem = useCallback((itemId: string) => {
-    const item = ITEMS[itemId];
-    if (!item) return;
-
-    setState(prev => {
-      const existing = prev.inventory.find(i => i.itemId === itemId);
-      if (!existing || existing.quantity <= 0) return prev;
-
-      let nextBuffs = [...prev.buffs];
-
-      if (item.type === 'food') {
-        if (itemId === 'wilderness_stew') {
-          nextBuffs.push({ id: 'stew_buff', name: 'Wilderness Stew', type: 'xp', multiplier: 1.1, remainingActions: 20 });
-          addEvent(`Ate Wilderness Stew. +10% XP for 20 actions!`, 'info', '🍲');
-        } else if (itemId === 'dragon_feast') {
-          nextBuffs.push({ id: 'feast_xp_buff', name: 'Dragon Feast (XP)', type: 'xp', multiplier: 1.25, remainingActions: 50 });
-          nextBuffs.push({ id: 'feast_speed_buff', name: 'Dragon Feast (Speed)', type: 'speed', multiplier: 1.15, remainingActions: 50 });
-          addEvent(`Ate Dragon Feast. +25% XP and +15% speed for 50 actions!`, 'info', '🍖');
-        } else {
-          nextBuffs.push({
-            id: `${itemId}_buff_${Date.now()}`,
-            name: `${item.name} Energy`,
-            type: 'speed',
-            multiplier: 1.05,
-            remainingActions: 5
-          });
-          addEvent(`Ate ${item.name}. Feeling energized!`, 'info');
-        }
-      } else if (item.type === 'potion') {
-        let buffType: 'speed' | 'combat' | 'xp' = 'speed';
-        let multiplier = 1.2;
-        let duration = 20;
-
-        if (itemId.includes('strength') || itemId.includes('attack') || itemId.includes('defense') || itemId.includes('combat')) {
-          buffType = 'combat';
-          multiplier = 1.5;
-        } else if (itemId.includes('wisdom') || itemId.includes('overload')) {
-          buffType = 'xp';
-          multiplier = 1.5;
-        }
-
-        if (itemId === 'overload_potion' || itemId === 'overload') {
-          multiplier = 2.0;
-          duration = 50;
-        }
-
-        nextBuffs.push({
-          id: `${itemId}_buff_${Date.now()}`,
-          name: item.name,
-          type: buffType,
-          multiplier,
-          remainingActions: duration
-        });
-        addEvent(`Drank ${item.name}. You feel powerful!`, 'info');
-      } else {
-        return prev;
-      }
-
-      const newInventory = prev.inventory
-        .map(i => i.itemId === itemId ? { ...i, quantity: i.quantity - 1 } : i)
-        .filter(i => i.quantity > 0);
-
-      return {
-        ...prev,
-        inventory: newInventory,
-        buffs: nextBuffs
-      };
-    });
-  }, [addEvent]);
-
-  const toggleNotifications = useCallback(() => {
-    setState(prev => ({ ...prev, showNotifications: !prev.showNotifications }));
-  }, []);
-
-  // Quest system functions
-  const startQuest = useCallback((questId: string) => {
-    const quest = QUESTS.find(q => q.id === questId);
-    if (!quest) return;
-
-    setState(prev => {
-      // Check prerequisites
-      if (!checkQuestPrerequisites(quest, prev)) {
-        addEvent(`Quest prerequisites not met!`, 'info');
-        return prev;
-      }
-
-      // Check if already started/completed
-      if (prev.quests[questId]) {
-        addEvent(`Quest already ${prev.quests[questId].status}!`, 'info');
-        return prev;
-      }
-
-      addEvent(`Quest started: ${quest.name}`, 'quest', '📋');
-
-      // Initialize objective progress, pre-filling any already-met objectives
-      const objectiveProgress: Record<string, number> = {};
-      quest.objectives.forEach(obj => {
-        let current = 0;
-        if (obj.type === 'gather' && obj.itemId) {
-          current = prev.totalItemsGained[obj.itemId] || 0;
-        } else if (obj.type === 'kill' && obj.actionId) {
-          current = prev.killCount[obj.actionId] || 0;
-        } else if (obj.type === 'reach_level' && obj.skillId) {
-          current = prev.skills[obj.skillId].level;
-        } else if (obj.type === 'earn_gp') {
-          current = prev.gp;
-        }
-        objectiveProgress[obj.id] = Math.min(current, obj.target);
-      });
-
-      return {
-        ...prev,
-        quests: {
-          ...prev.quests,
-          [questId]: {
-            questId,
-            status: 'in_progress',
-            objectiveProgress,
-            startedAt: Date.now(),
-          }
-        }
-      };
-    });
-  }, [addEvent]);
-
-  // Set bank tab
-  const setBankTab = useCallback((tab: string) => {
-    setState(prev => ({ ...prev, bankTab: tab }));
-  }, []);
-
-  // ===== BOUNTY HUNTING SYSTEM =====
-  const BOUNTY_TIERS: Record<BountyTier, { minLevel: number; killRange: [number, number]; markMultiplier: number; xpMultiplier: number }> = {
-    iron: { minLevel: 1, killRange: [15, 40], markMultiplier: 1, xpMultiplier: 1 },
-    gold: { minLevel: 40, killRange: [30, 80], markMultiplier: 2, xpMultiplier: 1.5 },
-    imperial: { minLevel: 75, killRange: [50, 150], markMultiplier: 4, xpMultiplier: 2.5 },
-  };
-
-  const requestBounty = useCallback((tier: BountyTier) => {
-    setState(prev => {
-      if (prev.bountyContract) {
-        addEvent('You already have an active contract! Complete or abandon it first.', 'info');
-        return prev;
-      }
-
-      const slayerLevel = prev.skills.slayer.level;
-      const tierConfig = BOUNTY_TIERS[tier];
-      if (slayerLevel < tierConfig.minLevel) {
-        addEvent(`Slayer level ${tierConfig.minLevel} required for ${tier} contracts!`, 'info');
-        return prev;
-      }
-
-      // Find eligible monsters for this tier
-      const eligibleMonsters = ACTIONS.filter(a =>
-        a.isMonster &&
-        a.skill === 'slayer' &&
-        a.levelRequired <= slayerLevel &&
-        a.levelRequired >= Math.max(1, tierConfig.minLevel - 10)
-      );
-
-      if (eligibleMonsters.length === 0) {
-        addEvent('No suitable targets found for your level!', 'info');
-        return prev;
-      }
-
-      const target = eligibleMonsters[Math.floor(Math.random() * eligibleMonsters.length)];
-      const killsRequired = tierConfig.killRange[0] + Math.floor(Math.random() * (tierConfig.killRange[1] - tierConfig.killRange[0]));
-      const baseMarks = Math.floor(killsRequired * 0.5 * tierConfig.markMultiplier);
-      const bonusXp = Math.floor(target.xpReward * killsRequired * 0.3 * tierConfig.xpMultiplier);
-
-      const contract: BountyContract = {
-        monsterId: target.id,
-        monsterName: target.name,
-        killsRequired,
-        killsCompleted: 0,
-        tier,
-        bountyMarkReward: baseMarks,
-        bonusXp,
-        assignedAt: Date.now(),
-      };
-
-      addEvent(`NEW CONTRACT: Hunt ${killsRequired}x ${target.name}`, 'info', '📜');
-
-      return { ...prev, bountyContract: contract };
-    });
-  }, [addEvent]);
-
-  const abandonBounty = useCallback(() => {
-    setState(prev => {
-      if (!prev.bountyContract) return prev;
-      addEvent('Contract abandoned. Streak reset.', 'info', '❌');
-      return { ...prev, bountyContract: undefined, bountyStreak: 0 };
-    });
-  }, [addEvent]);
-
-  // ===== ADMIN / DEV TOOLS =====
-  const adminSetLevel = useCallback((skillId: SkillId, level: number) => {
-    const clampedLevel = Math.max(1, Math.min(99, level));
-    setState(prev => {
-      const xp = LEVEL_XP(clampedLevel);
-      return {
-        ...prev,
-        skills: {
-          ...prev.skills,
-          [skillId]: { id: skillId, level: clampedLevel, xp }
-        }
-      };
-    });
-  }, []);
-
-  const adminAddGp = useCallback((amount: number) => {
-    setState(prev => ({ ...prev, gp: prev.gp + amount }));
-  }, []);
-
-  const adminAddBountyMarks = useCallback((amount: number) => {
-    setState(prev => ({ ...prev, bountyMarks: prev.bountyMarks + amount }));
-  }, []);
-
-  const adminSetAllLevels = useCallback((level: number) => {
-    const clampedLevel = Math.max(1, Math.min(99, level));
-    const xp = LEVEL_XP(clampedLevel);
-    setState(prev => {
-      const newSkills = { ...prev.skills };
-      (Object.keys(newSkills) as SkillId[]).forEach(id => {
-        newSkills[id] = { id, level: clampedLevel, xp };
-      });
-      return { ...prev, skills: newSkills };
-    });
-  }, []);
-
-  const adminResetSave = useCallback(() => {
-    setState(INITIAL_STATE);
-    addEvent('Save data reset!', 'info');
-  }, [addEvent]);
-
-  const buyBountyItem = useCallback((itemId: string) => {
-    const item = ITEMS[itemId];
-    if (!item) return;
-
-    setState(prev => {
-      const cost = item.value; // bounty mark cost stored in item value
-      if (prev.bountyMarks < cost) {
-        addEvent('Not enough Bounty Marks!', 'info');
-        return prev;
-      }
-      if (prev.inventory.some(i => i.itemId === itemId)) {
-        addEvent('You already own this item!', 'info');
-        return prev;
-      }
-
-      addEvent(`Purchased ${item.name} for ${cost} Bounty Marks!`, 'loot', item.icon, item.rarity);
-      return {
-        ...prev,
-        bountyMarks: prev.bountyMarks - cost,
-        inventory: [...prev.inventory, { itemId, quantity: 1 }],
-      };
-    });
-  }, [addEvent]);
-
-  // Kingdom passive income tick
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const { kingdom, skills } = stateRef.current;
-
-      let gpGain = 0;
-      let essenceGain = 0;
-      const xpGains: Record<string, number> = {};
-
-      KINGDOM_WORKERS.forEach(worker => {
-        const count = kingdom[worker.id] || 0;
-        if (count === 0) return;
-
-        const totalBonus = worker.bonusValue * count;
-
-        if (worker.bonusType === 'gp') {
-          gpGain += totalBonus;
-        } else if (worker.bonusType === 'celestial_essence') {
-          essenceGain += totalBonus;
-        } else if (worker.bonusType === 'xp') {
-          xpGains[worker.primarySkillId] = (xpGains[worker.primarySkillId] || 0) + totalBonus;
-        }
-      });
-
-      if (gpGain > 0 || essenceGain > 0 || Object.keys(xpGains).length > 0) {
-        setState(prev => {
-          let nextGp = prev.gp + gpGain;
-          let nextEssence = prev.celestialEssence + essenceGain;
-          const nextSkills = { ...prev.skills };
-
-          Object.entries(xpGains).forEach(([skillId, xp]) => {
-            const sId = skillId as SkillId;
-            const skill = nextSkills[sId];
-            const newXp = skill.xp + xp;
-            const newLevel = XP_TO_LEVEL(newXp);
-
-            if (newLevel > skill.level) {
-              addEvent(`KINGDOM LEVEL UP! ${sId.toUpperCase()} is now level ${newLevel}!`, 'level');
-            }
-            nextSkills[sId] = { ...skill, xp: newXp, level: newLevel };
-          });
-
-          return {
-            ...prev,
-            gp: nextGp,
-            celestialEssence: nextEssence,
-            skills: nextSkills
-          };
-        });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [addEvent]);
-
-  // === Gem Socketing ===
-  const socketGem = useCallback((equipmentSlot: string, gemItemId: string) => {
-    const gem = ITEMS[gemItemId];
-    if (!gem?.isGem) return;
-
-    setState(prev => {
-      const equippedItemId = prev.equipment[equipmentSlot as keyof Equipment];
-      if (!equippedItemId) return prev;
-      const equippedItem = ITEMS[equippedItemId];
-      if (!equippedItem?.socketable) return prev;
-
-      const currentGems = prev.socketedGems[equipmentSlot] || [];
-      const maxSockets = equippedItem.sockets || 0;
-      if (currentGems.length >= maxSockets) return prev;
-
-      // Must have the gem in inventory
-      const invGem = prev.inventory.find(i => i.itemId === gemItemId);
-      if (!invGem || invGem.quantity < 1) return prev;
-
-      addEvent(`Socketed ${gem.name} into ${equippedItem.name}`, 'info', '💎');
-
-      return {
-        ...prev,
-        inventory: prev.inventory
-          .map(i => i.itemId === gemItemId ? { ...i, quantity: i.quantity - 1 } : i)
-          .filter(i => i.quantity > 0),
-        socketedGems: {
-          ...prev.socketedGems,
-          [equipmentSlot]: [...currentGems, gemItemId],
-        },
-      };
-    });
-  }, [addEvent]);
-
-  const unsocketGem = useCallback((equipmentSlot: string, gemIndex: number) => {
-    setState(prev => {
-      const currentGems = prev.socketedGems[equipmentSlot];
-      if (!currentGems || gemIndex >= currentGems.length) return prev;
-
-      const gemId = currentGems[gemIndex];
-      const gem = ITEMS[gemId];
-      addEvent(`Removed ${gem?.name || 'gem'} from socket`, 'info', '💎');
-
-      const newGems = [...currentGems];
-      newGems.splice(gemIndex, 1);
-
-      // Return gem to inventory
-      const existing = prev.inventory.find(i => i.itemId === gemId);
-      const newInventory = existing
-        ? prev.inventory.map(i => i.itemId === gemId ? { ...i, quantity: i.quantity + 1 } : i)
-        : [...prev.inventory, { itemId: gemId, quantity: 1 }];
-
-      return {
-        ...prev,
-        inventory: newInventory,
-        socketedGems: {
-          ...prev.socketedGems,
-          [equipmentSlot]: newGems.length > 0 ? newGems : [],
-        },
-      };
-    });
-  }, [addEvent]);
-
-  // === Pets ===
-  const setActivePet = useCallback((petId: string | undefined) => {
-    setState(prev => ({ ...prev, activePet: petId }));
-    if (petId) {
-      addEvent(`${ITEMS[petId]?.name} is now following you!`, 'info', ITEMS[petId]?.icon);
-    }
-  }, [addEvent]);
-
-  // === Clue Scrolls ===
-  const openClueScroll = useCallback((clueItemId: string) => {
-    const rewards = CLUE_REWARDS[clueItemId];
-    if (!rewards) return;
-
-    // Must have the clue scroll
-    const hasClue = stateRef.current.inventory.find(i => i.itemId === clueItemId);
-    if (!hasClue || hasClue.quantity < 1) return;
-
-    // Remove the clue scroll
-    removeFromInventory(clueItemId, 1);
-
-    const tierName = clueItemId.replace('clue_scroll_', '').toUpperCase();
-    addEvent(`Opening ${tierName} Clue Scroll...`, 'info', '📜');
-
-    // Roll each reward independently
-    let gotAnything = false;
-    rewards.forEach(reward => {
-      if (Math.random() <= reward.chance) {
-        if (reward.itemId === 'gp') {
-          addGp(reward.quantity);
-        } else {
-          addToInventory(reward.itemId, reward.quantity);
-        }
-        gotAnything = true;
-      }
-    });
-
-    if (!gotAnything) {
-      // Consolation prize — always at least some GP
-      const consolation = clueItemId === 'clue_scroll_easy' ? 2000
-        : clueItemId === 'clue_scroll_medium' ? 10000
-        : clueItemId === 'clue_scroll_hard' ? 50000 : 200000;
-      addGp(consolation);
-    }
-  }, [addToInventory, removeFromInventory, addGp, addEvent]);
+  }, [mutate]);
 
   return {
     state,
-    events,
-    startAction,
-    stopAction,
-    addToInventory,
-    removeFromInventory,
-    addGp,
+    enterDungeon,
+    retreatToTown,
     equipItem,
     unequipItem,
-    toggleEdict,
-    ascendSkill,
-    buyRelic,
+    sellItem,
+    useConsumable,
+    recruitHero,
+    toggleBench,
+    reviveHero,
+    healParty,
+    buyAbility,
+    buyShopItem,
+    resolveDecision,
+    setSpeed,
+    togglePause,
+    setAutoSell,
+    dismissOfflineReport,
+    resetGame,
+    advanceTutorial,
+    clickMonster,
+    autoEquipBest,
+    quickHealParty,
+    sellJunk,
+    upgradeEquip,
+    buyBlessing,
+    useScroll,
+    buyShopBundle,
+    claimBounty,
+    spendAllAP,
+    autoEnchantCheapest,
+    quickHealHero,
+    setActiveTask,
+    clearActiveTask,
     hireWorker,
-    useItem,
-    toggleNotifications,
-    salvageItem,
-    usePotion,
-    // New systems
-    startQuest,
-    setBankTab,
-    // Bounty Hunting
-    requestBounty,
-    abandonBounty,
-    // Admin/Dev Tools
-    adminSetLevel,
-    adminAddGp,
-    adminAddBountyMarks,
-    adminSetAllLevels,
-    adminResetSave,
-    // Bounty shop
-    buyBountyItem,
-    // Gem Socketing
-    socketGem,
-    unsocketGem,
-    // Pets
-    setActivePet,
-    // Prestige
-    prestige: useCallback(() => {
-      setState(prev => {
-        let totalLevel = 0;
-        (Object.values(prev.skills) as { level: number }[]).forEach(s => { totalLevel += s.level; });
-        if (totalLevel < 1500) return prev; // minimum requirement
-
-        // Tokens earned = total level / 100, bonus for ascensions
-        let totalAsc = 0;
-        (Object.values(prev.ascensions) as number[]).forEach(a => { totalAsc += a; });
-        const tokensEarned = Math.floor(totalLevel / 100) + totalAsc * 2;
-
-        // Reset skills to level 1
-        const resetSkills: any = {};
-        Object.keys(prev.skills).forEach(id => {
-          resetSkills[id] = { id, level: 1, xp: 0 };
-        });
-
-        // Reset ascensions
-        const resetAscensions: any = {};
-        Object.keys(prev.ascensions).forEach(id => {
-          resetAscensions[id] = 0;
-        });
-
-        addEvent(`PRESTIGE ${prev.prestigeLevel + 1}! Earned ${tokensEarned} Prestige Tokens!`, 'level');
-
-        return {
-          ...prev,
-          skills: resetSkills,
-          gp: 0,
-          celestialEssence: 0,
-          inventory: [],
-          equipment: {},
-          activeEdicts: [],
-          ascensions: resetAscensions,
-          buffs: [],
-          kingdom: {},
-          activeAction: undefined,
-          socketedGems: {},
-          dryStreak: 0,
-          bountyContract: undefined,
-          bountyStreak: 0,
-          bountyMarks: 0,
-          autoSellItems: [],
-          // KEEP: collectionLog, petsUnlocked, activePet, quests, killCount, totalActions, totalItemsGained, achievements
-          prestigeLevel: prev.prestigeLevel + 1,
-          prestigeTokens: prev.prestigeTokens + tokensEarned,
-        };
-      });
-    }, [addEvent]),
-    // Auto-sell
-    toggleAutoSell: useCallback((itemId: string) => {
-      setState(prev => {
-        const isAutoSell = prev.autoSellItems.includes(itemId);
-        return {
-          ...prev,
-          autoSellItems: isAutoSell
-            ? prev.autoSellItems.filter(id => id !== itemId)
-            : [...prev.autoSellItems, itemId],
-        };
-      });
-    }, []),
-    // Clue Scrolls
-    openClueScroll,
-    // Offline progress
-    offlineGains,
-    dismissOfflineGains: () => setOfflineGains(null),
   };
 }

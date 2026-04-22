@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import CcApp from './cc/App';
-import { ErrorBoundary } from './cc/components/ErrorBoundary';
+import CcApp from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 // Safety: unregister any stale service workers / caches from earlier builds.
