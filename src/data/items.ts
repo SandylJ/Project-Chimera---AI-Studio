@@ -379,6 +379,13 @@ export const ITEMS: Record<string, Item> = {
   ancient_staff:            mk({ id: 'ancient_staff',            name: 'Ancient Staff',           icon: '🪄', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 42, stats: { int: 32, luck: 8 }, value: 12000, levelReq: 30, classReq: ['mage', 'priest'] }),
   composite_bow:            mk({ id: 'composite_bow',            name: 'Composite Bow',           icon: '🏹', rarity: 'uncommon', type: 'weapon', slot: 'weapon', weaponPower: 14, stats: { dex: 10, spd: 2 }, value: 420, classReq: ['ranger'] }),
   crystal_bow:              mk({ id: 'crystal_bow',              name: 'Crystal Bow',             icon: '🏹', rarity: 'epic', type: 'weapon', slot: 'weapon', weaponPower: 34, stats: { dex: 22, spd: 5, luck: 3 }, value: 5800, levelReq: 20, classReq: ['ranger'] }),
+
+  // ========== CRAFTING — ENDGAME GEAR (sinks for rare mats) ==========
+  dragonhide_body:  mk({ id: 'dragonhide_body',  name: 'Dragonhide Body',  icon: '🦎', rarity: 'epic', type: 'armor', slot: 'body', armor: 26, stats: { dex: 12, con: 6 }, value: 4200, levelReq: 22, classReq: ['ranger', 'rogue'] }),
+  dragonhide_chaps: mk({ id: 'dragonhide_chaps', name: 'Dragonhide Chaps', icon: '🦎', rarity: 'epic', type: 'armor', slot: 'legs', armor: 18, stats: { dex: 8, con: 4 }, value: 2800, levelReq: 22, classReq: ['ranger', 'rogue'] }),
+  bloodcrown:       mk({ id: 'bloodcrown',       name: 'Bloodcrown',       icon: '👑', rarity: 'legendary', type: 'armor', slot: 'head', armor: 20, stats: { str: 10, con: 12, luck: 6 }, value: 9500, levelReq: 26 }),
+  dragonhoard_plate:mk({ id: 'dragonhoard_plate',name: 'Dragonhoard Plate',icon: '🐉', rarity: 'celestial', type: 'armor', slot: 'body', armor: 78, stats: { str: 18, con: 36, luck: 10 }, value: 48000, levelReq: 45 }),
+  dragonhoard_cape: mk({ id: 'dragonhoard_cape', name: 'Dragonhoard Cape', icon: '🧣', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 4, stats: { str: 12, dex: 12, con: 12, luck: 10 }, value: 38000, levelReq: 40 }),
 };
 
 // Loot pools by dungeon tier (indexed by monster level)
@@ -391,14 +398,16 @@ export const TIER_LOOT_POOLS: { maxLevel: number; items: string[] }[] = [
 ];
 
 // Skill material drop pools — monsters drop tier-appropriate raw mats so
-// dungeon runs feed the Skills page directly.
+// dungeon runs feed the Skills page directly. Rune essence and stray
+// silk scraps drop across mid tiers so combat feeds Runecrafting +
+// Thieving chains even if the player never assigns those workers.
 export const SKILL_MATERIAL_POOLS: { maxLevel: number; items: string[] }[] = [
   { maxLevel: 5,  items: ['logs', 'copper_ore', 'tin_ore', 'raw_shrimp', 'herbs', 'flax', 'feathers', 'monster_hide', 'vial_of_water'] },
-  { maxLevel: 12, items: ['oak_logs', 'iron_ore', 'raw_sardine', 'herbs', 'monster_hide', 'thread', 'uncut_sapphire', 'vial_of_water', 'wheat'] },
-  { maxLevel: 20, items: ['willow_logs', 'silver_ore', 'raw_trout', 'toadflax', 'leather', 'uncut_emerald', 'iron_ore', 'coal'] },
-  { maxLevel: 30, items: ['maple_logs', 'coal', 'raw_salmon', 'ranarr', 'leather', 'uncut_ruby', 'silver_ore', 'gold_ore'] },
-  { maxLevel: 45, items: ['yew_logs', 'gold_ore', 'raw_lobster', 'avantoe', 'hard_leather', 'uncut_diamond', 'mithril_ore', 'glowing_mushroom'] },
-  { maxLevel: 60, items: ['magic_logs', 'mithril_ore', 'raw_swordfish', 'kwuarm', 'hard_leather', 'uncut_diamond', 'adamant_ore', 'raw_monkfish'] },
-  { maxLevel: 75, items: ['elder_logs', 'adamant_ore', 'raw_shark', 'cadantine', 'dragon_leather', 'runite_ore', 'raw_manta_ray'] },
-  { maxLevel: 9999, items: ['magic_logs', 'runite_ore', 'dragonite_ore', 'raw_manta_ray', 'raw_anglerfish', 'raw_dark_crab', 'cadantine', 'dragon_leather'] },
+  { maxLevel: 12, items: ['oak_logs', 'iron_ore', 'raw_sardine', 'herbs', 'monster_hide', 'thread', 'uncut_sapphire', 'vial_of_water', 'wheat', 'silk_scraps', 'foraged_herb'] },
+  { maxLevel: 20, items: ['willow_logs', 'silver_ore', 'raw_trout', 'toadflax', 'leather', 'uncut_emerald', 'iron_ore', 'coal', 'rune_essence', 'air_rune', 'earth_rune'] },
+  { maxLevel: 30, items: ['maple_logs', 'coal', 'raw_salmon', 'ranarr', 'leather', 'uncut_ruby', 'silver_ore', 'gold_ore', 'rune_essence', 'fire_rune', 'silk_scraps', 'stamina_herb'] },
+  { maxLevel: 45, items: ['yew_logs', 'gold_ore', 'raw_lobster', 'avantoe', 'hard_leather', 'uncut_diamond', 'mithril_ore', 'glowing_mushroom', 'pure_essence', 'cosmic_rune', 'silk_fine', 'marks_of_grace'] },
+  { maxLevel: 60, items: ['magic_logs', 'mithril_ore', 'raw_swordfish', 'kwuarm', 'hard_leather', 'uncut_diamond', 'adamant_ore', 'raw_monkfish', 'pure_essence', 'chaos_rune', 'silk_fine', 'poison_vial_raw'] },
+  { maxLevel: 75, items: ['elder_logs', 'adamant_ore', 'raw_shark', 'cadantine', 'dragon_leather', 'runite_ore', 'raw_manta_ray', 'law_rune', 'nature_rune', 'blood_diamond', 'mastery_mark'] },
+  { maxLevel: 9999, items: ['magic_logs', 'runite_ore', 'dragonite_ore', 'raw_manta_ray', 'raw_anglerfish', 'raw_dark_crab', 'cadantine', 'dragon_leather', 'death_rune', 'blood_rune', 'soul_rune', 'astral_rune', 'dragon_hoard_scrap'] },
 ];

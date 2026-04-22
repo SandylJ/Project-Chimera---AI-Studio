@@ -119,8 +119,14 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'cut_emerald',    name: 'Cut Emerald',    levelReq: 27, duration: 2500, xpReward: 40,  inputs: { uncut_emerald: 1 },  outputs: { emerald: 1 } },
     { id: 'cut_ruby',       name: 'Cut Ruby',       levelReq: 34, duration: 3000, xpReward: 60,  inputs: { uncut_ruby: 1 },     outputs: { ruby: 1 } },
     { id: 'cut_diamond',    name: 'Cut Diamond',    levelReq: 43, duration: 3500, xpReward: 90,  inputs: { uncut_diamond: 1 },  outputs: { diamond: 1 } },
-    // ---- Cloth / bowstring ----
+    // ---- Cloth / bowstring / thread (feeds talismans + sewing) ----
+    { id: 'spin_thread',    name: 'Spin Thread',    levelReq: 1,  duration: 1200, xpReward: 6,   inputs: { flax: 1 },            outputs: { thread: 2 } },
+    { id: 'spin_silk',      name: 'Spin Silk Thread',levelReq: 8,  duration: 1800, xpReward: 14, inputs: { silk_scraps: 2 },     outputs: { thread: 3 } },
     { id: 'spin_flax',      name: 'Spin Bowstring', levelReq: 10, duration: 1500, xpReward: 15,  inputs: { flax: 1 },            outputs: { bowstring: 1 } },
+    // ---- Tanning / leatherwork (removes leather bottleneck) ----
+    { id: 'tan_hide',       name: 'Tan Monster Hide',levelReq: 5,  duration: 3000, xpReward: 16, inputs: { monster_hide: 2, knife: 1 }, outputs: { leather: 1, knife: 1 } },
+    { id: 'tan_hard_leather',name:'Tan Hard Leather', levelReq: 25, duration: 4000, xpReward: 50, inputs: { leather: 2, fire_rune: 1, knife: 1 }, outputs: { hard_leather: 1, knife: 1 } },
+    { id: 'tan_dragon_leather',name:'Tan Dragon Leather',levelReq:60,duration: 8000, xpReward: 220,inputs: { dragon_scale: 1, nature_rune: 2, knife: 1 }, outputs: { dragon_leather: 1, knife: 1 } },
     // ---- Armor ----
     { id: 'craft_leather_vest',name:'Craft Leather Vest',levelReq: 8, duration: 4500, xpReward: 22, inputs: { leather: 3, thread: 1 }, outputs: { leather_vest: 1 } },
     { id: 'craft_cloth_robe',  name:'Craft Cloth Robe',  levelReq: 5, duration: 4000, xpReward: 25, inputs: { spider_silk: 3 },         outputs: { cloth_robe: 1 } },
@@ -187,6 +193,12 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'fletch_battlestaff',   name: 'Fletch Battlestaff',  levelReq: 30, duration: 7000, xpReward: 90,  inputs: { willow_logs: 2, air_rune: 5, water_rune: 5, earth_rune: 5, fire_rune: 5 }, outputs: { battlestaff: 1 } },
     { id: 'fletch_mystic_staff',  name: 'Fletch Mystic Staff', levelReq: 55, duration: 11000,xpReward: 220, inputs: { magic_logs: 2, cosmic_rune: 5, law_rune: 3, sapphire: 1 }, outputs: { mystic_staff: 1 } },
     { id: 'fletch_ancient_staff', name: 'Fletch Ancient Staff',levelReq: 85, duration: 18000,xpReward: 500, inputs: { magic_logs: 3, blood_rune: 10, soul_rune: 5, diamond: 1 }, outputs: { ancient_staff: 1 } },
+    // ---- Endgame armor (sinks for dragon_leather, blood_diamond, dragon_hoard_scrap) ----
+    { id: 'craft_dragonhide_body',name:'Craft Dragonhide Body',levelReq: 65, duration: 13000,xpReward: 380, inputs: { dragon_leather: 3, thread: 3, knife: 1 }, outputs: { dragonhide_body: 1, knife: 1 } },
+    { id: 'craft_dragonhide_chaps',name:'Craft Dragonhide Chaps',levelReq:63, duration: 11000,xpReward: 310, inputs: { dragon_leather: 2, thread: 2, knife: 1 }, outputs: { dragonhide_chaps: 1, knife: 1 } },
+    { id: 'craft_bloodcrown',     name:'Craft Bloodcrown',    levelReq: 72, duration: 15000,xpReward: 440, inputs: { blood_diamond: 1, gold_bar: 3, blood_rune: 5 }, outputs: { bloodcrown: 1 } },
+    { id: 'craft_dragonhoard_cape',name:'Craft Dragonhoard Cape',levelReq:88,duration: 22000,xpReward: 720, inputs: { dragon_hoard_scrap: 1, silk_fine: 3, nature_rune: 20 }, outputs: { dragonhoard_cape: 1 } },
+    { id: 'craft_dragonhoard_plate',name:'Craft Dragonhoard Plate',levelReq:95,duration: 30000,xpReward: 1100,inputs: { dragon_hoard_scrap: 2, runite_bar: 5, soul_rune: 3 }, outputs: { dragonhoard_plate: 1 } },
   ],
 
   herblore: [
@@ -262,6 +274,9 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'grow_dwarf_weed', name: 'Grow Dwarf Weed',  levelReq: 65, duration: 28000, xpReward: 320, outputs: { dwarf_weed: 1 } },
     { id: 'grow_torstol',    name: 'Grow Torstol',     levelReq: 75, duration: 35000, xpReward: 450, outputs: { torstol: 1 } },
     { id: 'grow_spirit_herb',name: 'Grow Spirit Herb', levelReq: 88, duration: 50000, xpReward: 800, inputs: { bone_shard: 5, nature_rune: 3 }, outputs: { spirit_herb: 1 } },
+    // ---- Poisonous crops (widens the poison supply chain) ----
+    { id: 'grow_poison_ivy', name: 'Grow Poison Ivy',  levelReq: 28, duration: 14000, xpReward: 90,  outputs: { poison_vial_raw: 1, foraged_herb: 1 } },
+    { id: 'grow_nightshade', name: 'Grow Deadly Nightshade', levelReq: 52, duration: 20000, xpReward: 200, outputs: { poison_vial_raw: 2, toadflax: 1 } },
   ],
 
   cooking: [

@@ -213,7 +213,12 @@ function dayIndex(): number {
 function rollShopRotation(day: number): ShopRotation {
   const rng = mulberry32(day ^ 0x9E37);
   const allEquip = Object.values(ITEMS).filter(i => i.slot && !i.classReq);
-  const scrolls = ['scroll_town_portal', 'scroll_identify', 'scroll_xp', 'scroll_bless', 'scroll_haste'];
+  const scrolls = [
+    'scroll_town_portal', 'scroll_identify', 'scroll_xp', 'scroll_bless', 'scroll_haste',
+    'scroll_fireball', 'scroll_bone_heal', 'scroll_soul_barrier', 'scroll_astral',
+    // Thieving-produced loot containers use the same single-click-to-use mechanic
+    'jewel_case', 'thieves_cache', 'stolen_scroll',
+  ];
   const pool = [...allEquip].sort((a, b) => a.value - b.value);
   // Three tiers of featured gear — pull from a shared pool so ids are unique.
   const used = new Set<string>();
@@ -859,6 +864,70 @@ export function useCcGame() {
             h.buffs.push({ id: mkId('buff'), stat: 'spd', power: 1.0, remaining: 45000 });
           }
           pushLog(s, 'heal', '⚡ Haste! Double speed 45s.', 'rare');
+          break;
+        }
+        case 'scroll_fireball': {
+          if (!s.activeDungeon) { pushLog(s, 'system', 'Only in dungeons.'); return; }
+          // Damage every enemy in the current tile's encounter.
+          const tile = s.activeDungeon.tiles.find(t => t.x === s.activeDungeon!.partyPos.x && t.y === s.activeDungeon!.partyPos.y);
+          if (!tile?.encounter?.monsters.length) { pushLog(s, 'system', '🔥 No enemies to scorch.'); return; }
+          for (const m of tile.encounter.monsters) {
+            m.hp = Math.max(0, m.hp - 600);
+          }
+          pushLog(s, 'combat', '🔥 Fireball scroll scorches the room for 600 dmg!', 'rare');
+          break;
+        }
+        case 'scroll_bone_heal': {
+          // Revive one downed/dead hero to full.
+          const target = s.heroes.find(h => !h.bench && (h.state === 'downed' || h.state === 'dead'));
+          if (!target) { pushLog(s, 'system', 'No downed allies to mend.'); return; }
+          target.state = 'alive';
+          target.hp = target.maxHp;
+          target.mp = target.maxMp;
+          pushLog(s, 'heal', `🩸 Mending scroll revives ${target.name} to full!`, 'epic');
+          break;
+        }
+        case 'scroll_soul_barrier': {
+          const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
+          for (const h of active) { h.shield = (h.shield ?? 0) + 500; }
+          pushLog(s, 'heal', '👻 Soul Barrier: party gains 500 shield.', 'epic');
+          break;
+        }
+        case 'scroll_astral': {
+          if (!s.activeDungeon) { pushLog(s, 'system', 'Only in dungeons.'); return; }
+          for (const t of s.activeDungeon.tiles) t.revealed = true;
+          pushLog(s, 'system', '✨ Astral scroll reveals the entire dungeon.', 'epic');
+          break;
+        }
+        case 'jewel_case': {
+          const gems = ['uncut_sapphire','uncut_emerald','uncut_ruby','uncut_diamond','uncut_dragonstone'];
+          const pick = gems[Math.floor(Math.random() * gems.length)];
+          s.stash.items[pick] = (s.stash.items[pick] ?? 0) + 1;
+          pushLog(s, 'loot', `💎 Jewel case contained a ${ITEMS[pick]?.name}!`, 'rare');
+          break;
+        }
+        case 'thieves_cache': {
+          // Random spread of 2-4 thieving-themed goodies.
+          const pool = ['silk_scraps','silk_fine','poison_vial_raw','gold_trinket','foraged_herb','stolen_key','jewel_case'];
+          const count = 2 + Math.floor(Math.random() * 3);
+          const picked: string[] = [];
+          for (let i = 0; i < count; i++) {
+            const id = pool[Math.floor(Math.random() * pool.length)];
+            s.stash.items[id] = (s.stash.items[id] ?? 0) + 1;
+            picked.push(ITEMS[id]?.name || id);
+          }
+          const bonusGold = 50 + Math.floor(Math.random() * 150);
+          s.stash.gold += bonusGold;
+          s.totalGoldEarned += bonusGold;
+          pushLog(s, 'loot', `🎁 Cache yielded ${picked.join(', ')} and ${bonusGold}g.`, 'rare');
+          break;
+        }
+        case 'stolen_scroll': {
+          // Reroll as one of the real scrolls — playing dice with stolen ink.
+          const realScrolls = ['scroll_town_portal','scroll_identify','scroll_xp','scroll_bless','scroll_haste'];
+          const pick = realScrolls[Math.floor(Math.random() * realScrolls.length)];
+          s.stash.items[pick] = (s.stash.items[pick] ?? 0) + 1;
+          pushLog(s, 'loot', `📜 Stolen scroll turned out to be ${ITEMS[pick]?.name}.`, 'rare');
           break;
         }
         default: break;
