@@ -720,6 +720,17 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Count equipped Graceful-set pieces on a hero. Each piece grants
+  // 10% chance to skip food consumption (max 50% at full set), so a
+  // well-trained Agility player wrings more healing out of the same
+  // cooked shark stack.
+  const gracefulPieces = (h: Hero): number => {
+    const gracefulIds = new Set(['graceful_hood','graceful_top','graceful_legs','graceful_boots','graceful_cape']);
+    let count = 0;
+    for (const id of Object.values(h.equipment)) if (id && gracefulIds.has(id)) count++;
+    return count;
+  };
+
   // Use party's potions (and cooked food) to top off HP/MP. Healing pool is
   // now any stashed item with healOnUse > 0 — so cooked fish from the Cooking
   // skill feeds combat directly.
@@ -727,20 +738,27 @@ export function useCcGame() {
     mutate(s => {
       const active = s.heroes.filter(h => !h.bench && h.state === 'alive');
       let used = 0;
+      let saved = 0;
       // Build heal pool: all stashed items with healOnUse, sorted biggest-first.
       const healPool = Object.keys(s.stash.items)
         .filter(id => (s.stash.items[id] ?? 0) > 0 && (ITEMS[id]?.healOnUse ?? 0) > 0)
         .sort((a, b) => (ITEMS[b].healOnUse ?? 0) - (ITEMS[a].healOnUse ?? 0));
       for (const h of active) {
         if (h.hp >= h.maxHp * 0.95) continue;
+        const skipChance = Math.min(0.5, 0.1 * gracefulPieces(h));
         for (const pid of healPool) {
           if ((s.stash.items[pid] ?? 0) <= 0) continue;
           const pot = ITEMS[pid];
           if (!pot) continue;
           h.hp = Math.min(h.maxHp, h.hp + (pot.healOnUse ?? 0));
           if (pot.manaOnUse) h.mp = Math.min(h.maxMp, h.mp + pot.manaOnUse);
-          s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
-          if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+          // Graceful roll: on success, the food is not consumed.
+          if (skipChance > 0 && Math.random() < skipChance) {
+            saved++;
+          } else {
+            s.stash.items[pid] = (s.stash.items[pid] ?? 0) - 1;
+            if (s.stash.items[pid] <= 0) delete s.stash.items[pid];
+          }
           used++;
           if (h.hp >= h.maxHp * 0.95) break;
         }
@@ -756,7 +774,10 @@ export function useCcGame() {
           used++;
         }
       }
-      if (used > 0) pushLog(s, 'heal', `🧪 Used ${used} potion${used === 1 ? '' : 's'} across the party.`);
+      if (used > 0) {
+        const savedMsg = saved > 0 ? ` — Graceful preserved ${saved}.` : '';
+        pushLog(s, 'heal', `🧪 Used ${used} potion${used === 1 ? '' : 's'} across the party.${savedMsg}`);
+      }
       else pushLog(s, 'system', `🧪 No potions needed or available.`);
     });
   }, [mutate]);
