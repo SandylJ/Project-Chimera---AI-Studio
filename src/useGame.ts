@@ -158,7 +158,24 @@ function migrate(s: Partial<GameState>): GameState {
           s.totalMonstersKilled ?? 0,
           s.totalGoldEarned ?? 0,
         ),
-    town: s.town ?? {
+    town: s.town ? {
+      // Migrate each worker so newly-added fields (cyclesPerSkill,
+      // active task autoRepeat/stalled/repeatRemaining) survive a load.
+      workers: (s.town.workers ?? []).map(w => ({
+        id: w.id,
+        name: w.name,
+        cyclesPerSkill: w.cyclesPerSkill ?? {},
+        activeTask: w.activeTask ? {
+          skillId: w.activeTask.skillId,
+          actionId: w.activeTask.actionId,
+          progress: w.activeTask.progress ?? 0,
+          duration: w.activeTask.duration ?? 1000,
+          autoRepeat: w.activeTask.autoRepeat,
+          stalled: w.activeTask.stalled,
+          repeatRemaining: w.activeTask.repeatRemaining,
+        } : undefined,
+      })),
+    } : {
       workers: [
         { id: 'w1', name: 'Peasant Jon' },
         { id: 'w2', name: 'Miller Sam' },
@@ -166,6 +183,8 @@ function migrate(s: Partial<GameState>): GameState {
       ],
     },
     skills: s.skills ?? {},
+    skillXpBoostUntil: s.skillXpBoostUntil,
+    pinnedActions: s.pinnedActions ?? [],
   };
   // Validate activeDungeon shape — if it's malformed, drop it to send the
   // player back to the town picker rather than crashing BattleView.

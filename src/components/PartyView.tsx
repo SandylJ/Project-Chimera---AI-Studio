@@ -3,7 +3,7 @@ import { GameState, Hero, EquipSlot } from '../types';
 import { CLASSES } from '../data/classes';
 import { ABILITIES, CLASS_ABILITY_TREE } from '../data/abilities';
 import { ITEMS } from '../data/items';
-import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier, rogueSetPieces, gracefulSetPieces } from '../engine/util';
+import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier, rogueSetPieces, gracefulSetPieces, rarityColor } from '../engine/util';
 import { ClassSprite } from '../visuals/sprites';
 
 interface Props {
@@ -478,17 +478,6 @@ const SetBadge: React.FC<{ label: string; count: number; total: number; bonusTex
   );
 };
 
-function rarityColor(r: string): string {
-  switch (r) {
-    case 'common': return '#E8E0D4';
-    case 'uncommon': return '#7FE2A0';
-    case 'rare': return '#6EA9E4';
-    case 'epic': return '#C58BE8';
-    case 'legendary': return '#F2B84B';
-    case 'celestial': return '#FF6EE6';
-    default: return '#E8E0D4';
-  }
-}
 
 function groupAbilitiesByTier(ids: string[]): Array<{ tier: number; minLevel: number; ids: string[] }> {
   // Bucket by levelReq: 1-4, 5-9, 10-14, 15-19, 20+

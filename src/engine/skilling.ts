@@ -727,11 +727,6 @@ export function tickSkilling(state: GameState, dt: number) {
   }
 }
 
-// Effective duration for display — applied milestone speed bonus per skill.
-export function effectiveDuration(state: GameState, skillId: SkillId, baseDuration: number): number {
-  const lvl = state.skills[skillId]?.level || 1;
-  return Math.max(200, baseDuration * getSkillBonuses(lvl).speedMul);
-}
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
