@@ -27,6 +27,22 @@ export const SKILLS_LIST: SkillEntry[] = [
   { id: 'agility',      icon: '🏃', name: 'Agility' },
 ];
 
+// One-liners for the selected-skill header. Doubles as a tutorial hint
+// for players who don't know what the newer skills do.
+export const SKILL_BLURBS: Record<SkillId, string> = {
+  mining:       'Pull ores, gems and rune essence from rock. Feeds Smithing & Runecrafting.',
+  woodcutting:  'Chop logs from common to elder. Feeds Crafting (bows, staves) & Smithing (charcoal).',
+  smithing:     'Smelt bars and forge weapons + armor. Bronze → Dragonite, plus rune-etched endgame gear.',
+  crafting:     'Cut gems, weave silk, fletch bows, sew jewelry, and craft talismans/skill capes.',
+  herblore:     'Mix combat buff potions, healing brews, and the Wisdom Potion that boosts skill XP.',
+  fishing:      'Catch fish from shrimp to dark crab. Feeds Cooking; renders Fish Oil for Herblore.',
+  cooking:      'Cook fish, bake pies, brew stews. Cooked food heals the party mid-dungeon.',
+  farming:      'Grow herbs, allotment crops, fruit trees, and endgame ingredients for super potions.',
+  runecrafting: 'Imbue essence with talismans to craft runes. Scribes combat scrolls; powers enchanted gear.',
+  thieving:     'Pickpocket and heist for silk, poisons, and rare loot containers (jewel cases, caches).',
+  agility:      'Run obstacle courses for Marks of Grace, Stamina Herbs, Shortcut Tokens, and Mastery Marks.',
+};
+
 // =====================================================================
 // Skill list sidebar — left rail with icon, level, craftable badge.
 // =====================================================================

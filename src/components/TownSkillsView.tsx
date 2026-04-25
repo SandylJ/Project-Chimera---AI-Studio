@@ -7,7 +7,7 @@ import {
 } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 import {
-  SKILLS_LIST, SkillSidebar, TownTierBanner, WorkerCard, SkillActionCard,
+  SKILLS_LIST, SKILL_BLURBS, SkillSidebar, TownTierBanner, WorkerCard, SkillActionCard,
 } from './town-skills-parts';
 
 interface Props {
@@ -210,6 +210,9 @@ export const TownSkillsView: React.FC<Props> = ({
                   <span className="text-[#7A6E60] mx-1">·</span>
                   {Math.floor(currentXp).toLocaleString()} / {nextLevelXp.toLocaleString()} xp
                 </div>
+              </div>
+              <div className="text-[10px] text-[#B8A890] mt-0.5 italic leading-tight">
+                {SKILL_BLURBS[selectedSkill]}
               </div>
               <div className="w-full bg-[#14100C] h-2 rounded mt-1 overflow-hidden border border-[#3D3328]">
                 <div className="h-full bg-[linear-gradient(90deg,#9a8030_0%,#ffe080_100%)] transition-all"
