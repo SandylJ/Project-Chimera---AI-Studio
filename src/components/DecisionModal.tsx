@@ -7,7 +7,9 @@ interface Props {
 }
 
 export const DecisionModal: React.FC<Props> = ({ decision, onChoose }) => {
-  const [tick, setTick] = useState(0);
+  // Anonymous re-render trigger so the countdown stays live without
+  // holding the tick value. We just need React to flush every 250ms.
+  const [, setTick] = useState(0);
   useEffect(() => {
     if (!decision) return;
     const id = window.setInterval(() => setTick(t => t + 1), 250);

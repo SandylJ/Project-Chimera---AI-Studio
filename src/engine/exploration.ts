@@ -1,8 +1,8 @@
-import { GameState, Tile, Dungeon, Hero } from '../types';
+import { GameState, Tile, Dungeon } from '../types';
 import {
-  pushLog, aliveActiveHeroes, mkId, rngInt, rollChance, effectiveStats,
+  pushLog, aliveActiveHeroes, rollChance,
 } from './util';
-import { rollChestLoot, rollBossLoot } from './loot';
+import { rollChestLoot } from './loot';
 import { currentTile } from './combat';
 import { DUNGEON_DEFS } from '../data/dungeons';
 import { triggerDecision } from './decisions';

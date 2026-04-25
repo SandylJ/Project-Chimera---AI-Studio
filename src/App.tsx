@@ -367,10 +367,6 @@ const TopTabBar: React.FC<{
             return !b.claimed && prog >= b.target;
           });
           const partyAlert = t.id === 'party' && state.heroes.some(h => !h.bench && (h.abilityPoints > 0 || h.state !== 'alive'));
-          const stashAlert = t.id === 'stash' && Object.entries(state.stash.items).some(([id]) => {
-            const it = (globalThis as any).__ITEMS?.[id]; // not available — safe fallback
-            return !!it;
-          });
           const highlighted = townAlert || partyAlert;
           return (
             <button key={t.id}

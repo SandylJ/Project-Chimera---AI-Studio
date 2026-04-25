@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { GameState, Rarity } from '../types';
 import { ITEMS } from '../data/items';
 import { sellValue } from '../engine/loot';
+import { rarityColor } from '../engine/util';
+import { isUsableConsumable, useLabel } from './consumable-helpers';
 
 interface Props {
   state: GameState;
@@ -175,7 +177,7 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
             {e.item.description && <div className="text-[10px] text-[#7A6E60] italic mt-1">{e.item.description}</div>}
             <div className="flex gap-1 mt-2 flex-wrap">
               {/* Use-scroll shortcut */}
-              {useScroll && e.item.type === 'consumable' && (e.id.startsWith('scroll_') || e.id === 'jewel_case' || e.id === 'thieves_cache' || e.id === 'stolen_scroll' || e.id === 'tome_of_mastery' || e.id === 'wisdom_potion') && (
+              {useScroll && isUsableConsumable(e.id, e.item) && (
                 <button type="button" onClick={() => useScroll(e.id)}
                         className="press flex-1 text-[10px] py-1 text-[#0a0806] font-bold hover:brightness-110"
                         style={{
@@ -183,7 +185,7 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
                           border: '1px solid var(--cc-blue)',
                           borderRadius: 2,
                         }}>
-                  {e.id === 'tome_of_mastery' ? 'Read' : e.id === 'wisdom_potion' ? 'Drink' : e.id.startsWith('scroll_') ? 'Use' : 'Open'}
+                  {useLabel(e.id)}
                 </button>
               )}
               <button type="button" onClick={() => sellItem(e.id, 1)}
@@ -269,14 +271,3 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
   );
 };
 
-function rarityColor(r: string): string {
-  switch (r) {
-    case 'common': return '#E8E0D4';
-    case 'uncommon': return '#7FE2A0';
-    case 'rare': return '#6EA9E4';
-    case 'epic': return '#C58BE8';
-    case 'legendary': return '#F2B84B';
-    case 'celestial': return '#FF6EE6';
-    default: return '#E8E0D4';
-  }
-}

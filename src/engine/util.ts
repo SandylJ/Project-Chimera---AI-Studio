@@ -1,4 +1,4 @@
-import { Hero, Stats, StatKey, Item, Monster, GameState, LogEntry, Rarity, BlessingId, EquipSlot } from '../types';
+import { Hero, Stats, Item, Monster, GameState, LogEntry, Rarity, BlessingId, EquipSlot } from '../types';
 import { ITEMS } from '../data/items';
 import { CLASSES } from '../data/classes';
 
@@ -125,8 +125,6 @@ export function rollChance(chance: number): boolean {
 }
 
 // ============ Stats / Effective Stats ============
-
-const EMPTY_STATS: Stats = { str: 0, dex: 0, int: 0, con: 0, spd: 0, luck: 0 };
 
 export function addStats(a: Partial<Stats>, b: Partial<Stats>): Stats {
   return {

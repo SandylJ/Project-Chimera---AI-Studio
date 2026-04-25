@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GameState, LogEntry } from '../types';
+import { rarityColor } from '../engine/util';
 
 interface Props {
   state: GameState;
@@ -110,14 +111,3 @@ function kindColor(k: LogEntry['kind']): string {
   }
 }
 
-function rarityColor(r: string): string {
-  switch (r) {
-    case 'common': return '#E8E0D4';
-    case 'uncommon': return '#7FE2A0';
-    case 'rare': return '#6EA9E4';
-    case 'epic': return '#C58BE8';
-    case 'legendary': return '#F2B84B';
-    case 'celestial': return '#FF6EE6';
-    default: return '#E8E0D4';
-  }
-}

@@ -35,18 +35,6 @@ const STONE_WARM: Omit<DungeonTheme, 'ambientKind' | 'bgEmoji' | 'accentColor' |
   floorDark: '#7a5838',
 };
 
-const STONE_COLD: typeof STONE_WARM = {
-  voidColor: '#000000',
-  wallTop:   '#b8d4e8',
-  wallLight: '#8ab3d0',
-  wallMid:   '#5c84a4',
-  wallDark:  '#2e4a64',
-  wallMortar:'#1a2e40',
-  floorLight:'#b8d0dc',
-  floorMid:  '#7a9cb4',
-  floorDark: '#4a6884',
-};
-
 const STONE_CRYPT: typeof STONE_WARM = {
   voidColor: '#000000',
   wallTop:   '#c8b8d8',

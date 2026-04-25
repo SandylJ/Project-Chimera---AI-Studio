@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { BlessingId, Bounty, ClassId, EquipSlot, GameState, Hero } from '../types';
 import { CLASSES } from '../data/classes';
 import { ITEMS } from '../data/items';
-import { enchantCost, enchantTier, MAX_ENCHANT, blessingLevel, blessingCost, blessingBonus } from '../engine/util';
+import { enchantCost, enchantTier, MAX_ENCHANT, blessingLevel, blessingCost, blessingBonus, rarityColor } from '../engine/util';
 import { ClassSprite } from '../visuals/sprites';
 import { bountyProgress } from '../useGame';
 
@@ -395,7 +395,7 @@ const Shop: React.FC<{
                   <div className="text-[10px] text-[#7FE2A0] font-bold">save {savings}g</div>
                 </div>
                 <div className="text-[11px] text-[#B8A890] mb-2">
-                  {b.items.map(([id, q], i) => (
+                  {b.items.map(([id, q]) => (
                     <span key={id} className="block">· {q}× {ITEMS[id]?.icon} {ITEMS[id]?.name}</span>
                   ))}
                 </div>
@@ -847,14 +847,3 @@ const Stat: React.FC<{ k: string; v: string }> = ({ k, v }) => (
   </div>
 );
 
-function rarityColor(r: string): string {
-  switch (r) {
-    case 'common': return '#E8E0D4';
-    case 'uncommon': return '#7FE2A0';
-    case 'rare': return '#6EA9E4';
-    case 'epic': return '#C58BE8';
-    case 'legendary': return '#F2B84B';
-    case 'celestial': return '#FF6EE6';
-    default: return '#E8E0D4';
-  }
-}

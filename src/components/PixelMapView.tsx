@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GameState, Tile, MonsterInstance, Hero, Rarity } from '../types';
+import { GameState, Tile, MonsterInstance, Hero } from '../types';
 import { CLASSES } from '../data/classes';
 import { MONSTERS } from '../data/monsters';
-import { ITEMS } from '../data/items';
 import { ABILITIES } from '../data/abilities';
 import { themeFor, DungeonTheme } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
@@ -1360,7 +1359,6 @@ const AttackFxDraw: React.FC<{ e: AttackFx; now: number }> = ({ e, now }) => {
   const dx = e.targetX - e.sourceX;
   const dy = e.targetY - e.sourceY;
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-  const dist = Math.hypot(dx, dy);
 
   if (e.kind === 'melee') {
     // Slash arc at target

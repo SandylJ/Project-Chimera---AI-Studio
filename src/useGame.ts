@@ -8,7 +8,7 @@ import { randomNameFor, randomWorkerName } from './data/names';
 import { tickGame } from './engine/tick';
 import {
   mkId, pushLog, recomputeHeroMaxHPMP, effectiveStats, canEquip,
-  enchantCost, enchantTier, blessingLevel, blessingCost, MAX_ENCHANT,
+  enchantCost, enchantTier, blessingLevel, blessingCost,
 } from './engine/util';
 import { applyDamageToMonster } from './engine/combat';
 import { generateDungeon } from './engine/dungeonGen';

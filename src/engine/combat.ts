@@ -202,7 +202,7 @@ function castAbility(state: GameState, hero: Hero, ab: Ability, tile: Tile): boo
   }
 
   for (const eff of ab.effects) {
-    applyEffect(state, hero, stats, eff, ab, targets, allies);
+    applyEffect(state, hero, stats, eff, targets, allies);
   }
 
   pushLog(state, 'combat', `${hero.name} casts ${ab.name} ${ab.icon}`, undefined);
@@ -214,7 +214,6 @@ function applyEffect(
   caster: Hero,
   stats: Stats,
   eff: AbilityEffect,
-  ab: Ability,
   targets: MonsterInstance[],
   allies: Hero[],
 ): void {
@@ -353,7 +352,7 @@ function scalingStatFor(hero: Hero): StatKey {
   }
 }
 
-export function applyDamageToMonster(state: GameState, m: MonsterInstance, rawDmg: number, attackerName: string): void {
+export function applyDamageToMonster(state: GameState, m: MonsterInstance, rawDmg: number, _attackerName: string): void {
   const def = MONSTERS[m.monsterId];
   const armor = def ? def.defense : 0;
   const dmg = Math.max(1, Math.floor(rawDmg - armor * 0.4));

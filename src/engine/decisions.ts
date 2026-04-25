@@ -1,4 +1,4 @@
-import { GameState, ActiveDecision, DecisionOption } from '../types';
+import { GameState, ActiveDecision } from '../types';
 import { aliveActiveHeroes, pushLog, mkId, rngInt, rollChance, rngChoice } from './util';
 import { ITEMS } from '../data/items';
 import { addToStash } from './loot';
@@ -46,7 +46,7 @@ function mkFountain(state: GameState): ActiveDecision {
   };
 }
 
-function mkFork(state: GameState): ActiveDecision {
+function mkFork(_state: GameState): ActiveDecision {
   return {
     id: mkId('dec'),
     kind: 'fork',

@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { GameState, Hero, MonsterInstance, Tile, Rarity } from '../types';
+import { GameState, Hero } from '../types';
 import { CLASSES } from '../data/classes';
 import { MONSTERS } from '../data/monsters';
 import { ABILITIES } from '../data/abilities';
 import { ITEMS } from '../data/items';
-import { themeFor } from '../visuals/dungeonTheme';
 import { ClassSprite } from '../visuals/sprites';
 import { PixelMapView } from './PixelMapView';
 import { effectiveStats, totalArmor, weaponPower, xpToNext } from '../engine/util';
@@ -288,7 +287,7 @@ const VictoryCelebration: React.FC<{ dungeon: any; nowTick: number }> = ({ dunge
   const age = nowTick - (dungeon.victoryAt ?? nowTick);
   if (age > 2500 || age < 0) return null;
   const t = Math.min(1, age / 2500);
-  const coins = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+  const coins = useMemo(() => Array.from({ length: 60 }, () => ({
     x: Math.random() * 100,
     delay: Math.random() * 300,
     speed: 0.7 + Math.random() * 0.8,

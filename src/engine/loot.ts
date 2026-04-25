@@ -1,5 +1,4 @@
 import { GameState, Monster, Rarity } from '../types';
-import { MONSTERS } from '../data/monsters';
 import { ITEMS, TIER_LOOT_POOLS, SKILL_MATERIAL_POOLS } from '../data/items';
 import { pushLog, rngInt, rngChoice, rollChance } from './util';
 import { townBonuses, totalSkillLevel } from './skilling';
