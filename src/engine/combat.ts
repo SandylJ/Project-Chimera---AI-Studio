@@ -7,6 +7,7 @@ import {
 } from './util';
 import { rollMonsterLoot } from './loot';
 import { awardXp } from './progression';
+import { awardSlayerXp } from './skilling';
 
 export interface CombatContext {
   tile: Tile;
@@ -420,6 +421,11 @@ export function onMonsterKilled(state: GameState, m: MonsterInstance): void {
       state.totalGoldEarned += comboGold;
     }
   }
+
+  // Slayer XP: trickle town-skill XP to workers' active skills (or one
+  // random skill if no workers are assigned). Keeps combat tied into
+  // the skilling loop without spamming the log.
+  awardSlayerXp(state, def.level, !!def.boss);
 
   const comboTag = state.killCombo >= 3 ? ` 🔥x${state.killCombo}` : '';
   pushLog(state, 'combat', `${def.icon} ${def.name} defeated!${comboTag}`);

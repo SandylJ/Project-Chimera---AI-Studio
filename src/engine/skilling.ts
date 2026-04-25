@@ -95,6 +95,38 @@ export function reachedMilestones(level: number): SkillMilestoneId[] {
   return SKILL_MILESTONES.filter(m => level >= m.level).map(m => m.id);
 }
 
+// Grant XP to a town skill from any source — town worker cycles, slayer
+// trickle, scrolls, etc. Handles level-up + milestone announcements.
+export function awardSkillXp(state: GameState, skillId: SkillId, xp: number): void {
+  if (xp <= 0) return;
+  if (!state.skills[skillId]) state.skills[skillId] = { level: 1, xp: 0 };
+  const sk = state.skills[skillId]!;
+  sk.xp += xp;
+  while (sk.level < 99 && sk.xp >= xpForLevel(sk.level + 1)) {
+    sk.level++;
+    pushLog(state, 'level', `⬆ ${capitalize(skillId)} reached level ${sk.level}!`);
+    const ms = SKILL_MILESTONES.find(m => m.level === sk.level);
+    if (ms) pushLog(state, 'level', `✨ ${capitalize(skillId)} ${ms.title}: ${ms.blurb}`, 'epic');
+  }
+}
+
+// Slayer XP: every monster kill grants a small pool of town-skill XP,
+// split evenly across whichever skills currently have workers assigned.
+// If nothing's assigned, picks one random skill so the system still
+// fires for combat-only players. Scales with monster level.
+export function awardSlayerXp(state: GameState, monsterLevel: number, isBoss: boolean): void {
+  const total = Math.max(1, Math.floor(monsterLevel * (isBoss ? 2.0 : 0.5)));
+  const assigned = new Set<SkillId>();
+  for (const w of state.town.workers) {
+    if (w.activeTask) assigned.add(w.activeTask.skillId);
+  }
+  const targets: SkillId[] = assigned.size > 0
+    ? Array.from(assigned)
+    : [ALL_SKILLS[Math.floor(Math.random() * ALL_SKILLS.length)]];
+  const each = Math.max(1, Math.ceil(total / targets.length));
+  for (const id of targets) awardSkillXp(state, id, each);
+}
+
 // Cost to hire the next worker. Doubles per worker past the starter 3.
 export function workerHireCost(currentCount: number): number {
   return 1000 * Math.pow(2, Math.max(0, currentCount - 3));
@@ -662,22 +694,19 @@ export function tickSkilling(state: GameState, dt: number) {
       worker.cyclesPerSkill ||= {};
       worker.cyclesPerSkill[task.skillId] = (worker.cyclesPerSkill[task.skillId] ?? 0) + 1;
 
-      if (!state.skills[task.skillId]) {
-        state.skills[task.skillId] = { level: 1, xp: 0 };
-      }
-      const sk = state.skills[task.skillId]!;
-      const town = townBonuses(totalSkillLevel(state));
-      sk.xp += Math.floor(actionDef.xpReward * bonuses.xpMul * town.xpMul);
-
-      while (sk.level < 99 && sk.xp >= xpForLevel(sk.level + 1)) {
-        sk.level++;
-        pushLog(state, 'level', `⬆ ${capitalize(task.skillId)} reached level ${sk.level}!`);
-        // Announce milestone perks the moment they unlock.
-        const ms = SKILL_MILESTONES.find(m => m.level === sk.level);
-        if (ms) {
-          pushLog(state, 'level', `✨ ${capitalize(task.skillId)} ${ms.title}: ${ms.blurb}`, 'epic');
+      // Mass-craft countdown: stop once the requested number of cycles
+      // has been produced.
+      if (typeof task.repeatRemaining === 'number' && task.repeatRemaining > 0) {
+        task.repeatRemaining--;
+        if (task.repeatRemaining <= 0) {
+          pushLog(state, 'system', `${worker.name} finished the requested batch of ${actionDef.name}.`);
+          worker.activeTask = undefined;
+          break;
         }
       }
+
+      const town = townBonuses(totalSkillLevel(state));
+      awardSkillXp(state, task.skillId, Math.floor(actionDef.xpReward * bonuses.xpMul * town.xpMul));
 
       if (!hasRequiredInputs(state, actionDef.inputs)) {
         if (task.autoRepeat) {

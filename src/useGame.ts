@@ -1225,7 +1225,8 @@ export function useCcGame() {
   }, [mutate]);
 
   // ========== Town skills ==========
-  const setActiveTask = useCallback((skillId: string, actionId: string, duration: number, workerId?: string) => {
+  // repeatTimes: 0 / undefined = infinite. >0 = mass-craft N cycles.
+  const setActiveTask = useCallback((skillId: string, actionId: string, duration: number, workerId?: string, repeatTimes?: number) => {
     mutate(s => {
       let worker = workerId
         ? s.town.workers.find(w => w.id === workerId)
@@ -1234,7 +1235,13 @@ export function useCcGame() {
         pushLog(s, 'system', 'No available workers to assign task.');
         return;
       }
-      worker.activeTask = { skillId: skillId as any, actionId, duration, progress: 0 };
+      worker.activeTask = {
+        skillId: skillId as any,
+        actionId,
+        duration,
+        progress: 0,
+        ...(repeatTimes && repeatTimes > 0 ? { repeatRemaining: repeatTimes } : {}),
+      };
     });
   }, [mutate]);
 

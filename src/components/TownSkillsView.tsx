@@ -5,7 +5,7 @@ import { ITEMS } from '../data/items';
 
 interface Props {
   state: GameState;
-  setActiveTask: (skillId: string, actionId: string, duration: number, workerId?: string) => void;
+  setActiveTask: (skillId: string, actionId: string, duration: number, workerId?: string, repeatTimes?: number) => void;
   clearActiveTask: (workerId: string) => void;
   toggleAutoRepeat?: (workerId: string) => void;
   hireWorker?: () => void;
@@ -17,6 +17,11 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
   const [selectedSkill, setSelectedSkill] = useState<SkillId>('mining');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  // Mass-craft cycle count for the next assign. 0 = infinite (default).
+  const [repeatTimes, setRepeatTimes] = useState<number>(0);
+  const REPEAT_OPTIONS: Array<{ n: number; label: string }> = [
+    { n: 0, label: '∞' }, { n: 5, label: '5×' }, { n: 10, label: '10×' }, { n: 25, label: '25×' }, { n: 100, label: '100×' },
+  ];
 
   const skillsList: { id: SkillId; icon: string; name: string }[] = [
     { id: 'mining',       icon: '⛏️', name: 'Mining' },
@@ -112,9 +117,9 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
   const capeBonus = (capeWornFor ? 0.25 : 0) + (completionCapeWorn ? 0.10 : 0);
 
   // Bulk-assign all idle workers to the same action. Useful when you've
-  // hired half the village to mine copper.
+  // hired half the village to mine copper. Honors the mass-craft count.
   const bulkAssign = (actionId: string, duration: number) => {
-    for (const w of freeWorkers) setActiveTask(selectedSkill, actionId, duration, w.id);
+    for (const w of freeWorkers) setActiveTask(selectedSkill, actionId, duration, w.id, repeatTimes);
   };
   const bulkStop = () => {
     for (const w of activeWorkers) clearActiveTask(w.id);
@@ -266,6 +271,9 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                   <div className="flex flex-col gap-1">
                     <div className={`text-[10px] truncate ${stalled ? 'text-[#D4A943]' : 'text-[#4EBA6F]'}`}>
                       {stalled ? `⏸ Out of mats — ${taskDef?.name}` : (taskDef?.name || 'Working...')}
+                      {typeof w.activeTask?.repeatRemaining === 'number' && w.activeTask.repeatRemaining > 0 && (
+                        <span className="ml-1 text-[#F2E6A8]">×{w.activeTask.repeatRemaining}</span>
+                      )}
                     </div>
                     <div className="w-full bg-[#0A1A10] h-1 rounded-full overflow-hidden">
                       <div className={stalled ? 'h-full bg-[#D4A943]/50' : 'h-full bg-[#4EBA6F]'}
@@ -369,15 +377,33 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
             )}
           </div>
 
-          {/* Search + bulk-stop */}
-          <div className="flex items-center gap-2">
+          {/* Search + repeat picker + bulk-stop */}
+          <div className="flex items-center gap-2 flex-wrap">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search action or output…"
-              className="flex-1 bg-[#14100C] border border-[#3D3328] rounded px-2 py-1 text-xs text-[#F2E6A8] placeholder-[#5C5246] focus:outline-none focus:border-[#D4A943]"
+              className="flex-1 min-w-[160px] bg-[#14100C] border border-[#3D3328] rounded px-2 py-1 text-xs text-[#F2E6A8] placeholder-[#5C5246] focus:outline-none focus:border-[#D4A943]"
             />
+            <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                 title="Mass-craft: how many cycles per assign before the worker auto-stops. ∞ = run forever.">
+              <span className="text-[#7A6E60] mr-1">Run:</span>
+              {REPEAT_OPTIONS.map(o => {
+                const on = repeatTimes === o.n;
+                return (
+                  <button key={o.n} onClick={() => setRepeatTimes(o.n)}
+                          className={`px-1.5 py-1 rounded border transition-colors ${
+                            on
+                              ? 'bg-[#D4A943] text-[#14100C] border-[#D4A943]'
+                              : 'bg-[#14100C] text-[#B8A890] border-[#3D3328] hover:border-[#D4A943]'
+                          }`}>
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
             {activeWorkers.length > 0 && (
               <button onClick={bulkStop}
                       className="px-2.5 py-1 text-[10px] uppercase tracking-widest font-bold rounded border bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border-[#E86E6E80]"
@@ -532,7 +558,7 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                   <div className="flex gap-1">
                     <button
                       disabled={freeWorkers.length === 0 || missingInput}
-                      onClick={() => setActiveTask(selectedSkill, action.id, action.duration)}
+                      onClick={() => setActiveTask(selectedSkill, action.id, action.duration, undefined, repeatTimes)}
                       className={`flex-1 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors
                         ${freeWorkers.length === 0
                           ? 'bg-[#1A1A1A] text-[#7A6E60] border border-[#3D3328] cursor-not-allowed'

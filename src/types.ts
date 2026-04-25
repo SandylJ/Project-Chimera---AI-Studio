@@ -326,6 +326,9 @@ export interface ActiveTask {
   // Set when the task is paused waiting for inputs; UI uses it to show a
   // "waiting for materials" badge instead of the running progress bar.
   stalled?: boolean;
+  // If set, the worker stops once this many cycles have completed —
+  // mass-craft mode. Decremented per completed cycle; <=0 means infinite.
+  repeatRemaining?: number;
 }
 
 export interface TownWorker {
