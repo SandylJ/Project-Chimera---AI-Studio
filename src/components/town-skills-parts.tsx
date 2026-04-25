@@ -191,17 +191,39 @@ export const WorkerCard: React.FC<{
     ? (worker.activeTask.progress / worker.activeTask.duration) * 100
     : 0;
   return (
-    <div className={`p-2 rounded-lg border flex flex-col gap-1.5 relative overflow-hidden transition-colors
+    <div className={`p-2 rounded-lg border flex flex-col gap-1 overflow-hidden transition-colors
       ${isIdle ? 'bg-[#1A1512] border-[#3D3328]'
         : stalled ? 'bg-[#2E2818] border-[#D4A943]'
         : 'bg-[#1A2E20] border-[#4EBA6F] shadow-[0_0_10px_rgba(78,186,111,0.15)]'}`}>
-      <div className="flex items-center justify-between">
-        <span className={`font-bold text-xs truncate
+      <div className="flex items-center justify-between gap-1">
+        <span className={`text-base shrink-0 ${!isIdle && !stalled && 'animate-pulse'}`}>{icon}</span>
+        <span className={`font-bold text-xs truncate flex-1
           ${isIdle ? 'text-[#B8A890]' : stalled ? 'text-[#F2E6A8]' : 'text-[#A3E6B5]'}`}>{worker.name}</span>
-        <span className={`text-sm shrink-0 ${!isIdle && !stalled && 'animate-pulse'}`}>{icon}</span>
+        {!isIdle && (
+          <div className="flex gap-0.5 shrink-0">
+            {toggleAutoRepeat && (
+              <button
+                onClick={() => toggleAutoRepeat(worker.id)}
+                title={repeating
+                  ? 'Auto-repeat ON — keep task assigned through stockouts'
+                  : 'Auto-repeat OFF — stop on stockout'}
+                className={`px-1 py-0.5 rounded text-[8px] font-bold border leading-none
+                  ${repeating
+                    ? 'bg-[#7FE2A030] text-[#7FE2A0] border-[#7FE2A080]'
+                    : 'bg-[#1A1A1A] text-[#7A6E60] border-[#3D3328] hover:text-[#B8A890] hover:border-[#7A6E60]'}`}>
+                ↻
+              </button>
+            )}
+            <button onClick={() => clearActiveTask(worker.id)}
+                    title="Stop this worker"
+                    className="px-1 py-0.5 bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border border-[#E86E6E80] rounded text-[8px] font-bold leading-none">
+              ✕
+            </button>
+          </div>
+        )}
       </div>
       {domEntry && (
-        <div className={`text-[9px] leading-none flex items-center gap-1 -mt-1
+        <div className={`text-[9px] leading-none flex items-center gap-1
           ${matchesDom ? 'text-[#F2B84B]' : 'text-[#7A6E60]'}`}
              style={{ fontFamily: "'JetBrains Mono', monospace" }}
              title={matchesDom
@@ -212,7 +234,7 @@ export const WorkerCard: React.FC<{
         </div>
       )}
       {!domEntry && leadingEntry && leadingSkill && (
-        <div className="text-[9px] leading-none flex items-center gap-1 -mt-1 text-[#7A6E60]"
+        <div className="text-[9px] leading-none flex items-center gap-1 text-[#7A6E60]"
              style={{ fontFamily: "'JetBrains Mono', monospace" }}
              title={`${leadingSkill.n}/${SPECIALTY_THRESHOLD} cycles toward ${leadingEntry.name} specialty`}>
           <span className="opacity-60">{leadingEntry.icon}</span>
@@ -223,7 +245,7 @@ export const WorkerCard: React.FC<{
       {isIdle ? (
         <div className="text-[10px] text-[#7A6E60]">Idle</div>
       ) : (
-        <div className="flex flex-col gap-1">
+        <>
           <div className={`text-[10px] truncate ${stalled ? 'text-[#D4A943]' : 'text-[#4EBA6F]'}`}>
             {stalled ? `⏸ Out of mats — ${taskDef?.name}` : (taskDef?.name || 'Working...')}
             {typeof remaining === 'number' && remaining > 0 && (
@@ -238,28 +260,7 @@ export const WorkerCard: React.FC<{
                 : 'h-full bg-[#4EBA6F]'
             } style={{ width: `${progressPct}%`, transition: 'width 0.2s linear' }} />
           </div>
-        </div>
-      )}
-      {!isIdle && (
-        <div className="absolute top-1 right-1 flex gap-1">
-          {toggleAutoRepeat && (
-            <button
-              onClick={() => toggleAutoRepeat(worker.id)}
-              title={repeating
-                ? 'Auto-repeat ON — keep task assigned through stockouts'
-                : 'Auto-repeat OFF — stop on stockout'}
-              className={`px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-bold border
-                ${repeating
-                  ? 'bg-[#7FE2A030] text-[#7FE2A0] border-[#7FE2A080]'
-                  : 'bg-[#1A1A1A] text-[#7A6E60] border-[#3D3328] hover:text-[#B8A890] hover:border-[#7A6E60]'}`}>
-              ↻
-            </button>
-          )}
-          <button onClick={() => clearActiveTask(worker.id)}
-                  className="px-1.5 py-0.5 bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border border-[#E86E6E80] rounded text-[8px] uppercase tracking-widest font-bold">
-            Stop
-          </button>
-        </div>
+        </>
       )}
     </div>
   );
