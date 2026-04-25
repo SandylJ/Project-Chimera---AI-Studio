@@ -7,6 +7,7 @@ import { ITEMS } from '../data/items';
 import {
   SKILL_ACTIONS, SkillActionDef, SkillBonuses,
   TOWN_TIERS, TownBonuses,
+  SKILL_MILESTONES,
   producerForItem, dominantSkill,
 } from '../engine/skilling';
 
@@ -63,6 +64,18 @@ export const SkillSidebar: React.FC<{
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   L{lvl}
                 </span>
+              </div>
+              {/* 5 dots, one per milestone tier — lit when reached. */}
+              <div className="flex gap-[2px] mt-0.5"
+                   title={SKILL_MILESTONES.map(m => `L${m.level}: ${m.title}`).join(' · ')}>
+                {SKILL_MILESTONES.map(m => {
+                  const reached = lvl >= m.level;
+                  return (
+                    <span key={m.id}
+                          className={`block w-1.5 h-1.5 rounded-full transition-colors
+                            ${reached ? 'bg-[#D4A943] shadow-[0_0_3px_#D4A943]' : 'bg-[#3D3328]'}`} />
+                  );
+                })}
               </div>
               {craftable > 0 && (
                 <div className="text-[9px] text-[#7FE2A0] font-bold leading-none mt-0.5"
@@ -140,6 +153,22 @@ export const WorkerCard: React.FC<{
   const dom = dominantSkill(worker);
   const domEntry = dom ? SKILLS_LIST.find(s => s.id === dom) : null;
   const matchesDom = !!(worker.activeTask && dom && worker.activeTask.skillId === dom);
+  // Pre-specialty hint: while no skill has hit the 30-cycle threshold,
+  // show the leading skill + progress so the player can see which way
+  // a worker is leaning.
+  const SPECIALTY_THRESHOLD = 30;
+  const leadingSkill = (() => {
+    if (dom) return null;
+    const counts = worker.cyclesPerSkill ?? {};
+    let bestId: SkillId | null = null;
+    let bestN = 0;
+    for (const [id, n] of Object.entries(counts) as [SkillId, number][]) {
+      if (n > bestN) { bestN = n; bestId = id; }
+    }
+    if (!bestId || bestN < 5) return null;
+    return { id: bestId, n: bestN };
+  })();
+  const leadingEntry = leadingSkill ? SKILLS_LIST.find(s => s.id === leadingSkill.id) : null;
   const remaining = worker.activeTask?.repeatRemaining;
   const progressPct = worker.activeTask
     ? (worker.activeTask.progress / worker.activeTask.duration) * 100
@@ -163,6 +192,15 @@ export const WorkerCard: React.FC<{
                : `Specialist in ${domEntry.name} (assign there for −8%)`}>
           <span>{domEntry.icon}</span>
           <span className="uppercase tracking-widest">{matchesDom ? 'Specialist ★' : 'Specialty'}</span>
+        </div>
+      )}
+      {!domEntry && leadingEntry && leadingSkill && (
+        <div className="text-[9px] leading-none flex items-center gap-1 -mt-1 text-[#7A6E60]"
+             style={{ fontFamily: "'JetBrains Mono', monospace" }}
+             title={`${leadingSkill.n}/${SPECIALTY_THRESHOLD} cycles toward ${leadingEntry.name} specialty`}>
+          <span className="opacity-60">{leadingEntry.icon}</span>
+          <span className="tabular-nums">{leadingSkill.n}/{SPECIALTY_THRESHOLD}</span>
+          <span className="uppercase tracking-widest opacity-60">→ specialty</span>
         </div>
       )}
       {isIdle ? (

@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { GameState, SkillId } from '../types';
 import {
   SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES,
   getSkillBonuses, workerHireCost, totalSkillLevel, townBonuses, CAPE_BY_SKILL,
+  actionCategory, ActionCategory,
 } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 import {
@@ -24,6 +25,15 @@ const REPEAT_OPTIONS: Array<{ n: number; label: string }> = [
   { n: 0, label: '∞' }, { n: 5, label: '5×' }, { n: 10, label: '10×' }, { n: 25, label: '25×' }, { n: 100, label: '100×' },
 ];
 
+const CATEGORY_ICON: Record<ActionCategory, string> = {
+  ores: '🪨', bars: '🟧', logs: '🪵', gems: '💎',
+  weapons: '⚔️', armor: '🛡️', jewelry: '💍',
+  talismans: '🔯', runes: '🔮', scrolls: '📜',
+  food: '🍖', potions: '🧪',
+  materials: '🧶', mastery: '🏆', capes: '🎽',
+  misc: '❓',
+};
+
 export const TownSkillsView: React.FC<Props> = ({
   state, setActiveTask, clearActiveTask, toggleAutoRepeat, togglePinAction, hireWorker,
 }) => {
@@ -31,6 +41,7 @@ export const TownSkillsView: React.FC<Props> = ({
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [repeatTimes, setRepeatTimes] = useState<number>(0);
+  const [category, setCategory] = useState<ActionCategory | 'all'>('all');
 
   const workers = state.town?.workers || [];
   const freeWorkers = workers.filter(w => !w.activeTask);
@@ -68,6 +79,22 @@ export const TownSkillsView: React.FC<Props> = ({
   const actions: SkillActionDef[] = SKILL_ACTIONS[selectedSkill] || [];
   const pinned = state.pinnedActions ?? [];
 
+  // Categories present for this skill (derived from outputs). When the
+  // skill has 3+ distinct categories it's worth showing a filter chip
+  // strip — Crafting alone has ~10 categories.
+  const categoriesPresent = useMemo(() => {
+    const counts = new Map<ActionCategory, number>();
+    for (const a of actions) {
+      const c = actionCategory(a, ITEMS);
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [actions]);
+  const showCategoryChips = categoriesPresent.length >= 3;
+  // Reset category when switching skills so a "talismans" filter from
+  // Crafting doesn't carry into Mining and hide everything.
+  useEffect(() => { setCategory('all'); }, [selectedSkill]);
+
   // Sort: pinned → craftable now → unlocked but missing inputs → locked.
   const rankedActions = useMemo(() => {
     return [...actions].map(a => {
@@ -91,6 +118,7 @@ export const TownSkillsView: React.FC<Props> = ({
   const filteredActions = rankedActions.filter(({ a, unlocked, missingInput }) => {
     if (filter === 'craftable' && !(unlocked && !missingInput)) return false;
     if (filter === 'unlocked'  && !unlocked) return false;
+    if (category !== 'all' && actionCategory(a, ITEMS) !== category) return false;
     if (q) {
       const inName = a.name.toLowerCase().includes(q);
       const inOutput = Object.keys(a.outputs || {}).some(id =>
@@ -272,6 +300,34 @@ export const TownSkillsView: React.FC<Props> = ({
               </button>
             )}
           </div>
+
+          {/* Category chips — only shown when the skill has enough variety
+              to warrant filtering. Each chip shows count of recipes in
+              that bucket. */}
+          {showCategoryChips && (
+            <div className="flex items-center gap-1 flex-wrap text-[10px] font-bold uppercase tracking-widest"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <span className="text-[#7A6E60] mr-1">Type:</span>
+              <button onClick={() => setCategory('all')}
+                      className={`px-2 py-0.5 rounded border transition-colors ${
+                        category === 'all'
+                          ? 'bg-[#D4A943] text-[#14100C] border-[#D4A943]'
+                          : 'bg-[#14100C] text-[#B8A890] border-[#3D3328] hover:border-[#D4A943]'
+                      }`}>
+                All · {actions.length}
+              </button>
+              {categoriesPresent.map(([cat, count]) => (
+                <button key={cat} onClick={() => setCategory(cat)}
+                        className={`px-2 py-0.5 rounded border transition-colors ${
+                          category === cat
+                            ? 'bg-[#D4A943] text-[#14100C] border-[#D4A943]'
+                            : 'bg-[#14100C] text-[#B8A890] border-[#3D3328] hover:border-[#D4A943]'
+                        }`}>
+                  {CATEGORY_ICON[cat]} {cat} · {count}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Action cards */}

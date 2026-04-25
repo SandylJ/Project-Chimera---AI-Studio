@@ -218,6 +218,52 @@ export interface SkillActionDef {
   outputs?: Record<string, number>;
 }
 
+// Derived bucket for the action grid. Lets the UI offer a category
+// chip strip when a skill has many recipes (Crafting has 89). Computed
+// from the first output item — no field needs to live on each action.
+export type ActionCategory =
+  | 'ores' | 'bars' | 'logs' | 'gems'
+  | 'weapons' | 'armor' | 'jewelry'
+  | 'talismans' | 'runes' | 'scrolls'
+  | 'food' | 'potions'
+  | 'materials' | 'mastery' | 'capes'
+  | 'misc';
+
+import type { Item } from '../types';
+
+export function actionCategory(action: SkillActionDef, items: Record<string, Item>): ActionCategory {
+  const outIds = Object.keys(action.outputs ?? {});
+  if (outIds.length === 0) return 'misc';
+  // Pick the highest-value output as the "real" output — pass-through
+  // tools (knife, chisel, tinderbox, talisman re-emit) shouldn't drive
+  // the category.
+  let firstId = outIds[0];
+  let bestVal = items[firstId]?.value ?? 0;
+  for (const id of outIds) {
+    const v = items[id]?.value ?? 0;
+    if (v > bestVal) { bestVal = v; firstId = id; }
+  }
+  if (firstId === 'cape_of_completion' || /^(mining|woodcutting|smithing|crafting|herblore|fishing|cooking|farming|runecrafting|thieving|agility)_cape$/.test(firstId)) return 'capes';
+  if (firstId.startsWith('masters_') || firstId === 'tome_of_mastery') return 'mastery';
+  if (firstId.endsWith('_talisman')) return 'talismans';
+  if (firstId.endsWith('_rune') || firstId === 'astral_rune') return 'runes';
+  if (firstId.startsWith('scroll_')) return 'scrolls';
+  if (firstId.endsWith('_ore') || firstId === 'rune_essence' || firstId === 'pure_essence' || firstId === 'coal') return 'ores';
+  if (firstId.endsWith('_bar') || firstId === 'chaos_bar' || firstId === 'death_bar') return 'bars';
+  if (firstId.endsWith('_logs') || firstId === 'logs' || firstId === 'charcoal') return 'logs';
+  if (firstId.startsWith('uncut_') || ['sapphire','emerald','ruby','diamond','dragonstone','onyx'].includes(firstId)) return 'gems';
+  const item = items[firstId];
+  if (!item) return 'misc';
+  if (item.type === 'weapon') return 'weapons';
+  if (item.type === 'armor') return 'armor';
+  if (item.type === 'trinket') return 'jewelry';
+  if (item.type === 'potion') {
+    return (item.healOnUse || item.manaOnUse) ? 'food' : 'potions';
+  }
+  if (item.type === 'consumable') return 'scrolls';
+  return 'materials';
+}
+
 export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
   mining: [
     { id: 'mine_copper',   name: 'Mine Copper',    levelReq: 1,  duration: 3500, xpReward: 10,  outputs: { copper_ore: 1 } },
@@ -612,9 +658,15 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'forest_course',     name: 'Forest Course',         levelReq: 10, duration: 8000, xpReward: 45,  outputs: { marks_of_grace: 2, stamina_herb: 1 } },
     { id: 'cliffside_course',  name: 'Cliffside Course',      levelReq: 25, duration: 10500,xpReward: 85,  outputs: { marks_of_grace: 3, stamina_herb: 2 } },
     { id: 'rooftop_thieves',   name: 'Rooftop Thieves Run',   levelReq: 35, duration: 12000,xpReward: 130, outputs: { marks_of_grace: 5, shortcut_token: 1 } },
+    // ---- Mid-tier fillers (close the 35→70 gap) ----
+    { id: 'desert_dunes',      name: 'Desert Dunes Trail',    levelReq: 40, duration: 13000,xpReward: 165, outputs: { marks_of_grace: 6, stamina_herb: 2 } },
     { id: 'canyon_jump',       name: 'Canyon Jump Circuit',   levelReq: 50, duration: 14000,xpReward: 200, outputs: { marks_of_grace: 7, stamina_herb: 3, shortcut_token: 1 } },
+    { id: 'jungle_canopy',     name: 'Jungle Canopy Run',     levelReq: 60, duration: 16000,xpReward: 280, outputs: { marks_of_grace: 9, stamina_herb: 4, shortcut_token: 1 } },
     { id: 'shadow_runs',       name: 'Shadow Runs',           levelReq: 70, duration: 18000,xpReward: 340, outputs: { marks_of_grace: 10, shortcut_token: 2, stamina_herb: 5 } },
+    // ---- Endgame fillers (close 70→95 gap, ramp up Mastery Marks) ----
+    { id: 'frozen_bluff',      name: 'Frozen Bluff Course',   levelReq: 78, duration: 22000,xpReward: 430, outputs: { marks_of_grace: 12, shortcut_token: 2, stamina_herb: 6 } },
     { id: 'spirit_leap',       name: 'Spirit Leap',           levelReq: 85, duration: 25000,xpReward: 560, outputs: { marks_of_grace: 15, mastery_mark: 1 } },
+    { id: 'starlit_path',      name: 'Starlit Path',          levelReq: 90, duration: 32000,xpReward: 800, outputs: { marks_of_grace: 18, shortcut_token: 3, mastery_mark: 1 } },
     { id: 'ascendance_trial',  name: 'Ascendance Trial',      levelReq: 95, duration: 40000,xpReward: 1100,inputs: { shortcut_token: 5 }, outputs: { mastery_mark: 3, marks_of_grace: 25 } },
   ],
 };
