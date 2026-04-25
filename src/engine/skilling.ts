@@ -2,6 +2,39 @@ import { GameState, SkillId, TownWorker } from '../types';
 import { pushLog } from './util';
 import { addToStash, removeFromStash } from './loot';
 
+// Map from skill id to the cape that boosts it. Used by tickSkilling to
+// look up whether any active hero is wearing a matching cape (passive
+// boost to that skill's town output rate).
+export const CAPE_BY_SKILL: Record<SkillId, string> = {
+  mining: 'mining_cape',
+  woodcutting: 'woodcutting_cape',
+  smithing: 'smithing_cape',
+  crafting: 'crafting_cape',
+  herblore: 'herblore_cape',
+  fishing: 'fishing_cape',
+  cooking: 'cooking_cape',
+  farming: 'farming_cape',
+  runecrafting: 'runecrafting_cape',
+  thieving: 'thieving_cape',
+  agility: 'agility_cape',
+};
+
+// Returns extra doubleChance contributed by capes equipped on active
+// heroes for the given skill: the matching skill cape (+25%) and/or the
+// Cape of Completion (+10% to all skills, stacks).
+function capeBonusForSkill(state: GameState, skillId: SkillId): number {
+  let bonus = 0;
+  const skillCapeId = CAPE_BY_SKILL[skillId];
+  for (const h of state.heroes) {
+    if (h.bench) continue;
+    const neck = h.equipment.neck;
+    if (!neck) continue;
+    if (neck === skillCapeId) bonus = Math.max(bonus, 0.25);
+    if (neck === 'cape_of_completion') bonus = Math.max(bonus, bonus + 0.10);
+  }
+  return bonus;
+}
+
 // The skill a worker has run the most cycles on. ≥30 cycles required to
 // "lock in" a specialization so a worker that briefly tried Mining
 // doesn't get pinned there. Returns null if no specialization yet.
@@ -344,6 +377,20 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'craft_masters_robe',   name:"Craft Master's Robe",  levelReq: 88, duration: 32000,xpReward: 1500, inputs: { mastery_mark: 8, silk_fine: 5, dragon_leather: 3, soul_rune: 5 }, outputs: { masters_robe: 1 } },
     { id: 'craft_masters_crown',  name:"Craft Master's Crown", levelReq: 92, duration: 38000,xpReward: 1800, inputs: { mastery_mark: 12, onyx: 1, dragon_hoard_scrap: 2, blood_rune: 10, gold_bar: 3 }, outputs: { masters_crown: 1 } },
     { id: 'scribe_tome_of_mastery',name:'Scribe Tome of Mastery',levelReq: 75, duration: 18000,xpReward: 600, inputs: { mastery_mark: 3, magic_logs: 5, cosmic_rune: 5, nature_rune: 5 }, outputs: { tome_of_mastery: 1 } },
+    // ---- Skill capes (one per skill — see CAPE_BY_SKILL for the bonus map) ----
+    { id: 'craft_mining_cape',       name:'Craft Mining Cape',       levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, runite_ore: 10, dragonite_ore: 2, silk_fine: 3 }, outputs: { mining_cape: 1 } },
+    { id: 'craft_woodcutting_cape',  name:'Craft Woodcutting Cape',  levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, magic_logs: 8, elder_logs: 4, silk_fine: 3 }, outputs: { woodcutting_cape: 1 } },
+    { id: 'craft_smithing_cape',     name:'Craft Smithing Cape',     levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, runite_bar: 6, dragonite_bar: 2, silk_fine: 3 }, outputs: { smithing_cape: 1 } },
+    { id: 'craft_crafting_cape',     name:'Craft Crafting Cape',     levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, silk_fine: 8, dragon_leather: 4, gold_bar: 3 }, outputs: { crafting_cape: 1 } },
+    { id: 'craft_herblore_cape',     name:'Craft Herblore Cape',     levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, torstol: 4, spirit_herb: 1, silk_fine: 3 }, outputs: { herblore_cape: 1 } },
+    { id: 'craft_fishing_cape',      name:'Craft Fishing Cape',      levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, raw_anglerfish: 4, raw_dark_crab: 2, silk_fine: 3 }, outputs: { fishing_cape: 1 } },
+    { id: 'craft_cooking_cape',      name:'Craft Cooking Cape',      levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, cooked_dark_crab: 3, divine_wine: 1, silk_fine: 3 }, outputs: { cooking_cape: 1 } },
+    { id: 'craft_farming_cape',      name:'Craft Farming Cape',      levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, torstol: 6, dwarf_weed: 4, silk_fine: 3 }, outputs: { farming_cape: 1 } },
+    { id: 'craft_runecrafting_cape', name:'Craft Runecrafting Cape', levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, astral_rune: 1, soul_rune: 5, silk_fine: 3 }, outputs: { runecrafting_cape: 1 } },
+    { id: 'craft_thieving_cape',     name:'Craft Thieving Cape',     levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, soul_gem: 1, silk_fine: 6, gold_trinket: 3 }, outputs: { thieving_cape: 1 } },
+    { id: 'craft_agility_cape',      name:'Craft Agility Cape',      levelReq: 90, duration: 30000, xpReward: 1200, inputs: { mastery_mark: 4, marks_of_grace: 80, silk_fine: 3 }, outputs: { agility_cape: 1 } },
+    // Capstone — fuses every skill cape into one.
+    { id: 'craft_cape_of_completion',name:'Craft Cape of Completion',levelReq: 99, duration: 60000, xpReward: 5000, inputs: { mastery_mark: 20, mining_cape: 1, woodcutting_cape: 1, smithing_cape: 1, crafting_cape: 1, herblore_cape: 1, fishing_cape: 1, cooking_cape: 1, farming_cape: 1, runecrafting_cape: 1, thieving_cape: 1, agility_cape: 1 }, outputs: { cape_of_completion: 1 } },
   ],
 
   herblore: [
@@ -600,7 +647,8 @@ export function tickSkilling(state: GameState, dt: number) {
         }
       }
       if (actionDef.outputs) {
-        const doubled = bonuses.doubleChance > 0 && Math.random() < bonuses.doubleChance;
+        const totalDoubleChance = bonuses.doubleChance + capeBonusForSkill(state, task.skillId);
+        const doubled = totalDoubleChance > 0 && Math.random() < totalDoubleChance;
         const mult = doubled ? 2 : 1;
         for (const [id, qty] of Object.entries(actionDef.outputs)) {
           addToStash(state, id, qty * mult);

@@ -555,6 +555,36 @@ export function useCcGame() {
     overload_potion: { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 90000, selfDamage: 50 },
   };
 
+  // Apply every available buff potion in stash to every alive active
+  // hero — pre-dungeon prep button. Each potion id is consumed once per
+  // hero (so a stack of 4 attack potions buffs 4 heroes), capped at the
+  // size of the active alive party. No mana/HP regen is rolled in;
+  // that's still up to quickHealParty / quickHealHero.
+  const useAllBuffs = useCallback(() => {
+    mutate(s => {
+      const heroes = s.heroes.filter(h => !h.bench && h.state === 'alive');
+      if (heroes.length === 0) {
+        pushLog(s, 'system', 'No active heroes to buff.');
+        return;
+      }
+      let applied = 0;
+      for (const id of Object.keys(POTION_BUFFS)) {
+        const buffDef = POTION_BUFFS[id];
+        for (const h of heroes) {
+          if ((s.stash.items[id] ?? 0) < 1) break;
+          for (const b of buffDef.buffs) {
+            h.buffs.push({ id: mkId('buff'), stat: b.stat, power: b.power, remaining: buffDef.duration });
+          }
+          if (buffDef.selfDamage) h.hp = Math.max(1, h.hp - buffDef.selfDamage);
+          removeFromStash(s, id, 1);
+          applied++;
+        }
+      }
+      if (applied > 0) pushLog(s, 'heal', `🧪 Pre-buff applied ${applied} potion${applied === 1 ? '' : 's'}.`, 'rare');
+      else pushLog(s, 'system', 'No buff potions in stash.');
+    });
+  }, [mutate]);
+
   const useConsumable = useCallback((heroId: string, itemId: string) => {
     mutate(s => {
       const h = s.heroes.find(x => x.id === heroId);
@@ -1281,6 +1311,7 @@ export function useCcGame() {
     spendAllAP,
     autoEnchantCheapest,
     quickHealHero,
+    useAllBuffs,
     setActiveTask,
     clearActiveTask,
     toggleAutoRepeat,

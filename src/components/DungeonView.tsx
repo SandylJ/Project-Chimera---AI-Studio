@@ -9,6 +9,7 @@ interface Props {
   state: GameState;
   enterDungeon: (id: string) => void;
   skipDungeonFloor?: (id: string) => void;
+  useAllBuffs?: () => void;
   clickMonster?: (id: string) => void;
   autoEquipBest?: () => void;
   quickHealParty?: () => void;
@@ -21,11 +22,11 @@ interface Props {
 }
 
 export const DungeonView: React.FC<Props> = ({
-  state, enterDungeon, skipDungeonFloor, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll,
+  state, enterDungeon, skipDungeonFloor, useAllBuffs, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll,
   spendAllAP, autoEnchantCheapest, quickHealHero,
 }) => {
   if (!state.activeDungeon) {
-    return <DungeonPicker state={state} enterDungeon={enterDungeon} skipDungeonFloor={skipDungeonFloor} />;
+    return <DungeonPicker state={state} enterDungeon={enterDungeon} skipDungeonFloor={skipDungeonFloor} useAllBuffs={useAllBuffs} />;
   }
   return <BattleView state={state}
                      clickMonster={clickMonster}
@@ -39,12 +40,15 @@ export const DungeonView: React.FC<Props> = ({
                      quickHealHero={quickHealHero} />;
 };
 
-const DungeonPicker: React.FC<Props> = ({ state, enterDungeon, skipDungeonFloor }) => {
+const DungeonPicker: React.FC<Props> = ({ state, enterDungeon, skipDungeonFloor, useAllBuffs }) => {
   const active = state.heroes.filter(h => !h.bench && h.state === 'alive');
   const avgLevel = active.length > 0 ? Math.round(active.reduce((a, h) => a + h.level, 0) / active.length) : 1;
   const unlocked = DUNGEON_ORDER.filter(id => state.unlockedDungeons.includes(id));
   const tokenCount = state.stash.items['shortcut_token'] ?? 0;
   const agilityLvl = state.skills.agility?.level ?? 1;
+  // Count buff-eligible potions in stash for the prebuff button label.
+  const BUFF_IDS = ['attack_potion','defense_potion','strength_potion','magic_potion','ranging_potion','super_attack','super_defense','super_strength','super_magic','super_ranging','stamina_potion','agility_potion','weapon_poison','divine_potion','overload_potion'];
+  const buffCount = BUFF_IDS.reduce((a, id) => a + (state.stash.items[id] ?? 0), 0);
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-gradient-to-br from-[#1a140f] to-[#0D0B09]">
       <div className="px-6 py-4 border-b border-[#3D3328] bg-gradient-to-r from-[#2B231B] via-[#1E1A16] to-[#2B231B] flex items-center gap-4">
@@ -56,7 +60,16 @@ const DungeonPicker: React.FC<Props> = ({ state, enterDungeon, skipDungeonFloor 
             Choose where the party goes next. Your heroes fight autonomously — you make the calls that matter.
           </p>
         </div>
-        <div className="flex gap-2 text-right">
+        <div className="flex gap-2 text-right items-center">
+          {useAllBuffs && buffCount > 0 && (
+            <button
+              onClick={useAllBuffs}
+              title="Drink all buff potions before entering. Each potion goes to one hero."
+              className="press px-3 py-2 rounded text-[11px] font-bold uppercase tracking-widest text-[#0a0806] bg-[#7FE2A0] hover:brightness-110 border border-[#7FE2A0]"
+              style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              🧪 Pre-Buff <span className="opacity-70">({buffCount})</span>
+            </button>
+          )}
           <Pill label="Avg Level" value={String(avgLevel)} color="#D4A943" />
           <Pill label="Active" value={`${active.length}/4`} color="#7FE2A0" />
           <Pill label="Unlocked" value={`${unlocked.length}/${DUNGEON_ORDER.length}`} color="#6EA9E4" />

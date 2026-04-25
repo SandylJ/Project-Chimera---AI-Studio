@@ -404,6 +404,24 @@ export const ITEMS: Record<string, Item> = {
   masters_crown:   mk({ id: 'masters_crown',   name: "Master's Crown",   icon: '👑', rarity: 'celestial', type: 'armor',  slot: 'head', armor: 28, stats: { str: 12, dex: 12, int: 12, con: 12, spd: 8, luck: 8 }, value: 58000, levelReq: 50 }),
   masters_signet:  mk({ id: 'masters_signet',  name: "Master's Signet",  icon: '💍', rarity: 'celestial', type: 'trinket', slot: 'ring', stats: { str: 10, dex: 10, int: 10, con: 10, spd: 6, luck: 12 }, value: 46000, levelReq: 45 }),
   tome_of_mastery: mk({ id: 'tome_of_mastery', name: 'Tome of Mastery',  icon: '📚', rarity: 'legendary', type: 'consumable', value: 9000, description: 'Grants +500 XP to every town skill.' }),
+
+  // ========== SKILL CAPES (one per skill, neck slot) ==========
+  // Crafted at endgame, all neck slot. Equipped on any active hero, the
+  // cape grants a +25% doubleChance to that skill's town output. Heroes
+  // can wear at most one — forces a real strategic neck-slot choice.
+  mining_cape:       mk({ id: 'mining_cape',       name: 'Mining Cape',       icon: '⛏️', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { str: 6, con: 6, spd: 6 }, value: 30000, levelReq: 40, description: 'L99 Mining icon. Workers double-yield ore +25%.' }),
+  woodcutting_cape:  mk({ id: 'woodcutting_cape',  name: 'Woodcutting Cape',  icon: '🪓', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { str: 6, dex: 6, spd: 6 }, value: 30000, levelReq: 40, description: 'L99 Woodcutting icon. Workers double-yield logs +25%.' }),
+  smithing_cape:     mk({ id: 'smithing_cape',     name: 'Smithing Cape',     icon: '🔨', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { str: 8, con: 8, luck: 4 }, value: 30000, levelReq: 40, description: 'L99 Smithing icon. Smelts/smiths double-yield +25%.' }),
+  crafting_cape:     mk({ id: 'crafting_cape',     name: 'Crafting Cape',     icon: '🧵', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { dex: 8, int: 6, luck: 4 }, value: 30000, levelReq: 40, description: 'L99 Crafting icon. Crafted goods double-yield +25%.' }),
+  herblore_cape:     mk({ id: 'herblore_cape',     name: 'Herblore Cape',     icon: '🧪', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { int: 8, con: 6, luck: 4 }, value: 30000, levelReq: 40, description: 'L99 Herblore icon. Mixed potions double-yield +25%.' }),
+  fishing_cape:      mk({ id: 'fishing_cape',      name: 'Fishing Cape',      icon: '🎣', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { dex: 6, spd: 6, luck: 6 }, value: 30000, levelReq: 40, description: 'L99 Fishing icon. Catches double-yield +25%.' }),
+  cooking_cape:      mk({ id: 'cooking_cape',      name: 'Cooking Cape',      icon: '🍳', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { con: 10, int: 4, luck: 4 }, value: 30000, levelReq: 40, description: 'L99 Cooking icon. Cooked food double-yield +25%.' }),
+  farming_cape:      mk({ id: 'farming_cape',      name: 'Farming Cape',      icon: '🌱', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { con: 8, luck: 6, spd: 4 }, value: 30000, levelReq: 40, description: 'L99 Farming icon. Harvests double-yield +25%.' }),
+  runecrafting_cape: mk({ id: 'runecrafting_cape', name: 'Runecrafting Cape', icon: '🔮', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { int: 12, luck: 4, spd: 4 }, value: 30000, levelReq: 40, description: 'L99 Runecrafting icon. Runes double-yield +25%.' }),
+  thieving_cape:     mk({ id: 'thieving_cape',     name: 'Thieving Cape',     icon: '🥷', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { dex: 10, spd: 6, luck: 6 }, value: 30000, levelReq: 40, description: 'L99 Thieving icon. Stolen goods double-yield +25%.' }),
+  agility_cape:      mk({ id: 'agility_cape',      name: 'Agility Cape',      icon: '🏃', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 3, stats: { spd: 12, dex: 6, con: 4 }, value: 30000, levelReq: 40, description: 'L99 Agility icon. Course rewards double-yield +25%.' }),
+  // Capstone: requires every other skill cape to craft.
+  cape_of_completion:mk({ id: 'cape_of_completion',name: 'Cape of Completion',icon: '🏆', rarity: 'celestial', type: 'armor', slot: 'neck', armor: 6, stats: { str: 10, dex: 10, int: 10, con: 10, spd: 10, luck: 10 }, value: 100000, levelReq: 50, description: 'Worn by those who mastered every skill. +10% double-yield on all skills.' }),
 };
 
 // Loot pools by dungeon tier (indexed by monster level)

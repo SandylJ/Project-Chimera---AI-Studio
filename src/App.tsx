@@ -56,22 +56,60 @@ export default function CcApp() {
     }
   }, [state.currentLog]);
 
-  // Keyboard shortcuts: space=pause, 1/2/4=speed
+  // Keyboard shortcuts. Extended set: H heal, E auto-equip, A auto-enchant,
+  // J sell junk, T retreat to town, ?/ open help. Skipped while typing.
+  const [showShortcuts, setShowShortcuts] = useState(false);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.code === 'Space') { e.preventDefault(); g.togglePause(); }
       else if (e.key === '1') g.setSpeed(1);
       else if (e.key === '2') g.setSpeed(2);
       else if (e.key === '4') g.setSpeed(4);
+      else if (e.key === 'h' || e.key === 'H') g.quickHealParty();
+      else if (e.key === 'e' || e.key === 'E') g.autoEquipBest();
+      else if (e.key === 'a' || e.key === 'A') g.autoEnchantCheapest();
+      else if (e.key === 'j' || e.key === 'J') g.sellJunk();
+      else if (e.key === 't' || e.key === 'T') {
+        if (state.activeDungeon) g.retreatToTown();
+      }
+      else if (e.key === '?' || e.key === '/') {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+      }
+      else if (e.key === 'Escape') setShowShortcuts(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [g]);
+  }, [g, state.activeDungeon]);
 
   return (
     <div className="w-screen h-screen flex flex-col bg-[#0D0B09] text-[#E8E0D4] overflow-hidden"
          style={{ fontFamily: "'Nunito', sans-serif" }}>
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+             onClick={() => setShowShortcuts(false)}>
+          <div className="bg-[#14100C] border-2 border-[#D4A943] rounded-lg p-6 max-w-md w-full shadow-[0_0_40px_rgba(212,169,67,0.4)]"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-[#F2E6A8]" style={{ fontFamily: "'Cinzel', serif" }}>Keyboard Shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} className="text-[#7A6E60] hover:text-[#F2E6A8] text-sm">[Esc]</button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <Kbd k="Space" v="Pause / resume" />
+              <Kbd k="1 / 2 / 4" v="Speed 1× / 2× / 4×" />
+              <Kbd k="H" v="Quick-heal party" />
+              <Kbd k="E" v="Auto-equip best" />
+              <Kbd k="A" v="Auto-enchant cheapest" />
+              <Kbd k="J" v="Sell junk" />
+              <Kbd k="T" v="Retreat to town" />
+              <Kbd k="?" v="Toggle this help" />
+            </div>
+          </div>
+        </div>
+      )}
       <TopTabBar tab={tab} setTab={setTab} state={state}
                  setSpeed={g.setSpeed}
                  togglePause={g.togglePause}
@@ -83,6 +121,7 @@ export default function CcApp() {
             <DungeonView state={state}
                          enterDungeon={g.enterDungeon}
                          skipDungeonFloor={g.skipDungeonFloor}
+                         useAllBuffs={g.useAllBuffs}
                          clickMonster={g.clickMonster}
                          autoEquipBest={g.autoEquipBest}
                          quickHealParty={g.quickHealParty}
@@ -481,4 +520,11 @@ const Row: React.FC<{ k: string; v: string; color?: string }> = ({ k, v, color =
     <span className="text-[#7A6E60]">{k}</span>
     <span className="font-bold" style={{ color }}>{v}</span>
   </div>
+);
+
+const Kbd: React.FC<{ k: string; v: string }> = ({ k, v }) => (
+  <>
+    <span className="px-2 py-0.5 bg-[#2B231B] border border-[#3D3328] rounded text-[#F2E6A8] font-bold text-center">{k}</span>
+    <span className="text-[#B8A890] flex items-center">{v}</span>
+  </>
 );

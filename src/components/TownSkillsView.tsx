@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { GameState, SkillId } from '../types';
-import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost, TOWN_TIERS, totalSkillLevel, townBonuses, producerForItem, dominantSkill } from '../engine/skilling';
+import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost, TOWN_TIERS, totalSkillLevel, townBonuses, producerForItem, dominantSkill, CAPE_BY_SKILL } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 
 interface Props {
@@ -103,6 +103,13 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
 
   const bonuses = getSkillBonuses(currentLevel);
   const skillMilestones = SKILL_MILESTONES;
+
+  // Detect whether any active hero is wearing the matching skill cape
+  // (or the all-skill capstone) — drives the bonus chip in the header.
+  const skillCapeId = CAPE_BY_SKILL[selectedSkill];
+  const capeWornFor = state.heroes.some(h => !h.bench && h.equipment.neck === skillCapeId);
+  const completionCapeWorn = state.heroes.some(h => !h.bench && h.equipment.neck === 'cape_of_completion');
+  const capeBonus = (capeWornFor ? 0.25 : 0) + (completionCapeWorn ? 0.10 : 0);
 
   // Bulk-assign all idle workers to the same action. Useful when you've
   // hired half the village to mine copper.
@@ -346,11 +353,16 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                 </div>
               );
             })}
-            {(bonuses.speedMul < 1 || bonuses.doubleChance > 0 || bonuses.skipChance > 0 || bonuses.xpMul > 1) && (
+            {(bonuses.speedMul < 1 || bonuses.doubleChance > 0 || bonuses.skipChance > 0 || bonuses.xpMul > 1 || capeBonus > 0) && (
               <div className="text-[9px] text-[#7FE2A0] font-bold ml-1 tabular-nums"
                    style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {bonuses.speedMul < 1 && <span className="mr-2">−{Math.round((1 - bonuses.speedMul) * 100)}% time</span>}
-                {bonuses.doubleChance > 0 && <span className="mr-2">{Math.round(bonuses.doubleChance * 100)}% 2×</span>}
+                {(bonuses.doubleChance + capeBonus) > 0 && (
+                  <span className="mr-2">
+                    {Math.round((bonuses.doubleChance + capeBonus) * 100)}% 2×
+                    {capeBonus > 0 && <span className="text-[#F2B84B] ml-0.5">★</span>}
+                  </span>
+                )}
                 {bonuses.skipChance > 0 && <span className="mr-2">{Math.round(bonuses.skipChance * 100)}% skip</span>}
                 {bonuses.xpMul > 1 && <span>+{Math.round((bonuses.xpMul - 1) * 100)}% xp</span>}
               </div>
