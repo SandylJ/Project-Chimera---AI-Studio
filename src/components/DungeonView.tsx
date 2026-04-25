@@ -8,6 +8,7 @@ import { BattleView } from './BattleView';
 interface Props {
   state: GameState;
   enterDungeon: (id: string) => void;
+  skipDungeonFloor?: (id: string) => void;
   clickMonster?: (id: string) => void;
   autoEquipBest?: () => void;
   quickHealParty?: () => void;
@@ -20,11 +21,11 @@ interface Props {
 }
 
 export const DungeonView: React.FC<Props> = ({
-  state, enterDungeon, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll,
+  state, enterDungeon, skipDungeonFloor, clickMonster, autoEquipBest, quickHealParty, reviveHero, sellJunk, useScroll,
   spendAllAP, autoEnchantCheapest, quickHealHero,
 }) => {
   if (!state.activeDungeon) {
-    return <DungeonPicker state={state} enterDungeon={enterDungeon} />;
+    return <DungeonPicker state={state} enterDungeon={enterDungeon} skipDungeonFloor={skipDungeonFloor} />;
   }
   return <BattleView state={state}
                      clickMonster={clickMonster}
@@ -38,10 +39,12 @@ export const DungeonView: React.FC<Props> = ({
                      quickHealHero={quickHealHero} />;
 };
 
-const DungeonPicker: React.FC<Props> = ({ state, enterDungeon }) => {
+const DungeonPicker: React.FC<Props> = ({ state, enterDungeon, skipDungeonFloor }) => {
   const active = state.heroes.filter(h => !h.bench && h.state === 'alive');
   const avgLevel = active.length > 0 ? Math.round(active.reduce((a, h) => a + h.level, 0) / active.length) : 1;
   const unlocked = DUNGEON_ORDER.filter(id => state.unlockedDungeons.includes(id));
+  const tokenCount = state.stash.items['shortcut_token'] ?? 0;
+  const agilityLvl = state.skills.agility?.level ?? 1;
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-gradient-to-br from-[#1a140f] to-[#0D0B09]">
       <div className="px-6 py-4 border-b border-[#3D3328] bg-gradient-to-r from-[#2B231B] via-[#1E1A16] to-[#2B231B] flex items-center gap-4">
@@ -145,19 +148,50 @@ const DungeonPicker: React.FC<Props> = ({ state, enterDungeon }) => {
                   </div>
                 </div>
                 {unlocked ? (
-                  <div className="mt-2 text-center text-[11px] font-black rounded py-1.5 transition-all"
-                       style={{
-                         background: `linear-gradient(90deg, ${theme.accentColor}30, ${theme.accentColor}60, ${theme.accentColor}30)`,
-                         border: `1px solid ${theme.accentColor}`,
-                         color: theme.accentColor,
-                         backgroundSize: '200% 100%',
-                         animation: 'shimmer 3s infinite linear',
-                         textShadow: '0 1px 2px #000',
-                         fontFamily: "'JetBrains Mono', monospace",
-                         letterSpacing: '0.2em',
-                       }}>
-                    ENTER →
-                  </div>
+                  <>
+                    <div className="mt-2 text-center text-[11px] font-black rounded py-1.5 transition-all"
+                         style={{
+                           background: `linear-gradient(90deg, ${theme.accentColor}30, ${theme.accentColor}60, ${theme.accentColor}30)`,
+                           border: `1px solid ${theme.accentColor}`,
+                           color: theme.accentColor,
+                           backgroundSize: '200% 100%',
+                           animation: 'shimmer 3s infinite linear',
+                           textShadow: '0 1px 2px #000',
+                           fontFamily: "'JetBrains Mono', monospace",
+                           letterSpacing: '0.2em',
+                         }}>
+                      ENTER →
+                    </div>
+                    {(() => {
+                      // Shortcut button — only visible once you've cleared the
+                      // dungeon at least once (otherwise the skip mechanic
+                      // can't apply) and have the Agility level for it.
+                      if (cleared < 1) return null;
+                      const agilityReq = Math.max(1, Math.floor(def.minLevel / 2));
+                      const tokenCost = Math.max(1, Math.floor((cleared + 1) / 2));
+                      const canAfford = tokenCount >= tokenCost && agilityLvl >= agilityReq;
+                      return (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (canAfford && skipDungeonFloor) skipDungeonFloor(id);
+                          }}
+                          disabled={!canAfford}
+                          title={canAfford
+                            ? `Skip floor ${cleared + 1}: spend ${tokenCost}× Shortcut Token`
+                            : agilityLvl < agilityReq
+                              ? `Requires Agility ${agilityReq} (have ${agilityLvl})`
+                              : `Need ${tokenCost}× Shortcut Token (have ${tokenCount})`}
+                          className={`mt-1 text-center text-[10px] font-bold rounded py-1 border transition-colors
+                            ${canAfford
+                              ? 'bg-black/40 border-[#7FE2A0]/60 text-[#A3E6B5] hover:bg-[#1A2E20] hover:border-[#7FE2A0]'
+                              : 'bg-black/40 border-[#3D3328] text-[#5C5246] cursor-not-allowed'}`}
+                          style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.1em' }}>
+                          🏃 SKIP FLOOR · {tokenCost}🎟
+                        </button>
+                      );
+                    })()}
+                  </>
                 ) : (
                   <div className="mt-2 text-center text-[11px] font-black text-[#E86E6E] bg-black/60 rounded py-1.5 border border-[#E86E6E]/40"
                        style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.2em' }}>

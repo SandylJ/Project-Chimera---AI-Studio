@@ -432,6 +432,49 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Spend shortcut_tokens (Agility-skill output) to skip the next floor of
+  // a dungeon you've already entered. Cost scales with floor number; the
+  // gate is an Agility-level requirement keyed off the dungeon's tier so
+  // you can't buy your way past content you can't survive.
+  const skipDungeonFloor = useCallback((defId: string) => {
+    mutate(s => {
+      const def = DUNGEON_DEFS[defId];
+      if (!def) return;
+      if (!s.unlockedDungeons.includes(defId)) {
+        pushLog(s, 'system', '❌ Dungeon not unlocked yet.');
+        return;
+      }
+      if (s.activeDungeon) {
+        pushLog(s, 'system', '❌ Already in a dungeon — retreat first.');
+        return;
+      }
+      const cleared = s.dungeonsCompleted[defId] ?? 0;
+      if (cleared < 1) {
+        pushLog(s, 'system', '❌ Clear floor 1 the old-fashioned way before using shortcuts.');
+        return;
+      }
+      const floorBeingSkipped = cleared + 1;
+      // Agility gate: half the dungeon's minLevel (e.g. min lvl 30 dungeon
+      // needs Agility 15 to use shortcuts).
+      const agilityReq = Math.max(1, Math.floor(def.minLevel / 2));
+      const agilityLvl = s.skills.agility?.level ?? 1;
+      if (agilityLvl < agilityReq) {
+        pushLog(s, 'system', `❌ Need Agility ${agilityReq} to take this shortcut (have ${agilityLvl}).`);
+        return;
+      }
+      const tokenCost = Math.max(1, Math.floor(floorBeingSkipped / 2));
+      if ((s.stash.items['shortcut_token'] ?? 0) < tokenCost) {
+        pushLog(s, 'system', `❌ Need ${tokenCost}× Shortcut Token (have ${s.stash.items['shortcut_token'] ?? 0}).`);
+        return;
+      }
+      removeFromStash(s, 'shortcut_token', tokenCost);
+      s.dungeonsCompleted[defId] = floorBeingSkipped;
+      // Skip is pure progression — no GP / XP / loot. The reward is access
+      // to the next floor without a fight.
+      pushLog(s, 'victory', `🏃 Shortcut! Skipped ${def.name} floor ${floorBeingSkipped} (-${tokenCost} tokens)`, 'rare');
+    });
+  }, [mutate]);
+
   const retreatToTown = useCallback(() => {
     mutate(s => {
       if (!s.activeDungeon) return;
@@ -1159,6 +1202,20 @@ export function useCcGame() {
     });
   }, [mutate]);
 
+  // Flip the auto-repeat flag on a worker's active task. With it ON, the
+  // worker keeps the assignment when mats run out and resumes the moment
+  // they reappear (e.g. from a Mining worker producing ore for Smithing).
+  const toggleAutoRepeat = useCallback((workerId: string) => {
+    mutate(s => {
+      const w = s.town.workers.find(w => w.id === workerId);
+      if (!w?.activeTask) return;
+      w.activeTask.autoRepeat = !w.activeTask.autoRepeat;
+      // Clear stall state so the UI flips back to "running" right away
+      // when toggling on while mats are present.
+      if (!w.activeTask.autoRepeat) w.activeTask.stalled = false;
+    });
+  }, [mutate]);
+
   const hireWorker = useCallback(() => {
     mutate(s => {
       const cost = workerHireCost(s.town.workers.length);
@@ -1178,6 +1235,7 @@ export function useCcGame() {
   return {
     state,
     enterDungeon,
+    skipDungeonFloor,
     retreatToTown,
     equipItem,
     unequipItem,
@@ -1210,6 +1268,7 @@ export function useCcGame() {
     quickHealHero,
     setActiveTask,
     clearActiveTask,
+    toggleAutoRepeat,
     hireWorker,
   };
 }

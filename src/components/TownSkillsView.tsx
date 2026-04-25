@@ -1,18 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { GameState, SkillId } from '../types';
-import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost } from '../engine/skilling';
+import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost, TOWN_TIERS, totalSkillLevel, townBonuses, producerForItem } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 
 interface Props {
   state: GameState;
   setActiveTask: (skillId: string, actionId: string, duration: number, workerId?: string) => void;
   clearActiveTask: (workerId: string) => void;
+  toggleAutoRepeat?: (workerId: string) => void;
   hireWorker?: () => void;
 }
 
 type Filter = 'all' | 'craftable' | 'unlocked';
 
-export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearActiveTask, hireWorker }) => {
+export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearActiveTask, toggleAutoRepeat, hireWorker }) => {
   const [selectedSkill, setSelectedSkill] = useState<SkillId>('mining');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -62,7 +63,10 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
     return result;
   }, [state.skills, state.stash.items]);
 
-  const totalLevelSum = skillsList.reduce((a, s) => a + (state.skills[s.id]?.level || 1), 0);
+  const totalLevelSum = totalSkillLevel(state);
+  const town = townBonuses(totalLevelSum);
+  const townTierReached = TOWN_TIERS.filter(t => totalLevelSum >= t.total).pop();
+  const nextTownTier = TOWN_TIERS.find(t => totalLevelSum < t.total);
 
   const actions: SkillActionDef[] = SKILL_ACTIONS[selectedSkill] || [];
 
@@ -164,6 +168,48 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
 
       {/* ============ Main panel ============ */}
       <div className="flex-1 flex flex-col overflow-y-auto p-4 relative">
+        {/* Town tier banner — sums all skill levels into a global tier
+            that grants party-wide passive bonuses (gold, xp, essence). */}
+        <div className="bg-[#14100C] border border-[#3D3328] rounded-lg p-2.5 mb-3 shadow-md flex flex-col gap-2">
+          <div className="flex justify-between items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-widest text-[#7A6E60] font-bold">Town Tier</span>
+              <span className="text-sm font-bold text-[#F2E6A8]"
+                    style={{ fontFamily: "'Cinzel', serif" }}>
+                {townTierReached ? townTierReached.title : 'Hamlet'}
+              </span>
+              <span className="text-[10px] text-[#7FE2A0] font-bold tabular-nums"
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {town.goldMul > 1 && <span className="mr-2">+{Math.round((town.goldMul - 1) * 100)}% gold</span>}
+                {town.xpMul > 1 && <span className="mr-2">+{Math.round((town.xpMul - 1) * 100)}% xp</span>}
+                {town.essenceMul > 1 && <span>+{Math.round((town.essenceMul - 1) * 100)}% essence</span>}
+              </span>
+            </div>
+            <div className="text-[10px] text-[#B8A890] tabular-nums"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              {nextTownTier ? (
+                <>Σ <span className="text-[#F2E6A8] font-bold">{totalLevelSum}</span> / {nextTownTier.total}</>
+              ) : (
+                <>Σ <span className="text-[#F2B84B] font-bold">{totalLevelSum}</span> · MAX</>
+              )}
+            </div>
+          </div>
+          {nextTownTier && (
+            <div className="w-full bg-[#0D0B09] h-1.5 rounded overflow-hidden border border-[#3D3328]">
+              <div className="h-full bg-[linear-gradient(90deg,#9a8030_0%,#ffe080_100%)] transition-all"
+                   style={{
+                     width: `${Math.min(100, (totalLevelSum / nextTownTier.total) * 100)}%`,
+                   }} />
+            </div>
+          )}
+          {nextTownTier && (
+            <div className="text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              Next: {nextTownTier.title} — {nextTownTier.blurb}
+            </div>
+          )}
+        </div>
+
         {/* Worker roster */}
         <div className="flex justify-between items-center bg-[#14100C] border border-[#3D3328] rounded-lg p-2.5 mb-3 shadow-md">
           <div className="font-bold text-[#F2E6A8] text-xs uppercase tracking-widest">
@@ -179,26 +225,50 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
             const isIdle = !w.activeTask;
             const taskDef = w.activeTask ? SKILL_ACTIONS[w.activeTask.skillId]?.find(a => a.id === w.activeTask!.actionId) : null;
             const icon = w.activeTask ? skillsList.find(s => s.id === w.activeTask!.skillId)?.icon : '💤';
+            const stalled = !!w.activeTask?.stalled;
+            const repeating = !!w.activeTask?.autoRepeat;
             return (
-              <div key={w.id} className={`p-2 rounded-lg border ${isIdle ? 'bg-[#1A1512] border-[#3D3328]' : 'bg-[#1A2E20] border-[#4EBA6F] shadow-[0_0_10px_rgba(78,186,111,0.15)]'} flex flex-col gap-1.5 relative overflow-hidden transition-colors`}>
+              <div key={w.id} className={`p-2 rounded-lg border flex flex-col gap-1.5 relative overflow-hidden transition-colors
+                ${isIdle ? 'bg-[#1A1512] border-[#3D3328]'
+                  : stalled ? 'bg-[#2E2818] border-[#D4A943]'
+                  : 'bg-[#1A2E20] border-[#4EBA6F] shadow-[0_0_10px_rgba(78,186,111,0.15)]'}`}>
                 <div className="flex items-center justify-between">
-                  <span className={`font-bold text-xs truncate ${isIdle ? 'text-[#B8A890]' : 'text-[#A3E6B5]'}`}>{w.name}</span>
-                  <span className={`text-sm shrink-0 ${!isIdle && 'animate-pulse'}`}>{icon}</span>
+                  <span className={`font-bold text-xs truncate
+                    ${isIdle ? 'text-[#B8A890]' : stalled ? 'text-[#F2E6A8]' : 'text-[#A3E6B5]'}`}>{w.name}</span>
+                  <span className={`text-sm shrink-0 ${!isIdle && !stalled && 'animate-pulse'}`}>{icon}</span>
                 </div>
                 {isIdle ? (
                   <div className="text-[10px] text-[#7A6E60]">Idle</div>
                 ) : (
                   <div className="flex flex-col gap-1">
-                    <div className="text-[10px] text-[#4EBA6F] truncate">{taskDef?.name || 'Working...'}</div>
+                    <div className={`text-[10px] truncate ${stalled ? 'text-[#D4A943]' : 'text-[#4EBA6F]'}`}>
+                      {stalled ? `⏸ Out of mats — ${taskDef?.name}` : (taskDef?.name || 'Working...')}
+                    </div>
                     <div className="w-full bg-[#0A1A10] h-1 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#4EBA6F]" style={{ width: `${(w.activeTask!.progress / w.activeTask!.duration) * 100}%`, transition: 'width 0.2s linear' }} />
+                      <div className={stalled ? 'h-full bg-[#D4A943]/50' : 'h-full bg-[#4EBA6F]'}
+                           style={{ width: `${(w.activeTask!.progress / w.activeTask!.duration) * 100}%`, transition: 'width 0.2s linear' }} />
                     </div>
                   </div>
                 )}
                 {!isIdle && (
-                  <button onClick={() => clearActiveTask(w.id)} className="absolute top-1 right-1 px-1.5 py-0.5 bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border border-[#E86E6E80] rounded text-[8px] uppercase tracking-widest font-bold">
-                    Stop
-                  </button>
+                  <div className="absolute top-1 right-1 flex gap-1">
+                    {toggleAutoRepeat && (
+                      <button
+                        onClick={() => toggleAutoRepeat(w.id)}
+                        title={repeating
+                          ? 'Auto-repeat ON — keep task assigned through stockouts'
+                          : 'Auto-repeat OFF — stop on stockout'}
+                        className={`px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-bold border
+                          ${repeating
+                            ? 'bg-[#7FE2A030] text-[#7FE2A0] border-[#7FE2A080]'
+                            : 'bg-[#1A1A1A] text-[#7A6E60] border-[#3D3328] hover:text-[#B8A890] hover:border-[#7A6E60]'}`}>
+                        ↻
+                      </button>
+                    )}
+                    <button onClick={() => clearActiveTask(w.id)} className="px-1.5 py-0.5 bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border border-[#E86E6E80] rounded text-[8px] uppercase tracking-widest font-bold">
+                      Stop
+                    </button>
+                  </div>
                 )}
               </div>
             );
@@ -365,15 +435,37 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                         const def = getDef(id, qty);
                         const have = state.stash.items[id] || 0;
                         const hasEnough = have >= qty;
-                        return (
-                          <div key={id}
-                               className={`flex items-center gap-1 ${hasEnough ? 'text-[#B8A890]' : 'text-[#E86E6E]'}`}
-                               title={`${def.name}: ${have} in stash, need ${qty}`}>
+                        // If we don't have enough, point the player at the
+                        // recipe that produces this. Click to jump there.
+                        const producer = !hasEnough ? producerForItem(id) : null;
+                        const tooltip = producer
+                          ? `${def.name}: ${have}/${qty} — Click to view ${producer.name} (Lvl ${producer.levelReq})`
+                          : `${def.name}: ${have} in stash, need ${qty}`;
+                        const inner = (
+                          <>
                             <span className="tabular-nums text-[10px] font-bold"
                                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                               {have}/{qty}
                             </span>
                             <span className="text-sm">{def.icon}</span>
+                            {producer && <span className="text-[8px] text-[#7FE2A0] font-bold">↗</span>}
+                          </>
+                        );
+                        if (producer) {
+                          return (
+                            <button key={id}
+                                    onClick={() => { setSelectedSkill(producer.skillId); setSearch(''); }}
+                                    className="flex items-center gap-1 text-[#E86E6E] hover:text-[#F2E6A8] hover:underline text-left"
+                                    title={tooltip}>
+                              {inner}
+                            </button>
+                          );
+                        }
+                        return (
+                          <div key={id}
+                               className={`flex items-center gap-1 ${hasEnough ? 'text-[#B8A890]' : 'text-[#E86E6E]'}`}
+                               title={tooltip}>
+                            {inner}
                           </div>
                         );
                       })}

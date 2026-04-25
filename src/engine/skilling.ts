@@ -52,6 +52,77 @@ export function workerHireCost(currentCount: number): number {
   return 1000 * Math.pow(2, Math.max(0, currentCount - 3));
 }
 
+// ============================================================
+// Total skill level — sum of every trained skill. Drives
+// "Town tier" passive bonuses that reward all-rounder players.
+// ============================================================
+
+export const ALL_SKILLS: SkillId[] = [
+  'mining', 'woodcutting', 'smithing', 'crafting', 'herblore',
+  'fishing', 'cooking', 'farming',
+  'runecrafting', 'thieving', 'agility',
+];
+
+export interface TownTier {
+  total: number;
+  title: string;
+  blurb: string;
+}
+
+export const TOWN_TIERS: TownTier[] = [
+  { total: 100,  title: 'Apprentice Town', blurb: '+5% gold drops' },
+  { total: 250,  title: 'Skilled Town',    blurb: '+5% gold, +5% skill XP' },
+  { total: 500,  title: 'Master Town',     blurb: '+10% gold, +5% xp, +10% essence' },
+  { total: 750,  title: 'Legendary Town',  blurb: '+10% gold, +10% essence' },
+  { total: 1000, title: 'Mythic Town',     blurb: '+20% gold, +15% xp, +30% essence' },
+];
+
+export function totalSkillLevel(state: { skills: Partial<Record<SkillId, { level: number; xp: number }>> }): number {
+  let n = 0;
+  for (const id of ALL_SKILLS) n += state.skills[id]?.level ?? 1;
+  return n;
+}
+
+export interface TownBonuses {
+  goldMul: number;
+  xpMul: number;
+  essenceMul: number;
+}
+
+// Reverse index: which skill+action produces a given itemId? Builds once.
+// First-match wins so the cheapest/lowest-level recipe shows up — actions
+// are listed roughly in unlock order in the SKILL_ACTIONS tables.
+let _producerIndex: Record<string, { skillId: SkillId; actionId: string; name: string; levelReq: number }> | null = null;
+
+export function producerForItem(itemId: string): { skillId: SkillId; actionId: string; name: string; levelReq: number } | null {
+  if (!_producerIndex) {
+    _producerIndex = {};
+    for (const skillId of Object.keys(SKILL_ACTIONS) as SkillId[]) {
+      for (const a of SKILL_ACTIONS[skillId]) {
+        if (!a.outputs) continue;
+        for (const outId of Object.keys(a.outputs)) {
+          // Skip pass-through outputs (e.g. tinderbox returned with charcoal)
+          // — those aren't truly the "producer" of the tool.
+          if (a.inputs && a.inputs[outId]) continue;
+          if (_producerIndex[outId]) continue;
+          _producerIndex[outId] = { skillId, actionId: a.id, name: a.name, levelReq: a.levelReq };
+        }
+      }
+    }
+  }
+  return _producerIndex[itemId] ?? null;
+}
+
+export function townBonuses(total: number): TownBonuses {
+  let gold = 1, xp = 1, ess = 1;
+  if (total >= 100)  gold += 0.05;
+  if (total >= 250)  { gold += 0.05; xp += 0.05; }
+  if (total >= 500)  { gold += 0.10; xp += 0.05; ess += 0.10; }
+  if (total >= 750)  { gold += 0.10; ess += 0.10; }
+  if (total >= 1000) { gold += 0.20; xp += 0.15; ess += 0.30; }
+  return { goldMul: gold, xpMul: xp, essenceMul: ess };
+}
+
 // Define the available actions for each skill.
 export interface SkillActionDef {
   id: string;
@@ -471,10 +542,17 @@ export function tickSkilling(state: GameState, dt: number) {
       continue;
     }
     if (!hasRequiredInputs(state, actionDef.inputs)) {
+      if (task.autoRepeat) {
+        // Idle, don't accrue progress, don't drop the assignment. The UI
+        // shows a "waiting for materials" indicator via task.stalled.
+        task.stalled = true;
+        continue;
+      }
       pushLog(state, 'system', `${worker.name} ran out of materials for ${actionDef.name}.`);
       worker.activeTask = undefined;
       continue;
     }
+    task.stalled = false;
 
     const bonuses = getSkillBonuses(state.skills[task.skillId]?.level || 1);
     // task.duration starts at the action's base ms; once a cycle fires we
@@ -511,7 +589,8 @@ export function tickSkilling(state: GameState, dt: number) {
         state.skills[task.skillId] = { level: 1, xp: 0 };
       }
       const sk = state.skills[task.skillId]!;
-      sk.xp += Math.floor(actionDef.xpReward * bonuses.xpMul);
+      const town = townBonuses(totalSkillLevel(state));
+      sk.xp += Math.floor(actionDef.xpReward * bonuses.xpMul * town.xpMul);
 
       while (sk.level < 99 && sk.xp >= xpForLevel(sk.level + 1)) {
         sk.level++;
@@ -524,6 +603,10 @@ export function tickSkilling(state: GameState, dt: number) {
       }
 
       if (!hasRequiredInputs(state, actionDef.inputs)) {
+        if (task.autoRepeat) {
+          task.stalled = true;
+          break;
+        }
         pushLog(state, 'system', `${worker.name} ran out of materials for ${actionDef.name}.`);
         worker.activeTask = undefined;
         break;

@@ -82,6 +82,7 @@ export default function CcApp() {
           {tab === 'dungeon' && (
             <DungeonView state={state}
                          enterDungeon={g.enterDungeon}
+                         skipDungeonFloor={g.skipDungeonFloor}
                          clickMonster={g.clickMonster}
                          autoEquipBest={g.autoEquipBest}
                          quickHealParty={g.quickHealParty}
@@ -124,6 +125,7 @@ export default function CcApp() {
             <TownSkillsView state={state}
                             setActiveTask={g.setActiveTask}
                             clearActiveTask={g.clearActiveTask}
+                            toggleAutoRepeat={g.toggleAutoRepeat}
                             hireWorker={g.hireWorker} />
           )}
           {tab === 'log' && <CombatLog state={state} />}

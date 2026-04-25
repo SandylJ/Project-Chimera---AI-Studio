@@ -2,10 +2,12 @@ import { GameState, Monster, Rarity } from '../types';
 import { MONSTERS } from '../data/monsters';
 import { ITEMS, TIER_LOOT_POOLS, SKILL_MATERIAL_POOLS } from '../data/items';
 import { pushLog, rngInt, rngChoice, rollChance } from './util';
+import { townBonuses, totalSkillLevel } from './skilling';
 
 export function rollMonsterLoot(state: GameState, monster: Monster, luckBonus = 0): void {
-  // GP
-  const gold = rngInt(monster.goldReward[0], monster.goldReward[1]);
+  const tb = townBonuses(totalSkillLevel(state));
+  // GP — scaled by Town tier bonus.
+  const gold = Math.floor(rngInt(monster.goldReward[0], monster.goldReward[1]) * tb.goldMul);
   state.stash.gold += gold;
   state.totalGoldEarned += gold;
 
@@ -51,7 +53,8 @@ export function rollChestLoot(state: GameState, dungeonLevel: number, rogueBonus
     addToStash(state, itemId, 1);
     logLoot(state, itemId, 1);
   }
-  const gold = rngInt(20, 60) * Math.max(1, Math.floor(dungeonLevel / 4));
+  const tb = townBonuses(totalSkillLevel(state));
+  const gold = Math.floor(rngInt(20, 60) * Math.max(1, Math.floor(dungeonLevel / 4)) * tb.goldMul);
   state.stash.gold += gold;
   state.totalGoldEarned += gold;
   pushLog(state, 'loot', `Chest yields ${gold} gp.`, 'uncommon');
@@ -64,8 +67,10 @@ export function rollBossLoot(state: GameState, monster: Monster, guaranteedId: s
     logLoot(state, guaranteedId, 1);
   }
   if (essenceReward > 0) {
-    state.stash.essence += essenceReward;
-    pushLog(state, 'loot', `⟡ +${essenceReward} Celestial Essence`, 'legendary');
+    const tb = townBonuses(totalSkillLevel(state));
+    const ess = Math.floor(essenceReward * tb.essenceMul);
+    state.stash.essence += ess;
+    pushLog(state, 'loot', `⟡ +${ess} Celestial Essence`, 'legendary');
   }
 }
 

@@ -318,6 +318,14 @@ export interface ActiveTask {
   actionId: string;
   progress: number;  // ms elapsed toward current cycle
   duration: number;  // ms required per cycle
+  // When true, the worker keeps the task assigned even if materials run
+  // out — they idle until inputs reappear in the stash, then resume.
+  // Defaults to off so the existing behavior (stop on stockout) is the
+  // baseline for new players.
+  autoRepeat?: boolean;
+  // Set when the task is paused waiting for inputs; UI uses it to show a
+  // "waiting for materials" badge instead of the running progress bar.
+  stalled?: boolean;
 }
 
 export interface TownWorker {
