@@ -294,6 +294,25 @@ export const SkillActionCard: React.FC<{
     const it = ITEMS[id];
     return { name: it?.name || id, icon: it?.icon || '📦', qty };
   };
+  // Build a rich hover tooltip for a stash/output item: rarity, combat
+  // stats, heal/mana, description. Useful for crafters who want to know
+  // what a recipe actually makes without leaving the panel.
+  const richTooltip = (id: string): string => {
+    const it = ITEMS[id];
+    if (!it) return id;
+    const parts: string[] = [`${it.name} (${it.rarity})`];
+    if (it.weaponPower) parts.push(`+${it.weaponPower} dmg`);
+    if (it.armor) parts.push(`+${it.armor} armor`);
+    if (it.stats) {
+      const s = Object.entries(it.stats).map(([k, v]) => `+${v} ${k}`).join(' ');
+      if (s) parts.push(s);
+    }
+    if (it.healOnUse) parts.push(`heals ${it.healOnUse} HP`);
+    if (it.manaOnUse) parts.push(`+${it.manaOnUse} MP`);
+    if (it.value) parts.push(`${it.value}gp`);
+    if (it.description) parts.push(it.description);
+    return parts.join(' · ');
+  };
   const cycleSec = (Math.max(200, action.duration * bonuses.speedMul) / 1000).toFixed(1);
   const xpDisplay = Math.floor(action.xpReward * bonuses.xpMul);
 
@@ -393,7 +412,7 @@ export const SkillActionCard: React.FC<{
           {visibleOutputs.length > 0 ? visibleOutputs.map(([id, qty]) => {
             const def = itemDef(id, qty);
             return (
-              <div key={id} className="flex items-center gap-1 text-[#F2E6A8] font-bold" title={def.name}>
+              <div key={id} className="flex items-center gap-1 text-[#F2E6A8] font-bold" title={richTooltip(id)}>
                 <span className="tabular-nums text-[10px]"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>+{qty}</span>
                 <span className="text-sm drop-shadow-[0_0_3px_rgba(242,230,168,0.5)]">{def.icon}</span>

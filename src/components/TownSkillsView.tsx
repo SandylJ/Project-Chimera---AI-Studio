@@ -201,9 +201,18 @@ export const TownSkillsView: React.FC<Props> = ({
             <div className="text-3xl">{selectedEntry?.icon}</div>
             <div className="flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-xl font-bold text-[#F2E6A8] leading-none" style={{ fontFamily: "'Cinzel', serif" }}>
-                  {selectedEntry?.name}
-                </h2>
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl font-bold text-[#F2E6A8] leading-none" style={{ fontFamily: "'Cinzel', serif" }}>
+                    {selectedEntry?.name}
+                  </h2>
+                  {activeWorkers.length > 0 && (
+                    <span className="text-[10px] text-[#7FE2A0] font-bold leading-none px-1.5 py-0.5 rounded bg-[#1A2E20] border border-[#4EBA6F]/40"
+                          title={`${activeWorkers.length} worker${activeWorkers.length === 1 ? '' : 's'} on ${selectedEntry?.name}`}
+                          style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      👥 {activeWorkers.length}
+                    </span>
+                  )}
+                </div>
                 <div className="text-[10px] text-[#B8A890] font-bold tabular-nums"
                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   Lvl <span className="text-[#F2E6A8] text-sm">{currentLevel}</span>
