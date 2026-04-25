@@ -162,9 +162,17 @@ export const TownSkillsView: React.FC<Props> = ({
         <TownTierBanner totalLevelSum={totalLevelSum} town={town} />
 
         {/* Worker roster header + grid */}
-        <div className="flex justify-between items-center bg-[#14100C] border border-[#3D3328] rounded-lg p-2.5 mb-3 shadow-md">
-          <div className="font-bold text-[#F2E6A8] text-xs uppercase tracking-widest">Worker Roster</div>
-          <div className="text-xs font-bold text-[#D4A943]">{freeWorkers.length} / {workers.length} Idle</div>
+        <div className="flex flex-col bg-[#14100C] border border-[#3D3328] rounded-lg p-2.5 mb-3 shadow-md">
+          <div className="flex justify-between items-center">
+            <div className="font-bold text-[#F2E6A8] text-xs uppercase tracking-widest">Worker Roster</div>
+            <div className="text-xs font-bold text-[#D4A943]">{freeWorkers.length} / {workers.length} Idle</div>
+          </div>
+          {workers.length > 0 && freeWorkers.length === workers.length && (
+            <div className="text-[10px] text-[#D4A943] mt-1 italic"
+                 style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              Everyone's idle — pick a recipe below and hit Assign to start producing.
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 mb-5">
           {workers.map(w => (

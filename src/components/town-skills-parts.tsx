@@ -60,8 +60,9 @@ export const SkillSidebar: React.FC<{
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center gap-1">
                 <span className={`truncate ${isSelected ? 'text-[#F2E6A8]' : 'text-[#B8A890]'}`}>{s.name}</span>
-                <span className="text-[10px] text-[#D4A943] font-bold tabular-nums"
+                <span className="text-[10px] text-[#D4A943] font-bold tabular-nums flex items-center gap-0.5"
                       style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {lvl >= 99 ? <span title="Grandmaster">🏆</span> : lvl >= 75 ? <span title="Master">⭐</span> : null}
                   L{lvl}
                 </span>
               </div>
@@ -278,6 +279,24 @@ export const SkillActionCard: React.FC<{
   };
   const cycleSec = (Math.max(200, action.duration * bonuses.speedMul) / 1000).toFixed(1);
   const xpDisplay = Math.floor(action.xpReward * bonuses.xpMul);
+
+  // Passthrough tools: items that appear with the same qty in inputs and
+  // outputs (knife, chisel, lockpick, talismans). They're consumed and
+  // returned each cycle, so showing them in both columns is misleading.
+  // We mark them on the input row as "(kept)" and hide them from outputs.
+  const inputs = action.inputs ?? {};
+  const outputs = action.outputs ?? {};
+  const passthroughIds = Object.keys(inputs).filter(id => outputs[id] === inputs[id]);
+  const passthrough = new Set(passthroughIds);
+  const visibleOutputs = Object.entries(outputs).filter(([id]) => !passthrough.has(id));
+
+  // Cycles ready: how many runs the current stash supports. Helps the
+  // player size up "do I have enough mats to spin up 5 workers?". Only
+  // relevant for input-bearing recipes; non-passthrough inputs only.
+  const realInputs = Object.entries(inputs).filter(([id]) => !passthrough.has(id));
+  const cyclesReady = realInputs.length === 0
+    ? null
+    : Math.min(...realInputs.map(([id, qty]) => Math.floor((state.stash.items[id] ?? 0) / qty)));
   return (
     <div className={`relative bg-[#1A1512] rounded-lg border p-2.5 flex flex-col gap-1.5 transition-colors
       ${isDoing ? 'border-[#4EBA6F] shadow-[0_0_10px_rgba(78,186,111,0.25)]'
@@ -304,27 +323,34 @@ export const SkillActionCard: React.FC<{
       </div>
 
       <div className="flex items-center gap-1 py-1 text-[11px]">
-        {action.inputs ? (
+        {Object.keys(inputs).length > 0 ? (
           <div className="flex flex-col gap-0.5">
-            {Object.entries(action.inputs).map(([id, qty]) => {
+            {Object.entries(inputs).map(([id, qty]) => {
               const def = itemDef(id, qty);
               const have = state.stash.items[id] || 0;
               const hasEnough = have >= qty;
+              const isKept = passthrough.has(id);
               const producer = !hasEnough ? producerForItem(id) : null;
-              const tooltip = producer
-                ? `${def.name}: ${have}/${qty} — Click to view ${producer.name} (Lvl ${producer.levelReq})`
-                : `${def.name}: ${have} in stash, need ${qty}`;
+              const tooltip = isKept
+                ? `${def.name}: needed but kept after each cycle (have ${have})`
+                : producer
+                  ? `${def.name}: ${have}/${qty} — Click to view ${producer.name} (Lvl ${producer.levelReq})`
+                  : `${def.name}: ${have} in stash, need ${qty}`;
               const inner = (
                 <>
                   <span className="tabular-nums text-[10px] font-bold"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    {have}/{qty}
+                    {isKept ? `${have}/${qty}` : `${have}/${qty}`}
                   </span>
                   <span className="text-sm">{def.icon}</span>
-                  {producer && <span className="text-[8px] text-[#7FE2A0] font-bold">↗</span>}
+                  {isKept && <span className="text-[8px] text-[#7FE2A0] font-bold">↻</span>}
+                  {!isKept && producer && <span className="text-[8px] text-[#7FE2A0] font-bold">↗</span>}
                 </>
               );
-              if (producer) {
+              const baseClass = isKept
+                ? (hasEnough ? 'text-[#7FE2A0]' : 'text-[#E86E6E]')
+                : (hasEnough ? 'text-[#B8A890]' : 'text-[#E86E6E]');
+              if (!isKept && producer) {
                 return (
                   <button key={id} onClick={() => onJumpToSkill(producer.skillId)}
                           className="flex items-center gap-1 text-[#E86E6E] hover:text-[#F2E6A8] hover:underline text-left"
@@ -335,7 +361,7 @@ export const SkillActionCard: React.FC<{
               }
               return (
                 <div key={id}
-                     className={`flex items-center gap-1 ${hasEnough ? 'text-[#B8A890]' : 'text-[#E86E6E]'}`}
+                     className={`flex items-center gap-1 ${baseClass}`}
                      title={tooltip}>
                   {inner}
                 </div>
@@ -347,7 +373,7 @@ export const SkillActionCard: React.FC<{
         )}
         <span className="text-[#3D3328] text-sm mx-1">➔</span>
         <div className="flex flex-col gap-0.5">
-          {action.outputs && Object.entries(action.outputs).map(([id, qty]) => {
+          {visibleOutputs.length > 0 ? visibleOutputs.map(([id, qty]) => {
             const def = itemDef(id, qty);
             return (
               <div key={id} className="flex items-center gap-1 text-[#F2E6A8] font-bold" title={def.name}>
@@ -356,7 +382,9 @@ export const SkillActionCard: React.FC<{
                 <span className="text-sm drop-shadow-[0_0_3px_rgba(242,230,168,0.5)]">{def.icon}</span>
               </div>
             );
-          })}
+          }) : (
+            <div className="text-[9px] text-[#7A6E60] italic" style={{ fontFamily: "'JetBrains Mono', monospace" }}>—</div>
+          )}
         </div>
       </div>
 
@@ -365,6 +393,12 @@ export const SkillActionCard: React.FC<{
         <span title={bonuses.speedMul < 1 ? `Base ${(action.duration / 1000).toFixed(1)}s · sped up by milestone perk` : undefined}>
           {cycleSec}s
         </span>
+        {cyclesReady !== null && (
+          <span className={cyclesReady === 0 ? 'text-[#E86E6E]' : cyclesReady < 5 ? 'text-[#D4A943]' : 'text-[#B8A890]'}
+                title="Cycles your current stash supports">
+            ≈ {cyclesReady} run{cyclesReady === 1 ? '' : 's'}
+          </span>
+        )}
         <span className="text-[#7FE2A0]">+{xpDisplay} XP</span>
       </div>
 
