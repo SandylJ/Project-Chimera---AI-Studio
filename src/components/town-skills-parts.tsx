@@ -366,21 +366,26 @@ export const SkillActionCard: React.FC<{
               const have = state.stash.items[id] || 0;
               const hasEnough = have >= qty;
               const isKept = passthrough.has(id);
-              const producer = !hasEnough ? producerForItem(id) : null;
+              const producer = !hasEnough && !isKept ? producerForItem(id) : null;
+              // No skill makes it AND we don't have it → it's a dungeon drop.
+              const isDungeonDrop = !hasEnough && !isKept && !producer;
               const tooltip = isKept
                 ? `${def.name}: needed but kept after each cycle (have ${have})`
                 : producer
                   ? `${def.name}: ${have}/${qty} — Click to view ${producer.name} (Lvl ${producer.levelReq})`
-                  : `${def.name}: ${have} in stash, need ${qty}`;
+                  : isDungeonDrop
+                    ? `${def.name}: ${have}/${qty} — drops in dungeons (no skill produces this)`
+                    : `${def.name}: ${have} in stash, need ${qty}`;
               const inner = (
                 <>
                   <span className="tabular-nums text-[10px] font-bold"
                         style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    {isKept ? `${have}/${qty}` : `${have}/${qty}`}
+                    {have}/{qty}
                   </span>
                   <span className="text-sm">{def.icon}</span>
                   {isKept && <span className="text-[8px] text-[#7FE2A0] font-bold">↻</span>}
                   {!isKept && producer && <span className="text-[8px] text-[#7FE2A0] font-bold">↗</span>}
+                  {isDungeonDrop && <span className="text-[8px] text-[#E86E6E] font-bold">⚔</span>}
                 </>
               );
               const baseClass = isKept
@@ -460,8 +465,13 @@ export const SkillActionCard: React.FC<{
           )}
         </div>
       ) : (
-        <div className="w-full py-1 rounded text-[10px] font-bold uppercase tracking-wider text-center text-[#E86E6E]">
-          Requires Lvl {action.levelReq}
+        <div className={`w-full py-1 rounded text-[10px] font-bold uppercase tracking-wider text-center
+          ${(action.levelReq - (state.skills[selectedSkill]?.level ?? 1)) <= 3
+            ? 'text-[#F2B84B] bg-[#2B231B] border border-[#F2B84B]/40 animate-pulse'
+            : 'text-[#E86E6E]'}`}>
+          {(action.levelReq - (state.skills[selectedSkill]?.level ?? 1)) <= 3
+            ? `🔓 ${action.levelReq - (state.skills[selectedSkill]?.level ?? 1)} lvl away`
+            : `Requires Lvl ${action.levelReq}`}
         </div>
       )}
     </div>
