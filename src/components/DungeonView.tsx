@@ -4,6 +4,7 @@ import { DUNGEON_DEFS, DUNGEON_ORDER } from '../data/dungeons';
 import { MONSTERS } from '../data/monsters';
 import { themeFor } from '../visuals/dungeonTheme';
 import { BattleView } from './BattleView';
+import { BUFF_POTION_IDS } from '../useGame';
 
 interface Props {
   state: GameState;
@@ -47,8 +48,9 @@ const DungeonPicker: React.FC<Props> = ({ state, enterDungeon, skipDungeonFloor,
   const tokenCount = state.stash.items['shortcut_token'] ?? 0;
   const agilityLvl = state.skills.agility?.level ?? 1;
   // Count buff-eligible potions in stash for the prebuff button label.
-  const BUFF_IDS = ['attack_potion','defense_potion','strength_potion','magic_potion','ranging_potion','super_attack','super_defense','super_strength','super_magic','super_ranging','stamina_potion','agility_potion','weapon_poison','divine_potion','overload_potion'];
-  const buffCount = BUFF_IDS.reduce((a, id) => a + (state.stash.items[id] ?? 0), 0);
+  // BUFF_POTION_IDS is the single source of truth — keeps the button
+  // count in sync with what useAllBuffs actually consumes.
+  const buffCount = BUFF_POTION_IDS.reduce((a, id) => a + (state.stash.items[id] ?? 0), 0);
   return (
     <div className="flex flex-col h-full overflow-y-auto bg-gradient-to-br from-[#1a140f] to-[#0D0B09]">
       <div className="px-6 py-4 border-b border-[#3D3328] bg-gradient-to-r from-[#2B231B] via-[#1E1A16] to-[#2B231B] flex items-center gap-4">

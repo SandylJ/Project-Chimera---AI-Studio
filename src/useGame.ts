@@ -384,6 +384,30 @@ function saveToStorage(state: GameState): void {
   } catch {}
 }
 
+// Static lookup table of stat-buff potions. Hoisted out of the hook so
+// it isn't reconstructed on every React render. `healOnUse` /
+// `manaOnUse` numbers stay on the Item definitions; this table is
+// only the lingering stat-boost effect.
+const POTION_BUFFS: Record<string, { buffs: Array<{ stat: StatKey; power: number }>; duration: number; selfDamage?: number }> = {
+  attack_potion:   { buffs: [{ stat: 'str', power: 0.15 }], duration: 45000 },
+  defense_potion:  { buffs: [{ stat: 'con', power: 0.15 }], duration: 45000 },
+  strength_potion: { buffs: [{ stat: 'str', power: 0.25 }], duration: 45000 },
+  magic_potion:    { buffs: [{ stat: 'int', power: 0.25 }], duration: 45000 },
+  ranging_potion:  { buffs: [{ stat: 'dex', power: 0.25 }], duration: 45000 },
+  super_attack:    { buffs: [{ stat: 'str', power: 0.40 }], duration: 60000 },
+  super_defense:   { buffs: [{ stat: 'con', power: 0.40 }], duration: 60000 },
+  super_strength:  { buffs: [{ stat: 'str', power: 0.45 }], duration: 60000 },
+  super_magic:     { buffs: [{ stat: 'int', power: 0.45 }], duration: 60000 },
+  super_ranging:   { buffs: [{ stat: 'dex', power: 0.45 }], duration: 60000 },
+  stamina_potion:  { buffs: [{ stat: 'spd', power: 0.30 }], duration: 60000 },
+  agility_potion:  { buffs: [{ stat: 'spd', power: 0.30 }, { stat: 'dex', power: 0.30 }], duration: 60000 },
+  weapon_poison:   { buffs: [{ stat: 'luck', power: 0.25 }], duration: 60000 },
+  divine_potion:   { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 180000 },
+  overload_potion: { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 90000, selfDamage: 50 },
+};
+
+export const BUFF_POTION_IDS = Object.keys(POTION_BUFFS);
+
 export function useCcGame() {
   const [state, setState] = useState<GameState>(() => {
     const saved = loadFromStorage();
@@ -551,28 +575,6 @@ export function useCcGame() {
       pushLog(s, 'loot', `🪙 Sold ${actual}× ${ITEMS[itemId]?.name} for ${gold} gp.`);
     });
   }, [mutate]);
-
-  // Table of buffs granted by specific potions. Keeps the stat buff
-  // system orthogonal to item definitions — potions can still carry
-  // `healOnUse` / `manaOnUse` for immediate numbers, and drop an entry
-  // here for the lingering stat boost.
-  const POTION_BUFFS: Record<string, { buffs: Array<{ stat: StatKey; power: number }>; duration: number; selfDamage?: number }> = {
-    attack_potion:   { buffs: [{ stat: 'str', power: 0.15 }], duration: 45000 },
-    defense_potion:  { buffs: [{ stat: 'con', power: 0.15 }], duration: 45000 },
-    strength_potion: { buffs: [{ stat: 'str', power: 0.25 }], duration: 45000 },
-    magic_potion:    { buffs: [{ stat: 'int', power: 0.25 }], duration: 45000 },
-    ranging_potion:  { buffs: [{ stat: 'dex', power: 0.25 }], duration: 45000 },
-    super_attack:    { buffs: [{ stat: 'str', power: 0.40 }], duration: 60000 },
-    super_defense:   { buffs: [{ stat: 'con', power: 0.40 }], duration: 60000 },
-    super_strength:  { buffs: [{ stat: 'str', power: 0.45 }], duration: 60000 },
-    super_magic:     { buffs: [{ stat: 'int', power: 0.45 }], duration: 60000 },
-    super_ranging:   { buffs: [{ stat: 'dex', power: 0.45 }], duration: 60000 },
-    stamina_potion:  { buffs: [{ stat: 'spd', power: 0.30 }], duration: 60000 },
-    agility_potion:  { buffs: [{ stat: 'spd', power: 0.30 }, { stat: 'dex', power: 0.30 }], duration: 60000 },
-    weapon_poison:   { buffs: [{ stat: 'luck', power: 0.25 }], duration: 60000 },
-    divine_potion:   { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 180000 },
-    overload_potion: { buffs: [{ stat: 'str', power: 0.5 }, { stat: 'dex', power: 0.5 }, { stat: 'int', power: 0.5 }, { stat: 'con', power: 0.5 }, { stat: 'spd', power: 0.5 }, { stat: 'luck', power: 0.5 }], duration: 90000, selfDamage: 50 },
-  };
 
   // Apply every available buff potion in stash to every alive active
   // hero — pre-dungeon prep button. Each potion id is consumed once per
