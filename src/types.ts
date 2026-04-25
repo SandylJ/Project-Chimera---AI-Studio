@@ -332,6 +332,10 @@ export interface TownWorker {
   id: string;
   name: string;
   activeTask?: ActiveTask;
+  // Cycles-completed counter per skill. Drives "specialization": the
+  // skill with the most cycles becomes the worker's dominant skill and
+  // grants them a small efficiency bonus when working that skill.
+  cyclesPerSkill?: Partial<Record<SkillId, number>>;
 }
 
 export interface TownState {

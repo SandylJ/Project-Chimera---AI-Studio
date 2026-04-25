@@ -3,7 +3,7 @@ import { GameState, Hero, EquipSlot } from '../types';
 import { CLASSES } from '../data/classes';
 import { ABILITIES, CLASS_ABILITY_TREE } from '../data/abilities';
 import { ITEMS } from '../data/items';
-import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier, rogueSetPieces } from '../engine/util';
+import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier, rogueSetPieces, gracefulSetPieces } from '../engine/util';
 import { ClassSprite } from '../visuals/sprites';
 
 interface Props {
@@ -196,14 +196,24 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
         <Stat label="LUCK" value={String(Math.floor(stats.luck))} color="#FF6EE6" />
       </div>
 
-      {rogueSetPieces(hero) > 0 && (
-        <div className="mb-3 -mt-2">
-          <SetBadge
-            label="Rogue Set"
-            count={rogueSetPieces(hero)}
-            total={5}
-            bonusText="+10 LUCK (~+10% crit)"
-          />
+      {(rogueSetPieces(hero) > 0 || gracefulSetPieces(hero) > 0) && (
+        <div className="mb-3 -mt-2 flex flex-wrap gap-2">
+          {rogueSetPieces(hero) > 0 && (
+            <SetBadge
+              label="Rogue Set"
+              count={rogueSetPieces(hero)}
+              total={5}
+              bonusText="+10 LUCK (~+10% crit)"
+            />
+          )}
+          {gracefulSetPieces(hero) > 0 && (
+            <SetBadge
+              label="Graceful Set"
+              count={gracefulSetPieces(hero)}
+              total={5}
+              bonusText="+10 SPD"
+            />
+          )}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { GameState, SkillId } from '../types';
-import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost, TOWN_TIERS, totalSkillLevel, townBonuses, producerForItem } from '../engine/skilling';
+import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost, TOWN_TIERS, totalSkillLevel, townBonuses, producerForItem, dominantSkill } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 
 interface Props {
@@ -227,6 +227,9 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
             const icon = w.activeTask ? skillsList.find(s => s.id === w.activeTask!.skillId)?.icon : '💤';
             const stalled = !!w.activeTask?.stalled;
             const repeating = !!w.activeTask?.autoRepeat;
+            const dom = dominantSkill(w);
+            const domEntry = dom ? skillsList.find(s => s.id === dom) : null;
+            const matchesDom = !!(w.activeTask && dom && w.activeTask.skillId === dom);
             return (
               <div key={w.id} className={`p-2 rounded-lg border flex flex-col gap-1.5 relative overflow-hidden transition-colors
                 ${isIdle ? 'bg-[#1A1512] border-[#3D3328]'
@@ -237,6 +240,19 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                     ${isIdle ? 'text-[#B8A890]' : stalled ? 'text-[#F2E6A8]' : 'text-[#A3E6B5]'}`}>{w.name}</span>
                   <span className={`text-sm shrink-0 ${!isIdle && !stalled && 'animate-pulse'}`}>{icon}</span>
                 </div>
+                {domEntry && (
+                  <div className={`text-[9px] leading-none flex items-center gap-1 -mt-1
+                    ${matchesDom ? 'text-[#F2B84B]' : 'text-[#7A6E60]'}`}
+                       style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                       title={matchesDom
+                         ? `Specialist in ${domEntry.name} — −8% cycle time`
+                         : `Specialist in ${domEntry.name} (assign there for −8%)`}>
+                    <span>{domEntry.icon}</span>
+                    <span className="uppercase tracking-widest">
+                      {matchesDom ? 'Specialist ★' : 'Specialty'}
+                    </span>
+                  </div>
+                )}
                 {isIdle ? (
                   <div className="text-[10px] text-[#7A6E60]">Idle</div>
                 ) : (

@@ -141,10 +141,19 @@ export function addStats(a: Partial<Stats>, b: Partial<Stats>): Stats {
 
 // 5-piece rogue outfit set: bonus crit (luck stat) when fully equipped.
 const ROGUE_SET = new Set(['rogue_mask', 'rogue_top', 'rogue_legs', 'rogue_gloves', 'rogue_boots']);
+// 5-piece graceful agility set: bonus speed when fully equipped, on top
+// of the per-piece food-preservation roll in quickHealParty.
+const GRACEFUL_SET = new Set(['graceful_hood', 'graceful_top', 'graceful_legs', 'graceful_boots', 'graceful_cape']);
 
 export function rogueSetPieces(hero: Hero): number {
   let n = 0;
   for (const id of Object.values(hero.equipment)) if (id && ROGUE_SET.has(id)) n++;
+  return n;
+}
+
+export function gracefulSetPieces(hero: Hero): number {
+  let n = 0;
+  for (const id of Object.values(hero.equipment)) if (id && GRACEFUL_SET.has(id)) n++;
   return n;
 }
 
@@ -161,6 +170,11 @@ export function effectiveStats(hero: Hero): Stats {
   // Crit chance is roughly luck * 1% per point so this is ~+10% crit.
   if (rogueSetPieces(hero) >= 5) {
     total.luck = total.luck + 10;
+  }
+  // Graceful set bonus: full 5-piece grants +10 speed (≈ −90ms attack
+  // interval). Cape is L75 so this is genuinely endgame.
+  if (gracefulSetPieces(hero) >= 5) {
+    total.spd = total.spd + 10;
   }
   // apply active stat buffs
   for (const buff of hero.buffs) {

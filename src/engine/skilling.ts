@@ -1,6 +1,21 @@
-import { GameState, SkillId } from '../types';
+import { GameState, SkillId, TownWorker } from '../types';
 import { pushLog } from './util';
 import { addToStash, removeFromStash } from './loot';
+
+// The skill a worker has run the most cycles on. ≥30 cycles required to
+// "lock in" a specialization so a worker that briefly tried Mining
+// doesn't get pinned there. Returns null if no specialization yet.
+const SPECIALIZATION_MIN_CYCLES = 30;
+export function dominantSkill(worker: TownWorker): SkillId | null {
+  const counts = worker.cyclesPerSkill;
+  if (!counts) return null;
+  let bestId: SkillId | null = null;
+  let bestN = 0;
+  for (const [id, n] of Object.entries(counts) as [SkillId, number][]) {
+    if (n > bestN) { bestN = n; bestId = id; }
+  }
+  return bestN >= SPECIALIZATION_MIN_CYCLES ? bestId : null;
+}
 
 // ============================================================
 // Skill milestones — passive perks unlocked at level breakpoints.
@@ -324,6 +339,11 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     { id: 'craft_grace_bracelet', name:'Craft Grace Bracelet',levelReq: 20, duration: 5000, xpReward: 60, inputs: { marks_of_grace: 10, silver_bar: 1, thread: 2 }, outputs: { grace_bracelet: 1 } },
     { id: 'craft_stamina_gloves', name:'Craft Stamina Gloves',levelReq: 25, duration: 5500, xpReward: 80, inputs: { marks_of_grace: 15, hard_leather: 1, silk_scraps: 2 }, outputs: { stamina_gloves: 1 } },
     { id: 'craft_runners_cape',   name:'Craft Runners Cape',  levelReq: 35, duration: 7000, xpReward: 130,inputs: { marks_of_grace: 25, silk_fine: 1, thread: 3 }, outputs: { runners_cape: 1 } },
+    // ---- Mastery tier (mastery_mark sinks — Grandmaster + endgame Agility) ----
+    { id: 'craft_masters_signet', name:"Craft Master's Signet",levelReq: 80, duration: 22000,xpReward: 900,  inputs: { mastery_mark: 5, dragonstone: 1, gold_bar: 2, cosmic_rune: 5 }, outputs: { masters_signet: 1 } },
+    { id: 'craft_masters_robe',   name:"Craft Master's Robe",  levelReq: 88, duration: 32000,xpReward: 1500, inputs: { mastery_mark: 8, silk_fine: 5, dragon_leather: 3, soul_rune: 5 }, outputs: { masters_robe: 1 } },
+    { id: 'craft_masters_crown',  name:"Craft Master's Crown", levelReq: 92, duration: 38000,xpReward: 1800, inputs: { mastery_mark: 12, onyx: 1, dragon_hoard_scrap: 2, blood_rune: 10, gold_bar: 3 }, outputs: { masters_crown: 1 } },
+    { id: 'scribe_tome_of_mastery',name:'Scribe Tome of Mastery',levelReq: 75, duration: 18000,xpReward: 600, inputs: { mastery_mark: 3, magic_logs: 5, cosmic_rune: 5, nature_rune: 5 }, outputs: { tome_of_mastery: 1 } },
   ],
 
   herblore: [
@@ -559,7 +579,12 @@ export function tickSkilling(state: GameState, dt: number) {
     // pin it to the level-scaled cycleMs so the UI progress bar tracks
     // the real pace and re-tunes when the worker levels up.
     const baseDuration = actionDef.duration;
-    const cycleMs = Math.max(200, baseDuration * bonuses.speedMul);
+    // Specialization: a worker's dominant skill (most cycles run) shaves
+    // an extra 8% off cycle time on that skill only. Encourages keeping
+    // a worker on the same skill instead of shuffling them every action.
+    const dom = dominantSkill(worker);
+    const specMul = dom === task.skillId ? 0.92 : 1;
+    const cycleMs = Math.max(200, baseDuration * bonuses.speedMul * specMul);
     task.duration = cycleMs;
 
     task.progress += dt;
@@ -584,6 +609,10 @@ export function tickSkilling(state: GameState, dt: number) {
       if (bonuses.masterDrop > 0 && Math.random() < bonuses.masterDrop) {
         addToStash(state, 'mastery_mark', 1);
       }
+
+      // Track this cycle for worker specialization.
+      worker.cyclesPerSkill ||= {};
+      worker.cyclesPerSkill[task.skillId] = (worker.cyclesPerSkill[task.skillId] ?? 0) + 1;
 
       if (!state.skills[task.skillId]) {
         state.skills[task.skillId] = { level: 1, xp: 0 };

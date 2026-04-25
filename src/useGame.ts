@@ -4,7 +4,7 @@ import { CLASSES } from './data/classes';
 import { ABILITIES } from './data/abilities';
 import { DUNGEON_DEFS } from './data/dungeons';
 import { ITEMS } from './data/items';
-import { randomNameFor } from './data/names';
+import { randomNameFor, randomWorkerName } from './data/names';
 import { tickGame } from './engine/tick';
 import {
   mkId, pushLog, recomputeHeroMaxHPMP, effectiveStats, canEquip,
@@ -1024,6 +1024,19 @@ export function useCcGame() {
           pushLog(s, 'loot', `📜 Stolen scroll turned out to be ${ITEMS[pick]?.name}.`, 'rare');
           break;
         }
+        case 'tome_of_mastery': {
+          // +500 XP across every town skill at once.
+          const skillIds: Array<keyof typeof s.skills> = [
+            'mining','woodcutting','smithing','crafting','herblore',
+            'fishing','cooking','farming','runecrafting','thieving','agility',
+          ];
+          for (const id of skillIds) {
+            if (!s.skills[id]) s.skills[id] = { level: 1, xp: 0 };
+            s.skills[id]!.xp += 500;
+          }
+          pushLog(s, 'level', `📚 Tome of Mastery: +500 XP to every skill!`, 'epic');
+          break;
+        }
         default: break;
       }
       s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) - 1;
@@ -1224,11 +1237,13 @@ export function useCcGame() {
         return;
       }
       s.stash.gold -= cost;
+      const taken = new Set(s.town.workers.map(w => w.name));
+      const name = randomWorkerName(taken);
       s.town.workers.push({
         id: `w${Date.now()}_${Math.floor(Math.random() * 999)}`,
-        name: `Peasant ${s.town.workers.length + 1}`,
+        name,
       });
-      pushLog(s, 'system', `🎉 Hired a new worker for ${cost}g!`);
+      pushLog(s, 'system', `🎉 ${name} joins the town for ${cost}g!`);
     });
   }, [mutate]);
 

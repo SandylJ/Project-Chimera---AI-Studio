@@ -396,6 +396,14 @@ export const ITEMS: Record<string, Item> = {
   raw_karambwan:    mk({ id: 'raw_karambwan',   name: 'Raw Karambwan',   icon: '🐟', rarity: 'rare', type: 'material', value: 180 }),
   cooked_karambwan: mk({ id: 'cooked_karambwan',name: 'Cooked Karambwan',icon: '🍢', rarity: 'rare', type: 'potion', value: 380, healOnUse: 240, description: 'Restores 240 HP.' }),
   fish_oil:         mk({ id: 'fish_oil',        name: 'Fish Oil',        icon: '🫠', rarity: 'uncommon', type: 'material', value: 40, description: 'Rendered from deep-sea catches. Used in herblore.' }),
+
+  // ========== MASTERY TIER (mastery_mark sinks — true endgame) ==========
+  // Crafted with Mastery Marks (Grandmaster milestone drops + Agility
+  // ascendance). Celestial-rarity gear scaled past dragonhoard.
+  masters_robe:    mk({ id: 'masters_robe',    name: "Master's Robe",    icon: '🥻', rarity: 'celestial', type: 'armor',  slot: 'body', armor: 56, stats: { str: 16, dex: 16, int: 24, con: 24, luck: 8 }, value: 64000, levelReq: 50, description: 'Woven by a Grandmaster of every craft.' }),
+  masters_crown:   mk({ id: 'masters_crown',   name: "Master's Crown",   icon: '👑', rarity: 'celestial', type: 'armor',  slot: 'head', armor: 28, stats: { str: 12, dex: 12, int: 12, con: 12, spd: 8, luck: 8 }, value: 58000, levelReq: 50 }),
+  masters_signet:  mk({ id: 'masters_signet',  name: "Master's Signet",  icon: '💍', rarity: 'celestial', type: 'trinket', slot: 'ring', stats: { str: 10, dex: 10, int: 10, con: 10, spd: 6, luck: 12 }, value: 46000, levelReq: 45 }),
+  tome_of_mastery: mk({ id: 'tome_of_mastery', name: 'Tome of Mastery',  icon: '📚', rarity: 'legendary', type: 'consumable', value: 9000, description: 'Grants +500 XP to every town skill.' }),
 };
 
 // Loot pools by dungeon tier (indexed by monster level)

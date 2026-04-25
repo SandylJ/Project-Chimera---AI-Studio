@@ -26,3 +26,25 @@ export function randomNameFor(classId: ClassId, avoid: Set<string> = new Set()):
   }
   return pool[Math.floor(Math.random() * pool.length)] + ' ' + Math.floor(Math.random() * 99);
 }
+
+// Worker name pool — medieval trade-flavored. Used when the player hires
+// new town workers; "Peasant N" is the fallback after we run dry.
+export const WORKER_NAMES = [
+  'Tanner Hugh', 'Cooper Thom', 'Smithy Wat', 'Miller Nell', 'Reeve Ned',
+  'Thatcher Wyl', 'Fletcher Joan', 'Cobbler Edm', 'Brewer Mat', 'Weaver Cic',
+  'Carter Rob', 'Woodman Hal', 'Mason Grim', 'Baker Alys', 'Shepherd Per',
+  'Carpenter Edd', 'Glover Joan', 'Skinner Tib', 'Salter Maud', 'Tailor Will',
+  'Goosegirl Bett', 'Forester Dunn', 'Plowman Geof', 'Smith Owyn', 'Hayward Garr',
+  'Vintner Magda', 'Baxter Ami', 'Saddler Lyn', 'Wheelwright Tam', 'Chandler Ber',
+];
+
+export function randomWorkerName(avoid: Set<string>): string {
+  for (let i = 0; i < 16; i++) {
+    const n = WORKER_NAMES[Math.floor(Math.random() * WORKER_NAMES.length)];
+    if (!avoid.has(n)) return n;
+  }
+  // All flavor names taken — fall through to numbered Peasant.
+  let idx = avoid.size + 1;
+  while (avoid.has(`Peasant ${idx}`)) idx++;
+  return `Peasant ${idx}`;
+}
