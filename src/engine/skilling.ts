@@ -97,11 +97,15 @@ export function reachedMilestones(level: number): SkillMilestoneId[] {
 
 // Grant XP to a town skill from any source — town worker cycles, slayer
 // trickle, scrolls, etc. Handles level-up + milestone announcements.
+// Wisdom Potion: while skillXpBoostUntil is in the future, all incoming
+// town-skill XP is multiplied by 1.5.
 export function awardSkillXp(state: GameState, skillId: SkillId, xp: number): void {
   if (xp <= 0) return;
+  const wisdomActive = (state.skillXpBoostUntil ?? 0) > Date.now();
+  const final = wisdomActive ? Math.floor(xp * 1.5) : xp;
   if (!state.skills[skillId]) state.skills[skillId] = { level: 1, xp: 0 };
   const sk = state.skills[skillId]!;
-  sk.xp += xp;
+  sk.xp += final;
   while (sk.level < 99 && sk.xp >= xpForLevel(sk.level + 1)) {
     sk.level++;
     pushLog(state, 'level', `⬆ ${capitalize(skillId)} reached level ${sk.level}!`);
@@ -456,6 +460,8 @@ export const SKILL_ACTIONS: Record<string, SkillActionDef[]> = {
     // ---- Fish-oil based potions (ties Fishing into Herblore) ----
     { id: 'mix_fisher_draught',name:'Mix Fisher Draught',  levelReq: 38, duration: 4200, xpReward: 110, inputs: { fish_oil: 1, herbs: 2, vial_of_water: 1 }, outputs: { greater_healing_potion: 1 } },
     { id: 'mix_kraken_oil',   name: 'Mix Kraken Oil',      levelReq: 70, duration: 7500, xpReward: 300, inputs: { fish_oil: 2, cadantine: 1, vial_of_water: 1 }, outputs: { imbued_healing_potion: 1 } },
+    // Brews a self-buff that boosts town skill XP gain for 5 minutes.
+    { id: 'mix_wisdom_potion',name: 'Mix Wisdom Potion',   levelReq: 60, duration: 7000, xpReward: 240, inputs: { ranarr: 1, cadantine: 1, cosmic_rune: 5, vial_of_water: 1 }, outputs: { wisdom_potion: 1 } },
   ],
 
   fishing: [

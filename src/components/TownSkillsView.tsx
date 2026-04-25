@@ -8,12 +8,13 @@ interface Props {
   setActiveTask: (skillId: string, actionId: string, duration: number, workerId?: string, repeatTimes?: number) => void;
   clearActiveTask: (workerId: string) => void;
   toggleAutoRepeat?: (workerId: string) => void;
+  togglePinAction?: (actionId: string) => void;
   hireWorker?: () => void;
 }
 
 type Filter = 'all' | 'craftable' | 'unlocked';
 
-export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearActiveTask, toggleAutoRepeat, hireWorker }) => {
+export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearActiveTask, toggleAutoRepeat, togglePinAction, hireWorker }) => {
   const [selectedSkill, setSelectedSkill] = useState<SkillId>('mining');
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -75,7 +76,9 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
 
   const actions: SkillActionDef[] = SKILL_ACTIONS[selectedSkill] || [];
 
-  // Sort: craftable now → unlocked but missing inputs → locked. Stable by level.
+  const pinned = state.pinnedActions ?? [];
+  // Sort: pinned → craftable now → unlocked but missing inputs → locked.
+  // Stable by level.
   const rankedActions = useMemo(() => {
     return [...actions].map(a => {
       const unlocked = currentLevel >= a.levelReq;
@@ -85,13 +88,14 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
           if ((state.stash.items[id] || 0) < qty) { missingInput = true; break; }
         }
       }
-      const rank = !unlocked ? 2 : missingInput ? 1 : 0;
-      return { a, unlocked, missingInput, rank };
+      const isPinned = pinned.includes(a.id);
+      const rank = isPinned ? -1 : !unlocked ? 2 : missingInput ? 1 : 0;
+      return { a, unlocked, missingInput, rank, isPinned };
     }).sort((x, y) => {
       if (x.rank !== y.rank) return x.rank - y.rank;
       return x.a.levelReq - y.a.levelReq;
     });
-  }, [actions, currentLevel, state.stash.items]);
+  }, [actions, currentLevel, state.stash.items, pinned]);
 
   const q = search.trim().toLowerCase();
   const filteredActions = rankedActions.filter(({ a, unlocked, missingInput }) => {
@@ -115,6 +119,8 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
   const capeWornFor = state.heroes.some(h => !h.bench && h.equipment.neck === skillCapeId);
   const completionCapeWorn = state.heroes.some(h => !h.bench && h.equipment.neck === 'cape_of_completion');
   const capeBonus = (capeWornFor ? 0.25 : 0) + (completionCapeWorn ? 0.10 : 0);
+  const wisdomMs = Math.max(0, (state.skillXpBoostUntil ?? 0) - Date.now());
+  const wisdomActive = wisdomMs > 0;
 
   // Bulk-assign all idle workers to the same action. Useful when you've
   // hired half the village to mine copper. Honors the mass-craft count.
@@ -276,7 +282,12 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                       )}
                     </div>
                     <div className="w-full bg-[#0A1A10] h-1 rounded-full overflow-hidden">
-                      <div className={stalled ? 'h-full bg-[#D4A943]/50' : 'h-full bg-[#4EBA6F]'}
+                      <div className={
+                        stalled ? 'h-full bg-[#D4A943]/50' :
+                        (w.activeTask!.progress / w.activeTask!.duration) >= 0.85
+                          ? 'h-full bg-[#A3E6B5] shadow-[0_0_6px_#7FE2A0] animate-pulse'
+                          : 'h-full bg-[#4EBA6F]'
+                      }
                            style={{ width: `${(w.activeTask!.progress / w.activeTask!.duration) * 100}%`, transition: 'width 0.2s linear' }} />
                     </div>
                   </div>
@@ -361,7 +372,7 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                 </div>
               );
             })}
-            {(bonuses.speedMul < 1 || bonuses.doubleChance > 0 || bonuses.skipChance > 0 || bonuses.xpMul > 1 || capeBonus > 0) && (
+            {(bonuses.speedMul < 1 || bonuses.doubleChance > 0 || bonuses.skipChance > 0 || bonuses.xpMul > 1 || capeBonus > 0 || wisdomActive) && (
               <div className="text-[9px] text-[#7FE2A0] font-bold ml-1 tabular-nums"
                    style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 {bonuses.speedMul < 1 && <span className="mr-2">−{Math.round((1 - bonuses.speedMul) * 100)}% time</span>}
@@ -372,7 +383,12 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
                   </span>
                 )}
                 {bonuses.skipChance > 0 && <span className="mr-2">{Math.round(bonuses.skipChance * 100)}% skip</span>}
-                {bonuses.xpMul > 1 && <span>+{Math.round((bonuses.xpMul - 1) * 100)}% xp</span>}
+                {bonuses.xpMul > 1 && <span className="mr-2">+{Math.round((bonuses.xpMul - 1) * 100)}% xp</span>}
+                {wisdomActive && (
+                  <span className="text-[#B485E8]" title="Wisdom Potion active — +50% skill XP">
+                    📘 +50% xp · {Math.ceil(wisdomMs / 60000)}m left
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -460,7 +476,7 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
 
         {/* Action cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {filteredActions.map(({ a: action, unlocked, missingInput }) => {
+          {filteredActions.map(({ a: action, unlocked, missingInput, isPinned }) => {
             const workersDoingThis = activeWorkers.filter(w => w.activeTask?.actionId === action.id);
             const isDoing = workersDoingThis.length > 0;
 
@@ -468,11 +484,19 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
               <div key={action.id}
                    className={`relative bg-[#1A1512] rounded-lg border p-2.5 flex flex-col gap-1.5 transition-colors
                      ${isDoing ? 'border-[#4EBA6F] shadow-[0_0_10px_rgba(78,186,111,0.25)]'
+                       : isPinned ? 'border-[#F2B84B] shadow-[0_0_8px_rgba(242,184,75,0.25)]'
                        : !unlocked ? 'border-[#2a2420] opacity-55 grayscale'
                        : missingInput ? 'border-[#3D3328]'
                        : 'border-[#D4A943]/40 shadow-[0_0_6px_rgba(212,169,67,0.1)]'}`}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="font-bold text-[#F2E6A8] text-xs leading-tight truncate flex-1">{action.name}</div>
+                  {togglePinAction && (
+                    <button onClick={() => togglePinAction(action.id)}
+                            title={isPinned ? 'Unpin from top' : 'Pin to top'}
+                            className={`shrink-0 text-[10px] leading-none px-1 ${isPinned ? 'text-[#F2B84B]' : 'text-[#5C5246] hover:text-[#F2B84B]'}`}>
+                      {isPinned ? '★' : '☆'}
+                    </button>
+                  )}
                   <div className={`text-[9px] font-bold shrink-0 px-1 py-0.5 rounded border
                     ${unlocked
                       ? 'text-[#D4A943] bg-[#2B231B] border-[#D4A943]/30'

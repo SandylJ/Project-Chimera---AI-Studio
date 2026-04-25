@@ -1067,6 +1067,16 @@ export function useCcGame() {
           pushLog(s, 'level', `📚 Tome of Mastery: +500 XP to every skill!`, 'epic');
           break;
         }
+        case 'wisdom_potion': {
+          // +50% town skill XP for 5 minutes. Stacks duration if already
+          // active (to a 30-minute cap so chugging 100 doesn't feel free).
+          const now = Date.now();
+          const current = Math.max(now, s.skillXpBoostUntil ?? 0);
+          const newUntil = Math.min(now + 30 * 60 * 1000, current + 5 * 60 * 1000);
+          s.skillXpBoostUntil = newUntil;
+          pushLog(s, 'heal', `📘 Wisdom Potion: +50% skill XP for 5 minutes.`, 'epic');
+          break;
+        }
         default: break;
       }
       s.stash.items[itemId] = (s.stash.items[itemId] ?? 0) - 1;
@@ -1255,6 +1265,18 @@ export function useCcGame() {
   // Flip the auto-repeat flag on a worker's active task. With it ON, the
   // worker keeps the assignment when mats run out and resumes the moment
   // they reappear (e.g. from a Mining worker producing ore for Smithing).
+  // Toggle whether an action is pinned. Pinned actions sort to the top
+  // of the skill list so frequently-crafted recipes stay visible without
+  // scrolling through everything else.
+  const togglePinAction = useCallback((actionId: string) => {
+    mutate(s => {
+      const cur = s.pinnedActions ?? [];
+      s.pinnedActions = cur.includes(actionId)
+        ? cur.filter(x => x !== actionId)
+        : [...cur, actionId];
+    });
+  }, [mutate]);
+
   const toggleAutoRepeat = useCallback((workerId: string) => {
     mutate(s => {
       const w = s.town.workers.find(w => w.id === workerId);
@@ -1322,6 +1344,7 @@ export function useCcGame() {
     setActiveTask,
     clearActiveTask,
     toggleAutoRepeat,
+    togglePinAction,
     hireWorker,
   };
 }

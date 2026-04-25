@@ -379,4 +379,10 @@ export interface GameState {
   // Town skills — idle workers training Mining / Woodcutting / etc.
   town: TownState;
   skills: Partial<Record<SkillId, { level: number; xp: number }>>;
+  // Wall-clock ms timestamp at which the active "Wisdom Potion" buff
+  // expires. While Date.now() < this, town skill XP gains are +50%.
+  skillXpBoostUntil?: number;
+  // Action ids the player has pinned/starred — sorted to top of the
+  // skill action list regardless of unlock/missing-input ranking.
+  pinnedActions?: string[];
 }

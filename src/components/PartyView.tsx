@@ -193,7 +193,7 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
         <Stat label="INT" value={String(Math.floor(stats.int))} color="#B485E8" />
         <Stat label="CON" value={String(Math.floor(stats.con))} color="#F2B84B" />
         <Stat label="SPD" value={String(Math.floor(stats.spd))} color="#F2E6A8" />
-        <Stat label="LUCK" value={String(Math.floor(stats.luck))} color="#FF6EE6" />
+        <Stat label="LUCK" value={`${Math.floor(stats.luck)} · ${Math.round((0.05 + stats.luck * 0.01) * 100)}% crit`} color="#FF6EE6" />
       </div>
 
       {(rogueSetPieces(hero) > 0 || gracefulSetPieces(hero) > 0) && (

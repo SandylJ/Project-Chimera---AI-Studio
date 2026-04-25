@@ -355,6 +355,7 @@ export const ITEMS: Record<string, Item> = {
   divine_potion:   mk({ id: 'divine_potion',   name: 'Divine Potion',   icon: '💫', rarity: 'legendary', type: 'potion', value: 2600, description: 'Perma-50% stat boost until next dungeon ends.' }),
   imbued_healing_potion: mk({ id: 'imbued_healing_potion', name: 'Imbued Healing Potion', icon: '🧬', rarity: 'epic', type: 'potion', value: 900, healOnUse: 600, description: 'Infused with blood runes. Restores 600 HP.' }),
   guthix_rest:     mk({ id: 'guthix_rest',     name: 'Guthix Rest',     icon: '🍵', rarity: 'rare', type: 'potion', value: 300, healOnUse: 200, manaOnUse: 80, description: 'Tea of balance: 200 HP + 80 MP.' }),
+  wisdom_potion:   mk({ id: 'wisdom_potion',   name: 'Wisdom Potion',   icon: '📘', rarity: 'epic', type: 'consumable', value: 1200, description: '+50% town skill XP for 5 minutes.' }),
 
   // ========== SMITHING — EXPANSION (dragonite + rune-etched) ==========
   dragonite_sword:     mk({ id: 'dragonite_sword',     name: 'Dragonite Longsword',icon: '🐉', rarity: 'legendary', type: 'weapon', slot: 'weapon', weaponPower: 110, stats: { str: 40, con: 12, luck: 6 }, value: 22000, levelReq: 42 }),

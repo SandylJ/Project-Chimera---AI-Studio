@@ -165,6 +165,7 @@ export default function CcApp() {
                             setActiveTask={g.setActiveTask}
                             clearActiveTask={g.clearActiveTask}
                             toggleAutoRepeat={g.toggleAutoRepeat}
+                            togglePinAction={g.togglePinAction}
                             hireWorker={g.hireWorker} />
           )}
           {tab === 'log' && <CombatLog state={state} />}

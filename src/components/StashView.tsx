@@ -175,7 +175,7 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
             {e.item.description && <div className="text-[10px] text-[#7A6E60] italic mt-1">{e.item.description}</div>}
             <div className="flex gap-1 mt-2 flex-wrap">
               {/* Use-scroll shortcut */}
-              {useScroll && e.item.type === 'consumable' && (e.id.startsWith('scroll_') || e.id === 'jewel_case' || e.id === 'thieves_cache' || e.id === 'stolen_scroll' || e.id === 'tome_of_mastery') && (
+              {useScroll && e.item.type === 'consumable' && (e.id.startsWith('scroll_') || e.id === 'jewel_case' || e.id === 'thieves_cache' || e.id === 'stolen_scroll' || e.id === 'tome_of_mastery' || e.id === 'wisdom_potion') && (
                 <button type="button" onClick={() => useScroll(e.id)}
                         className="press flex-1 text-[10px] py-1 text-[#0a0806] font-bold hover:brightness-110"
                         style={{
@@ -183,7 +183,7 @@ export const StashView: React.FC<Props> = ({ state, sellItem, setAutoSell, useSc
                           border: '1px solid var(--cc-blue)',
                           borderRadius: 2,
                         }}>
-                  {e.id === 'tome_of_mastery' ? 'Read' : e.id.startsWith('scroll_') ? 'Use' : 'Open'}
+                  {e.id === 'tome_of_mastery' ? 'Read' : e.id === 'wisdom_potion' ? 'Drink' : e.id.startsWith('scroll_') ? 'Use' : 'Open'}
                 </button>
               )}
               <button type="button" onClick={() => sellItem(e.id, 1)}
