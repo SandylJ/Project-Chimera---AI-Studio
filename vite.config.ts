@@ -20,5 +20,16 @@ export default defineConfig(({mode}) => {
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
     },
+    build: {
+      // Split React into its own chunk so the main app bundle isn't
+      // invalidated whenever game code changes between deploys.
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+          },
+        },
+      },
+    },
   };
 });
