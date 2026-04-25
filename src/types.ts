@@ -327,7 +327,6 @@ export interface TownWorker {
 }
 
 export interface TownState {
-  unlockedWorkers: number;
   workers: TownWorker[];
 }
 

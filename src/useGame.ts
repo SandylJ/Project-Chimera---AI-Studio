@@ -15,6 +15,7 @@ import { generateDungeon } from './engine/dungeonGen';
 import { resolveDecision as engineResolveDecision } from './engine/decisions';
 import { addToStash, removeFromStash, sellValue } from './engine/loot';
 import { simulateOffline } from './engine/offline';
+import { workerHireCost } from './engine/skilling';
 
 const SAVE_KEY = 'cc_save_v1';
 const TICK_MS = 100;
@@ -85,7 +86,6 @@ function createInitialState(): GameState {
     shopRotation: rollShopRotation(dayIndex()),
     bountyBoard: rollBountyBoard(dayIndex(), 0, 0),
     town: {
-      unlockedWorkers: 3,
       workers: [
         { id: 'w1', name: 'Peasant Jon' },
         { id: 'w2', name: 'Miller Sam' },
@@ -159,7 +159,6 @@ function migrate(s: Partial<GameState>): GameState {
           s.totalGoldEarned ?? 0,
         ),
     town: s.town ?? {
-      unlockedWorkers: 3,
       workers: [
         { id: 'w1', name: 'Peasant Jon' },
         { id: 'w2', name: 'Miller Sam' },
@@ -1162,14 +1161,12 @@ export function useCcGame() {
 
   const hireWorker = useCallback(() => {
     mutate(s => {
-      const currentCount = s.town.workers.length;
-      const cost = 1000 * Math.pow(2, currentCount - 3);
+      const cost = workerHireCost(s.town.workers.length);
       if (s.stash.gold < cost) {
         pushLog(s, 'system', `Not enough gold to hire a worker (Need ${cost}g).`);
         return;
       }
       s.stash.gold -= cost;
-      s.town.unlockedWorkers++;
       s.town.workers.push({
         id: `w${Date.now()}_${Math.floor(Math.random() * 999)}`,
         name: `Peasant ${s.town.workers.length + 1}`,

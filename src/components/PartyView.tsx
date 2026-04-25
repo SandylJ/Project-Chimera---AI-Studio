@@ -3,7 +3,7 @@ import { GameState, Hero, EquipSlot } from '../types';
 import { CLASSES } from '../data/classes';
 import { ABILITIES, CLASS_ABILITY_TREE } from '../data/abilities';
 import { ITEMS } from '../data/items';
-import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier } from '../engine/util';
+import { effectiveStats, xpToNext, canEquip, totalArmor, weaponPower, enchantTier, rogueSetPieces } from '../engine/util';
 import { ClassSprite } from '../visuals/sprites';
 
 interface Props {
@@ -195,6 +195,17 @@ const HeroDetail: React.FC<DetailProps> = ({ hero, state, unequipItem, toggleBen
         <Stat label="SPD" value={String(Math.floor(stats.spd))} color="#F2E6A8" />
         <Stat label="LUCK" value={String(Math.floor(stats.luck))} color="#FF6EE6" />
       </div>
+
+      {rogueSetPieces(hero) > 0 && (
+        <div className="mb-3 -mt-2">
+          <SetBadge
+            label="Rogue Set"
+            count={rogueSetPieces(hero)}
+            total={5}
+            bonusText="+10 LUCK (~+10% crit)"
+          />
+        </div>
+      )}
 
       <div className="flex border-b border-[#3D3328] mb-3 gap-1">
         {(['gear', 'abilities', 'stats'] as const).map(t => {
@@ -440,6 +451,22 @@ const Kv: React.FC<{ k: string; v: string }> = ({ k, v }) => (
     <span className="text-[#E8E0D4] font-bold" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{v}</span>
   </div>
 );
+
+const SetBadge: React.FC<{ label: string; count: number; total: number; bonusText: string }> = ({ label, count, total, bonusText }) => {
+  const complete = count >= total;
+  return (
+    <div className={`flex items-center gap-2 px-2 py-1 rounded border text-[10px] font-bold uppercase tracking-widest
+      ${complete
+        ? 'bg-[#2B231B] text-[#F2E6A8] border-[#D4A943] shadow-[0_0_8px_rgba(212,169,67,0.4)]'
+        : 'bg-[#14100C] text-[#B8A890] border-[#3D3328]'}`}
+         style={{ fontFamily: "'JetBrains Mono', monospace" }}
+         title={complete ? `Set bonus active: ${bonusText}` : `Equip the full set for: ${bonusText}`}>
+      <span>{label}</span>
+      <span className={complete ? 'text-[#7FE2A0]' : 'text-[#7A6E60]'}>{count}/{total}</span>
+      {complete && <span className="text-[#7FE2A0]">✓ {bonusText}</span>}
+    </div>
+  );
+};
 
 function rarityColor(r: string): string {
   switch (r) {

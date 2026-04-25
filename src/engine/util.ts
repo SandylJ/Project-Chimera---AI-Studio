@@ -139,6 +139,15 @@ export function addStats(a: Partial<Stats>, b: Partial<Stats>): Stats {
   };
 }
 
+// 5-piece rogue outfit set: bonus crit (luck stat) when fully equipped.
+const ROGUE_SET = new Set(['rogue_mask', 'rogue_top', 'rogue_legs', 'rogue_gloves', 'rogue_boots']);
+
+export function rogueSetPieces(hero: Hero): number {
+  let n = 0;
+  for (const id of Object.values(hero.equipment)) if (id && ROGUE_SET.has(id)) n++;
+  return n;
+}
+
 export function effectiveStats(hero: Hero): Stats {
   let total: Stats = { ...hero.baseStats };
   for (const slot of Object.keys(hero.equipment) as Array<keyof typeof hero.equipment>) {
@@ -147,6 +156,11 @@ export function effectiveStats(hero: Hero): Stats {
     const item = ITEMS[itemId];
     if (!item?.stats) continue;
     total = addStats(total, item.stats);
+  }
+  // Rogue set bonus: full 5-piece grants +10 luck on top of per-piece stats.
+  // Crit chance is roughly luck * 1% per point so this is ~+10% crit.
+  if (rogueSetPieces(hero) >= 5) {
+    total.luck = total.luck + 10;
   }
   // apply active stat buffs
   for (const buff of hero.buffs) {

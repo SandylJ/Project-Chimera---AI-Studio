@@ -1,6 +1,56 @@
-import { GameState } from '../types';
+import { GameState, SkillId } from '../types';
 import { pushLog } from './util';
 import { addToStash, removeFromStash } from './loot';
+
+// ============================================================
+// Skill milestones — passive perks unlocked at level breakpoints.
+// Derived purely from current level, so no save migration required.
+// ============================================================
+
+export type SkillMilestoneId = 'apprentice' | 'adept' | 'expert' | 'master' | 'grandmaster';
+
+export const SKILL_MILESTONES: Array<{
+  id: SkillMilestoneId;
+  level: number;
+  title: string;
+  blurb: string;
+}> = [
+  { id: 'apprentice',  level: 10, title: 'Apprentice',  blurb: '−10% action time'        },
+  { id: 'adept',       level: 25, title: 'Adept',       blurb: '15% chance to double output' },
+  { id: 'expert',      level: 50, title: 'Expert',      blurb: '10% chance to skip an input' },
+  { id: 'master',      level: 75, title: 'Master',      blurb: '+25% XP'                 },
+  { id: 'grandmaster', level: 99, title: 'Grandmaster', blurb: 'all milestone bonuses doubled + Mastery Mark drops' },
+];
+
+export interface SkillBonuses {
+  speedMul: number;     // multiply duration by this — <1 means faster
+  doubleChance: number; // 0..1 chance per cycle to 2× outputs
+  skipChance: number;   // 0..1 chance per cycle to skip inputs
+  xpMul: number;        // multiply xp gain by this
+  masterDrop: number;   // 0..1 chance per cycle of bonus mastery_mark
+}
+
+export function getSkillBonuses(level: number): SkillBonuses {
+  const reached = (n: number) => level >= n;
+  const gm = reached(99);
+  const mul = gm ? 2 : 1; // Grandmaster: double everything
+  return {
+    speedMul:     reached(10) ? (1 - 0.10 * mul) : 1,
+    doubleChance: reached(25) ? (0.15 * mul) : 0,
+    skipChance:   reached(50) ? (0.10 * mul) : 0,
+    xpMul:        reached(75) ? (1 + 0.25 * mul) : 1,
+    masterDrop:   gm ? 0.05 : 0,
+  };
+}
+
+export function reachedMilestones(level: number): SkillMilestoneId[] {
+  return SKILL_MILESTONES.filter(m => level >= m.level).map(m => m.id);
+}
+
+// Cost to hire the next worker. Doubles per worker past the starter 3.
+export function workerHireCost(currentCount: number): number {
+  return 1000 * Math.pow(2, Math.max(0, currentCount - 3));
+}
 
 // Define the available actions for each skill.
 export interface SkillActionDef {
@@ -426,30 +476,51 @@ export function tickSkilling(state: GameState, dt: number) {
       continue;
     }
 
+    const bonuses = getSkillBonuses(state.skills[task.skillId]?.level || 1);
+    // task.duration starts at the action's base ms; once a cycle fires we
+    // pin it to the level-scaled cycleMs so the UI progress bar tracks
+    // the real pace and re-tunes when the worker levels up.
+    const baseDuration = actionDef.duration;
+    const cycleMs = Math.max(200, baseDuration * bonuses.speedMul);
+    task.duration = cycleMs;
+
     task.progress += dt;
-    while (task.progress >= task.duration) {
-      task.progress -= task.duration;
+    while (task.progress >= cycleMs) {
+      task.progress -= cycleMs;
 
       if (actionDef.inputs) {
-        for (const [id, qty] of Object.entries(actionDef.inputs)) {
-          if (qty > 0) removeFromStash(state, id, qty);
+        const skip = bonuses.skipChance > 0 && Math.random() < bonuses.skipChance;
+        if (!skip) {
+          for (const [id, qty] of Object.entries(actionDef.inputs)) {
+            if (qty > 0) removeFromStash(state, id, qty);
+          }
         }
       }
       if (actionDef.outputs) {
+        const doubled = bonuses.doubleChance > 0 && Math.random() < bonuses.doubleChance;
+        const mult = doubled ? 2 : 1;
         for (const [id, qty] of Object.entries(actionDef.outputs)) {
-          addToStash(state, id, qty);
+          addToStash(state, id, qty * mult);
         }
+      }
+      if (bonuses.masterDrop > 0 && Math.random() < bonuses.masterDrop) {
+        addToStash(state, 'mastery_mark', 1);
       }
 
       if (!state.skills[task.skillId]) {
         state.skills[task.skillId] = { level: 1, xp: 0 };
       }
       const sk = state.skills[task.skillId]!;
-      sk.xp += actionDef.xpReward;
+      sk.xp += Math.floor(actionDef.xpReward * bonuses.xpMul);
 
       while (sk.level < 99 && sk.xp >= xpForLevel(sk.level + 1)) {
         sk.level++;
         pushLog(state, 'level', `⬆ ${capitalize(task.skillId)} reached level ${sk.level}!`);
+        // Announce milestone perks the moment they unlock.
+        const ms = SKILL_MILESTONES.find(m => m.level === sk.level);
+        if (ms) {
+          pushLog(state, 'level', `✨ ${capitalize(task.skillId)} ${ms.title}: ${ms.blurb}`, 'epic');
+        }
       }
 
       if (!hasRequiredInputs(state, actionDef.inputs)) {
@@ -459,6 +530,12 @@ export function tickSkilling(state: GameState, dt: number) {
       }
     }
   }
+}
+
+// Effective duration for display — applied milestone speed bonus per skill.
+export function effectiveDuration(state: GameState, skillId: SkillId, baseDuration: number): number {
+  const lvl = state.skills[skillId]?.level || 1;
+  return Math.max(200, baseDuration * getSkillBonuses(lvl).speedMul);
 }
 
 function capitalize(s: string): string {

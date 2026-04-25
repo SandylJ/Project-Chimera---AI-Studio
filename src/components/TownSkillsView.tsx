@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { GameState, SkillId } from '../types';
-import { SKILL_ACTIONS, SkillActionDef, xpForLevel } from '../engine/skilling';
+import { SKILL_ACTIONS, SkillActionDef, xpForLevel, SKILL_MILESTONES, getSkillBonuses, workerHireCost } from '../engine/skilling';
 import { ITEMS } from '../data/items';
 
 interface Props {
@@ -15,6 +15,7 @@ type Filter = 'all' | 'craftable' | 'unlocked';
 export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearActiveTask, hireWorker }) => {
   const [selectedSkill, setSelectedSkill] = useState<SkillId>('mining');
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
 
   const skillsList: { id: SkillId; icon: string; name: string }[] = [
     { id: 'mining',       icon: '⛏️', name: 'Mining' },
@@ -83,18 +84,37 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
     });
   }, [actions, currentLevel, state.stash.items]);
 
-  const filteredActions = rankedActions.filter(({ unlocked, missingInput }) => {
-    if (filter === 'craftable') return unlocked && !missingInput;
-    if (filter === 'unlocked')  return unlocked;
+  const q = search.trim().toLowerCase();
+  const filteredActions = rankedActions.filter(({ a, unlocked, missingInput }) => {
+    if (filter === 'craftable' && !(unlocked && !missingInput)) return false;
+    if (filter === 'unlocked'  && !unlocked) return false;
+    if (q) {
+      const inName = a.name.toLowerCase().includes(q);
+      const inOutput = Object.keys(a.outputs || {}).some(id =>
+        (ITEMS[id]?.name || id).toLowerCase().includes(q));
+      if (!inName && !inOutput) return false;
+    }
     return true;
   });
+
+  const bonuses = getSkillBonuses(currentLevel);
+  const skillMilestones = SKILL_MILESTONES;
+
+  // Bulk-assign all idle workers to the same action. Useful when you've
+  // hired half the village to mine copper.
+  const bulkAssign = (actionId: string, duration: number) => {
+    for (const w of freeWorkers) setActiveTask(selectedSkill, actionId, duration, w.id);
+  };
+  const bulkStop = () => {
+    for (const w of activeWorkers) clearActiveTask(w.id);
+  };
 
   const getDef = (id: string, qty: number) => {
     const item = ITEMS[id];
     return { name: item?.name || id, icon: item?.icon || '📦', qty, id: item?.id };
   };
 
-  const hireCost = 1000 * Math.pow(2, Math.max(0, workers.length - 3));
+  const hireCost = workerHireCost(workers.length);
 
   return (
     <div className="h-full flex flex-col sm:flex-row bg-[#0D0B09]">
@@ -202,24 +222,71 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
         </div>
 
         {/* Selected-skill header */}
-        <div className="flex items-center gap-3 mb-3 sticky top-0 bg-[#0D0B09]/95 backdrop-blur-sm p-3 rounded-lg border border-[#3D3328] z-10 shadow-xl">
-          <div className="text-3xl">{skillsList.find(s => s.id === selectedSkill)?.icon}</div>
-          <div className="flex-1">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-xl font-bold text-[#F2E6A8] leading-none" style={{ fontFamily: "'Cinzel', serif" }}>
-                {skillsList.find(s => s.id === selectedSkill)?.name}
-              </h2>
-              <div className="text-[10px] text-[#B8A890] font-bold tabular-nums"
-                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                Lvl <span className="text-[#F2E6A8] text-sm">{currentLevel}</span>
-                <span className="text-[#7A6E60] mx-1">·</span>
-                {Math.floor(currentXp).toLocaleString()} / {nextLevelXp.toLocaleString()} xp
+        <div className="flex flex-col gap-2 mb-3 sticky top-0 bg-[#0D0B09]/95 backdrop-blur-sm p-3 rounded-lg border border-[#3D3328] z-10 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">{skillsList.find(s => s.id === selectedSkill)?.icon}</div>
+            <div className="flex-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="text-xl font-bold text-[#F2E6A8] leading-none" style={{ fontFamily: "'Cinzel', serif" }}>
+                  {skillsList.find(s => s.id === selectedSkill)?.name}
+                </h2>
+                <div className="text-[10px] text-[#B8A890] font-bold tabular-nums"
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Lvl <span className="text-[#F2E6A8] text-sm">{currentLevel}</span>
+                  <span className="text-[#7A6E60] mx-1">·</span>
+                  {Math.floor(currentXp).toLocaleString()} / {nextLevelXp.toLocaleString()} xp
+                </div>
+              </div>
+              <div className="w-full bg-[#14100C] h-2 rounded mt-1 overflow-hidden border border-[#3D3328]">
+                <div className="h-full bg-[linear-gradient(90deg,#9a8030_0%,#ffe080_100%)] transition-all"
+                     style={{ width: `${levelProgress}%` }} />
               </div>
             </div>
-            <div className="w-full bg-[#14100C] h-2 rounded mt-1 overflow-hidden border border-[#3D3328]">
-              <div className="h-full bg-[linear-gradient(90deg,#9a8030_0%,#ffe080_100%)] transition-all"
-                   style={{ width: `${levelProgress}%` }} />
-            </div>
+          </div>
+
+          {/* Milestone perks: lit when reached, dim with target lvl when not. */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {skillMilestones.map(m => {
+              const reached = currentLevel >= m.level;
+              return (
+                <div key={m.id}
+                     title={`Lvl ${m.level} — ${m.title}: ${m.blurb}`}
+                     className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest
+                       ${reached
+                         ? 'bg-[#2B231B] text-[#F2E6A8] border-[#D4A943] shadow-[0_0_6px_rgba(212,169,67,0.35)]'
+                         : 'bg-[#14100C] text-[#5C5246] border-[#3D3328]'}`}
+                     style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {reached ? '✓' : m.level} {m.title}
+                </div>
+              );
+            })}
+            {(bonuses.speedMul < 1 || bonuses.doubleChance > 0 || bonuses.skipChance > 0 || bonuses.xpMul > 1) && (
+              <div className="text-[9px] text-[#7FE2A0] font-bold ml-1 tabular-nums"
+                   style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {bonuses.speedMul < 1 && <span className="mr-2">−{Math.round((1 - bonuses.speedMul) * 100)}% time</span>}
+                {bonuses.doubleChance > 0 && <span className="mr-2">{Math.round(bonuses.doubleChance * 100)}% 2×</span>}
+                {bonuses.skipChance > 0 && <span className="mr-2">{Math.round(bonuses.skipChance * 100)}% skip</span>}
+                {bonuses.xpMul > 1 && <span>+{Math.round((bonuses.xpMul - 1) * 100)}% xp</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Search + bulk-stop */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search action or output…"
+              className="flex-1 bg-[#14100C] border border-[#3D3328] rounded px-2 py-1 text-xs text-[#F2E6A8] placeholder-[#5C5246] focus:outline-none focus:border-[#D4A943]"
+            />
+            {activeWorkers.length > 0 && (
+              <button onClick={bulkStop}
+                      className="px-2.5 py-1 text-[10px] uppercase tracking-widest font-bold rounded border bg-[#E86E6E20] text-[#E86E6E] hover:bg-[#E86E6E40] border-[#E86E6E80]"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Stop all on this skill
+              </button>
+            )}
           </div>
         </div>
 
@@ -335,23 +402,35 @@ export const TownSkillsView: React.FC<Props> = ({ state, setActiveTask, clearAct
 
                 <div className="flex justify-between items-center text-[9px] text-[#7A6E60] uppercase tracking-widest font-bold"
                      style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  <span>{(action.duration / 1000).toFixed(1)}s</span>
-                  <span className="text-[#7FE2A0]">+{action.xpReward} XP</span>
+                  <span title={bonuses.speedMul < 1 ? `Base ${(action.duration / 1000).toFixed(1)}s · sped up by milestone perk` : undefined}>
+                    {(Math.max(200, action.duration * bonuses.speedMul) / 1000).toFixed(1)}s
+                  </span>
+                  <span className="text-[#7FE2A0]">+{Math.floor(action.xpReward * bonuses.xpMul)} XP</span>
                 </div>
 
                 {unlocked ? (
-                  <button
-                    disabled={freeWorkers.length === 0 || missingInput}
-                    onClick={() => setActiveTask(selectedSkill, action.id, action.duration)}
-                    className={`w-full py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors
-                      ${freeWorkers.length === 0
-                        ? 'bg-[#1A1A1A] text-[#7A6E60] border border-[#3D3328] cursor-not-allowed'
-                        : missingInput
-                          ? 'bg-[#E86E6E15] text-[#E86E6E] border border-[#E86E6E]/20 cursor-not-allowed'
-                          : 'bg-[#D4A943] text-[#14100C] hover:bg-[#F2E6A8]'}`}
-                  >
-                    {freeWorkers.length === 0 ? 'No Free Workers' : missingInput ? 'Missing Mats' : 'Assign'}
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      disabled={freeWorkers.length === 0 || missingInput}
+                      onClick={() => setActiveTask(selectedSkill, action.id, action.duration)}
+                      className={`flex-1 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition-colors
+                        ${freeWorkers.length === 0
+                          ? 'bg-[#1A1A1A] text-[#7A6E60] border border-[#3D3328] cursor-not-allowed'
+                          : missingInput
+                            ? 'bg-[#E86E6E15] text-[#E86E6E] border border-[#E86E6E]/20 cursor-not-allowed'
+                            : 'bg-[#D4A943] text-[#14100C] hover:bg-[#F2E6A8]'}`}
+                    >
+                      {freeWorkers.length === 0 ? 'No Workers' : missingInput ? 'No Mats' : 'Assign'}
+                    </button>
+                    {freeWorkers.length > 1 && !missingInput && (
+                      <button
+                        onClick={() => bulkAssign(action.id, action.duration)}
+                        title={`Assign all ${freeWorkers.length} idle workers to this`}
+                        className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-[#2B231B] text-[#D4A943] border border-[#D4A943]/40 hover:bg-[#3A2E1F]">
+                        ×{freeWorkers.length}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="w-full py-1 rounded text-[10px] font-bold uppercase tracking-wider text-center text-[#E86E6E]">
                     Requires Lvl {action.levelReq}
